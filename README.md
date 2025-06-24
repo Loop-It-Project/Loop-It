@@ -1,5 +1,11 @@
 # Loop-It
 
+## Product Planing
+
+Unser Product Backlog sowie einzelne Sprints findet man unter folgender Seite:
+
+[Jira_Product_Backlog](https://zerrelius.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
+
 ## Technische Planung
 
 Die technische Konzeption und Umsetzungsstrategie findet sich unter:
