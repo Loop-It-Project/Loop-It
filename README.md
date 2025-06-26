@@ -21,3 +21,9 @@ Unsere Definition of Done, ab wann etwas als Fertig gilt ist in folgender Datei 
 [docs/definition_of_done.md](docs/definition_of_done.md)
 
 Dort wird die gesamte Checkliste aufgeführt ab wann ein Aspekt für uns als Team als Fertig gilt. Diese kann im Verlaufe des Projekts noch angepasst werden.
+
+## Sprint 1 Planing
+
+Unser erster geplanter Sprint und dessen Items sind zu finden in unserer:
+
+[docs/planing.md](docs/planing.md)
