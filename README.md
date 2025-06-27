@@ -27,3 +27,12 @@ Dort wird die gesamte Checkliste aufgeführt ab wann ein Aspekt für uns als Tea
 Unser erster geplanter Sprint und dessen Items sind zu finden in unserer:
 
 [docs/planing.md](docs/planing.md)
+
+## Abschlusspräsentation
+
+Der Entwurf unserer Abschlusspräsentation befindet sich unter:
+
+[presentation/Abschlusspräsentation - Loop It.pdf](presentation/Abschlusspr%C3%A4sentation%20-%20Loop%20It.pdf)
+
+Zusätzlich enthält der Ordner unser Projektlogo:  
+[presentation/loopit - logo.png](presentation/loopit%20-%20logo.png)
