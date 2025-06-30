@@ -53,7 +53,6 @@ export const usersTable = pgTable("users", {
 }, (table) => ({
   emailIdx: index("users_email_idx").on(table.email),
   usernameIdx: index("users_username_idx").on(table.username),
-  locationIdx: index("users_location_idx").on(table.location),
   lastActivityIdx: index("users_last_activity_idx").on(table.lastActivityAt),
 }));
 
@@ -145,7 +144,6 @@ export const profilesTable = pgTable("profiles", {
     columns: [table.userId],
     foreignColumns: [usersTable.id],
   }),
-  interestsIdx: index("profiles_interests_idx").on(table.interests),
 }));
 
 
@@ -336,8 +334,6 @@ export const postsTable = pgTable("posts", {
   universeIdx: index("posts_universe_idx").on(table.universeId),
   createdAtIdx: index("posts_created_at_idx").on(table.createdAt),
   contentTypeIdx: index("posts_content_type_idx").on(table.contentType),
-  tagsIdx: index("posts_tags_idx").on(table.tags),
-  hashtagsIdx: index("posts_hashtags_idx").on(table.hashtags),
 }));
 
 
@@ -432,7 +428,6 @@ export const universesTable = pgTable("universes", {
   slugIdx: index("universes_slug_idx").on(table.slug),
   creatorIdx: index("universes_creator_idx").on(table.creatorId),
   categoryIdx: index("universes_category_idx").on(table.category),
-  tagsIdx: index("universes_tags_idx").on(table.tags),
   memberCountIdx: index("universes_member_count_idx").on(table.memberCount),
 }));
 
@@ -595,7 +590,6 @@ export const searchIndexTable = pgTable("search_index", {
   searchVectorIdx: index("search_vector_idx").on(table.searchVector), // GIN index for PostgreSQL
   universeIdx: index("search_universe_idx").on(table.universeId),
   authorIdx: index("search_author_idx").on(table.authorId),
-  locationIdx: index("search_location_idx").on(table.location), // GiST index for geo queries
   popularityIdx: index("search_popularity_idx").on(table.popularityScore),
   createdAtIdx: index("search_created_at_idx").on(table.createdAt),
 }));

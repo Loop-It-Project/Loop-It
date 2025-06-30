@@ -142,6 +142,29 @@ export const createUniverse = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
+// User's eigene Universes abrufen
+export const getOwnedUniverses = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    const result = await UniverseService.getOwnedUniverses(userId, page, limit);
+    
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Owned universes retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Get owned universes error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to retrieve owned universes' 
+    });
+  }
+};
+
 // Validation rules
 export const universeSlugValidation = [
   param('universeSlug').isSlug().withMessage('Invalid universe slug format'),

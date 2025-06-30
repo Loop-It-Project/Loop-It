@@ -10,7 +10,8 @@ import {
     universeSlugValidation,
     paginationValidation,
     createUniverse,
-    createUniverseValidation
+    createUniverseValidation,
+    getOwnedUniverses
 } from '../controllers/universeController';
 
 const router = express.Router();
@@ -67,6 +68,13 @@ router.post(
   authenticateToken,
   createUniverseValidation,
   createUniverse
+);
+
+// User's eigene Universes
+router.get(
+    '/user/owned', 
+    authenticateToken, 
+    getOwnedUniverses
 );
 
 export default router;

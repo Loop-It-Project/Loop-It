@@ -3,10 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import searchRoutes from './routes/searchRoutes';
 import authRoutes from './routes/authRoutes';
 import feedRoutes from './routes/feedRoutes';
 import universeRoutes from './routes/universeRoutes';
+import hashtagRoutes from './routes/hashtagRoutes';
+import searchRoutes from './routes/searchRoutes';
+import postRoutes from './routes/postRoutes';
+
 
 // Environment variables laden
 dotenv.config();
@@ -30,6 +33,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/universes', universeRoutes);
 app.use('/api/hashtags', hashtagRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/posts', postRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

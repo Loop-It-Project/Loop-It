@@ -365,94 +365,93 @@ export class UniverseService {
     }
   }
 
-  // Discover Universes (für User die neue Universes finden wollen)
-  static async discoverUniverses(userId?: string, category?: string, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
+    // Discover Universes (für User die neue Universes finden wollen)
+    static async discoverUniverses(userId?: string, category?: string, page = 1, limit = 20) {
+      const offset = (page - 1) * limit;
 
-    try {
-      let query = db
-        .select({
-          id: universesTable.id,
-          name: universesTable.name,
-          slug: universesTable.slug,
-          description: universesTable.description,
-          category: universesTable.category,
-          coverImageId: universesTable.coverImageId,
-          memberCount: universesTable.memberCount,
-          postCount: universesTable.postCount,
-          isPublic: universesTable.isPublic,
-          requireApproval: universesTable.requireApproval,
-          createdAt: universesTable.createdAt
-        })
-        .from(universesTable)
-        .where(
-          and(
-            eq(universesTable.isPublic, true),
-            eq(universesTable.isActive, true)
-          )
+      try {
+        // Basis-Bedingungen
+        let whereConditions = and(
+          eq(universesTable.isPublic, true),
+          eq(universesTable.isActive, true)
         );
 
-      // Filter by category if provided
-      if (category) {
-        query = query.where(
-          and(
-            eq(universesTable.isPublic, true),
-            eq(universesTable.isActive, true),
+        // Kategorie-Filter hinzufügen falls vorhanden
+        if (category) {
+          whereConditions = and(
+            whereConditions,
             eq(universesTable.category, category)
-          )
-        );
-      }
+          );
+        }
 
-      const universes = await query
-        .orderBy(desc(universesTable.memberCount)) // Populärste zuerst
-        .limit(limit)
-        .offset(offset);
-
-      // Membership Status hinzufügen wenn User eingeloggt
-      if (userId) {
-        const universesWithStatus = await Promise.all(
-          universes.map(async (universe) => {
-            const membership = await db
-              .select()
-              .from(universeMembersTable)
-              .where(
-                and(
-                  eq(universeMembersTable.universeId, universe.id),
-                  eq(universeMembersTable.userId, userId)
-                )
-              )
-              .limit(1);
-
-            return {
-              ...universe,
-              isMember: membership.length > 0
-            };
+        // Query mit kombinierten Bedingungen
+        const query = db
+          .select({
+            id: universesTable.id,
+            name: universesTable.name,
+            slug: universesTable.slug,
+            description: universesTable.description,
+            category: universesTable.category,
+            coverImageId: universesTable.coverImageId,
+            memberCount: universesTable.memberCount,
+            postCount: universesTable.postCount,
+            isPublic: universesTable.isPublic,
+            requireApproval: universesTable.requireApproval,
+            createdAt: universesTable.createdAt
           })
-        );
+          .from(universesTable)
+          .where(whereConditions); // ← Nur eine where() Clause
+
+        const universes = await query
+          .orderBy(desc(universesTable.memberCount)) // Populärste zuerst
+          .limit(limit)
+          .offset(offset);
+
+        // Rest der Methode bleibt gleich...
+        if (userId) {
+          const universesWithStatus = await Promise.all(
+            universes.map(async (universe) => {
+              const membership = await db
+                .select()
+                .from(universeMembersTable)
+                .where(
+                  and(
+                    eq(universeMembersTable.universeId, universe.id),
+                    eq(universeMembersTable.userId, userId)
+                  )
+                )
+                .limit(1);
+
+              return {
+                ...universe,
+                isMember: membership.length > 0
+              };
+            })
+          );
+
+          return {
+            universes: universesWithStatus,
+            pagination: {
+              page,
+              limit,
+              hasMore: universes.length === limit
+            }
+          };
+        }
 
         return {
-          universes: universesWithStatus,
+          universes,
           pagination: {
             page,
             limit,
             hasMore: universes.length === limit
           }
         };
+      } catch (error) {
+        console.error('Error discovering universes:', error);
+        throw new Error('Failed to discover universes');
       }
-
-      return {
-        universes,
-        pagination: {
-          page,
-          limit,
-          hasMore: universes.length === limit
-        }
-      };
-    } catch (error) {
-      console.error('Error discovering universes:', error);
-      throw new Error('Failed to discover universes');
     }
-  }
 
     // Universe erstellen
     static async createUniverse(userId: string, universeData: CreateUniverseData) {
@@ -561,6 +560,44 @@ export class UniverseService {
       } catch (error) {
         console.error('Error creating universe:', error);
         throw error;
+      }
+    }
+
+    // User's eigene Universes (erstellt) abrufen
+    static async getOwnedUniverses(userId: string, page = 1, limit = 20) {
+      const offset = (page - 1) * limit;
+    
+      try {
+        const universes = await db
+          .select({
+            id: universesTable.id,
+            name: universesTable.name,
+            slug: universesTable.slug,
+            description: universesTable.description,
+            category: universesTable.category,
+            memberCount: universesTable.memberCount,
+            postCount: universesTable.postCount,
+            isPublic: universesTable.isPublic,
+            createdAt: universesTable.createdAt,
+          })
+          .from(universesTable)
+          .where(eq(universesTable.creatorId, userId))
+          .orderBy(desc(universesTable.createdAt))
+          .limit(limit)
+          .offset(offset);
+      
+        return {
+          universes,
+          pagination: {
+            page,
+            limit,
+            total: universes.length,
+            hasMore: universes.length === limit
+          }
+        };
+      } catch (error) {
+        console.error('Error fetching owned universes:', error);
+        throw new Error('Failed to fetch owned universes');
       }
     }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus } from 'lucide-react';
 import Feed from './feed/Feed';
-import FeedService from '../services/feedService';
+import FeedService from '../services/feedServices';
 
 const UniversePage = ({ universeSlug, onNavigate, user }) => {
   const [universe, setUniverse] = useState(null);
