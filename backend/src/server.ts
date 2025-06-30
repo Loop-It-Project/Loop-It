@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import searchRoutes from './routes/searchRoutes';
 import authRoutes from './routes/authRoutes';
+import feedRoutes from './routes/feedRoutes';
+import universeRoutes from './routes/universeRoutes';
 
 // Environment variables laden
 dotenv.config();
@@ -25,6 +27,9 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api', searchRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/feed', feedRoutes);
+app.use('/api/universes', universeRoutes);
+app.use('/api/hashtags', hashtagRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

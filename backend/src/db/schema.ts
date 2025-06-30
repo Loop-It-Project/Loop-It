@@ -394,6 +394,7 @@ export const universesTable = pgTable("universes", {
   id: uuid().primaryKey().defaultRandom(),
   name: varchar({ length: 100 }).notNull(),
   slug: varchar({ length: 100 }).notNull().unique(),
+  hashtag: varchar({ length: 100 }).notNull().unique(),
   description: text(),
   
   // Ownership & Moderation
