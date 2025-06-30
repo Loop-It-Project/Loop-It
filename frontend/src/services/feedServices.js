@@ -204,6 +204,61 @@ class FeedService {
       return { success: false, error: 'Network error' };
     }
   }
+
+  // Post erstellen
+  static async createPost(postData) {
+    try {
+      const response = await fetch(`${API_URL}/api/posts`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(postData)
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Create post error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Suche nach Universes und Hashtags
+  static async searchUniversesAndHashtags(query) {
+    try {
+      const response = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.results || [] } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Search error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // User's eigene Universes abrufen (erstellt)
+  static async getOwnedUniverses(page = 1, limit = 20) {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/universes/user/owned?page=${page}&limit=${limit}`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        }
+      );
+    
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching owned universes:', error);
+      throw error;
+    }
+  }
 }
 
 export default FeedService;

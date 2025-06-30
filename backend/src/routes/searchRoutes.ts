@@ -1,13 +1,12 @@
 // src/routes/searchRoutes.ts
 import { Router } from 'express';
-import { SearchController } from '../controllers/searchController';
+import { search, trending } from '../controllers/searchController';
 
 const router = Router();
-const searchController = new SearchController();
 
 // Search endpoints
-router.get('/search', searchController.search);
-router.get('/trending', searchController.trending);
-router.get('/suggestions', searchController.suggestions);
+router.get('/search', search);
+router.get('/trending', trending);
+//router.get('/suggestions', searchController.suggestions);
 
 export default router;
