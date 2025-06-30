@@ -2,11 +2,13 @@ name: Backend CI
 
 on:
   push:
-    paths:
-      - backend/**
+    branches:
+      - main
+      - feature/**
   pull_request:
-    paths:
-      - backend/**
+    branches:
+      - main
+      - feature/**
 
 jobs:
   build:
@@ -32,9 +34,6 @@ jobs:
 
       - name: Check for Vulnerabilities
         run: npm audit --audit-level=high
-
-#      - name: Run Linter
-#        run: npm run lint
 
       - name: Build Backend
         run: npm run build
