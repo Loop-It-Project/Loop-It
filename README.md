@@ -1,5 +1,21 @@
 # Loop-It
 
+## Repository
+
+Der Link zu unserem Repository:
+
+https://github.com/Loop-It-Project/Loop-It
+
+## Google Meet
+
+Der Link zu unserem Google Meet:
+
+https://meet.google.com/zqw-dhwj-nnf
+
+## Daily Scrum täglich um 09:15
+
+Tägliches Event für die Entwickler, dessen Zweck es ist, den Fortschritt hinsichtlich der Sprint-Ziele zu überprüfen, ggf. den Sprint-Backlog anzupassen und den Arbeitsplan für den nächsten Tag abzustimmen. Hierdurch sollen Zusammenarbeit und Leistung optimiert, und Hindernisse frühzeitig identifiziert werden.
+
 ## Product Planing
 
 Unser Product Backlog sowie einzelne Sprints findet man unter folgender Seite:

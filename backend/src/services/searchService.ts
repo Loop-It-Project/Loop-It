@@ -1,97 +1,137 @@
-// src/services/searchService.ts - VERVOLLSTÄNDIGEN:
 import { db } from '../db';
-import { searchIndexTable, trendingTopicsTable } from '../db/schema';
-import { searchQueries } from '../queries/searchQueries';
-import type { SearchQuery, SearchResult } from '../types/search';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { universesTable, postsTable, usersTable } from '../db/schema';
+import { eq, and, desc, sql, ilike, or } from 'drizzle-orm';
+
+// Interfaces für die Typisierung
+interface UniverseResult {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  memberCount: number;
+  hashtag: string | null;
+  type: string;
+}
+
+interface HashtagResult {
+  hashtag: string | null;
+  universeSlug: string;
+  universeName: string;
+  memberCount: number;
+  type: string;
+}
 
 export class SearchService {
-  async searchContent(query: SearchQuery): Promise<SearchResult> {
+  static async searchContent(searchQuery: any) {
     try {
-      const { 
-        query: searchText, 
-        entityTypes = ['posts', 'users', 'universes'], 
-        filters = {},
-        sortBy = 'relevance',
-        page = 1,
-        pageSize = 20 
-      } = query;
+      const { query, page = 1, pageSize = 20 } = searchQuery;
+      const offset = (page - 1) * pageSize;
 
-      // Build WHERE conditions
-      const conditions = [
-        sql`search_vector @@ plainto_tsquery('english', ${searchText})`,
-        eq(searchIndexTable.isActive, true),
-        eq(searchIndexTable.isPublic, true)
-      ];
-
-      if (filters.universeId) {
-        conditions.push(eq(searchIndexTable.universeId, filters.universeId));
+      if (!query || query.length < 2) {
+        return {
+          results: [],
+          pagination: { page, pageSize, total: 0, hasMore: false }
+        };
       }
 
-      if (filters.isNsfw !== undefined) {
-        conditions.push(eq(searchIndexTable.isNsfw, filters.isNsfw));
-      }
-
-      // Execute search
-      const results = await db
-        .select()
-        .from(searchIndexTable)
-        .where(and(...conditions))
-        .orderBy(
-          sortBy === 'relevance' 
-            ? desc(sql`ts_rank(search_vector, plainto_tsquery('english', ${searchText}))`)
-            : desc(searchIndexTable.createdAt)
+      // Suche nach Universes
+      const universes: UniverseResult[] = await db
+        .select({
+          id: universesTable.id,
+          name: universesTable.name,
+          slug: universesTable.slug,
+          description: universesTable.description,
+          memberCount: universesTable.memberCount,
+          hashtag: universesTable.hashtag,
+          type: sql<string>`'universe'`
+        })
+        .from(universesTable)
+        .where(
+          and(
+            eq(universesTable.isPublic, true),
+            eq(universesTable.isActive, true),
+            or(
+              ilike(universesTable.name, `%${query}%`),
+              ilike(universesTable.description, `%${query}%`),
+              ilike(universesTable.hashtag, `%${query}%`)
+            )
+          )
         )
+        .orderBy(desc(universesTable.memberCount))
         .limit(pageSize)
-        .offset((page - 1) * pageSize);
+        .offset(offset);
 
-      // Format results
+      // ✅ KORRIGIERT - Expliziter Typ:
+      let hashtags: HashtagResult[] = [];
+      
+      if (query.startsWith('#')) {
+        const hashtagQuery = query.substring(1).toLowerCase();
+        hashtags = await db
+          .select({
+            hashtag: universesTable.hashtag,
+            universeSlug: universesTable.slug,
+            universeName: universesTable.name,
+            memberCount: universesTable.memberCount,
+            type: sql<string>`'hashtag'`
+          })
+          .from(universesTable)
+          .where(
+            and(
+              eq(universesTable.isPublic, true),
+              eq(universesTable.isActive, true),
+              ilike(universesTable.hashtag, `%${hashtagQuery}%`)
+            )
+          )
+          .orderBy(desc(universesTable.memberCount))
+          .limit(10);
+      }
+
+      // Kombiniere Ergebnisse
+      const results = [...universes, ...hashtags];
+
       return {
-        results: results.map(this.formatSearchResult),
-        aggregations: {
-          totalCount: results.length,
-          entityCounts: {},
-          facets: {}
-        },
-        performance: {
-          queryTime: 0, // Implement timing
-          totalTime: 0,
-          resultsFound: results.length
-        },
+        results,
         pagination: {
           page,
           pageSize,
-          totalPages: Math.ceil(results.length / pageSize),
-          hasNext: results.length === pageSize,
-          hasPrevious: page > 1
+          total: results.length,
+          hasMore: results.length === pageSize
         }
       };
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Search service error:', error);
       throw new Error('Search failed');
     }
   }
 
-  private formatSearchResult = (item: any) => ({
-    id: item.entityId,
-    type: item.entityType,
-    title: item.title || '',
-    content: item.content || '',
-    relevanceScore: 0, // Calculate from search vector
-    highlights: {},
-    metadata: {
-      createdAt: item.createdAt,
-      tags: item.tags || [],
-    }
-  });
+  // Rest bleibt gleich...
+  static async getTrending(timeframe = '24h', limit = 10) {
+    try {
+      const universes: UniverseResult[] = await db
+        .select({
+          id: universesTable.id,
+          name: universesTable.name,
+          slug: universesTable.slug,
+          description: universesTable.description,
+          memberCount: universesTable.memberCount,
+          hashtag: universesTable.hashtag,
+          type: sql<string>`'universe'`
+        })
+        .from(universesTable)
+        .where(
+          and(
+            eq(universesTable.isPublic, true),
+            eq(universesTable.isActive, true)
+          )
+        )
+        .orderBy(desc(universesTable.memberCount))
+        .limit(limit);
 
-  async getTrendingTopics() {
-    return await db
-      .select()
-      .from(trendingTopicsTable)
-      .where(eq(trendingTopicsTable.isActive, true))
-      .orderBy(desc(trendingTopicsTable.engagementScore))
-      .limit(10);
+      return { results: universes };
+    } catch (error) {
+      console.error('Trending service error:', error);
+      throw new Error('Failed to get trending content');
+    }
   }
 }
 

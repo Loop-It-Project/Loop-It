@@ -3,10 +3,12 @@ import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
+import UniversePage from './components/UniversePage';
 import Hobbies from './components/Hobbies';
 
 function App() {
   const [currentView, setCurrentView] = useState('landing');
+  const [viewData, setViewData] = useState({}); // Für zusätzliche Navigation-Daten
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -22,8 +24,9 @@ function App() {
     setIsLoading(false);
   }, []);
 
-  const handleNavigate = (view) => {
+  const handleNavigate = (view, data = {}) => {
     setCurrentView(view);
+    setViewData(data);
   };
 
   const handleLogin = (userData) => {
@@ -33,6 +36,7 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
+    setViewData({});
     setCurrentView('landing');
   };
 
@@ -56,7 +60,18 @@ function App() {
         <Register onNavigate={handleNavigate} onLogin={handleLogin} />
       )}
       {currentView === 'dashboard' && user && (
-        <Dashboard user={user} onLogout={handleLogout} />
+        <Dashboard 
+          user={user} 
+          onLogout={handleLogout} 
+          onNavigate={handleNavigate}
+        />
+      )}
+      {currentView === 'universe' && user && (
+        <UniversePage
+          universeSlug={viewData.universeSlug}
+          user={user}
+          onNavigate={handleNavigate}
+        />
       )}
       {currentView === 'hobbies' && (
         <Hobbies onNavigate={handleNavigate} />
