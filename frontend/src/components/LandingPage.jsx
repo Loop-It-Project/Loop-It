@@ -41,6 +41,12 @@ const LandingPage = ({ onNavigate }) => {
             >
               Registrieren
             </button>
+                        <button 
+              onClick={() => onNavigate('hobbies')}
+              className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition hover:scale-105 cursor-pointer"
+            >
+              Hobbys
+            </button>
           </div>
         </nav>
       </header>

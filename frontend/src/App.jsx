@@ -3,6 +3,7 @@ import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
+import Hobbies from './components/Hobbies';
 
 function App() {
   const [currentView, setCurrentView] = useState('landing');
@@ -56,6 +57,9 @@ function App() {
       )}
       {currentView === 'dashboard' && user && (
         <Dashboard user={user} onLogout={handleLogout} />
+      )}
+      {currentView === 'hobbies' && (
+        <Hobbies onNavigate={handleNavigate} />
       )}
     </div>
   );
