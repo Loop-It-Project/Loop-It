@@ -74,7 +74,9 @@ function App() {
         />
       )}
       {currentView === 'hobbies' && (
-        <Hobbies onNavigate={handleNavigate} />
+        <Hobbies
+        onNavigate={handleNavigate} 
+        />
       )}
     </div>
   );
