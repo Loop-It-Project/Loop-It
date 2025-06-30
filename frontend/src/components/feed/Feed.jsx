@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Loader } from 'lucide-react';
 import PostCard from './PostCard';
-import FeedService from '../../services/feedService';
+import FeedService from '../../services/feedServices';
+import PostComposer from './PostComposer';
 
 const Feed = ({ 
   type = 'personal', // 'personal', 'universe', 'trending'
@@ -89,6 +90,10 @@ const Feed = ({
     }
   };
 
+  const handlePostCreated = (newPost) => {
+    setPosts(prev => [newPost, ...prev]);
+  };
+
   // Post Actions
   const handleLike = async (postId, liked) => {
     // TODO: Implement like functionality
@@ -130,6 +135,11 @@ const Feed = ({
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Post Composer - nur bei personal und universe feed */}
+      {(type === 'personal' || type === 'universe') && (
+        <PostComposer onPostCreated={handlePostCreated} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">

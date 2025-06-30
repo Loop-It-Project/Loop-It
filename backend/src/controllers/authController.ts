@@ -6,10 +6,11 @@ import { usersTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { body, validationResult } from 'express-validator';
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    res.status(400).json({ errors: errors.array() });
+    return 
   }
 
   try {
@@ -18,7 +19,8 @@ export const register = async (req: Request, res: Response) => {
     // Check if user already exists
     const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, email));
     if (existingUser.length > 0) {
-      return res.status(400).json({ error: 'User already exists' });
+      res.status(400).json({ error: 'User already exists' });
+      return 
     }
 
     // Hash password
@@ -57,10 +59,11 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    res.status(400).json({ errors: errors.array() });
+    return 
   }
 
   try {
@@ -69,13 +72,15 @@ export const login = async (req: Request, res: Response) => {
     // Find user
     const user = await db.select().from(usersTable).where(eq(usersTable.email, email));
     if (user.length === 0) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      res.status(400).json({ error: 'Invalid credentials' });
+      return 
     }
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user[0].passwordHash);
     if (!isValidPassword) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      res.status(400).json({ error: 'Invalid credentials' });
+      return 
     }
 
     // Update last login

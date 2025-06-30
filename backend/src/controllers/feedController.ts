@@ -7,10 +7,11 @@ interface AuthRequest extends Request {
 }
 
 // Personal Feed - Für Dashboard
-export const getPersonalFeed = async (req: AuthRequest, res: Response) => {
+export const getPersonalFeed = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    res.status(400).json({ errors: errors.array() });
+    return 
   }
 
   try {
@@ -36,10 +37,11 @@ export const getPersonalFeed = async (req: AuthRequest, res: Response) => {
 };
 
 // Universe Feed - Für Universe-spezifische Seiten
-export const getUniverseFeed = async (req: Request, res: Response) => {
+export const getUniverseFeed = async (req: Request, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    res.status(400).json({ errors: errors.array() });
+    return 
   }
 
   try {
@@ -66,10 +68,11 @@ export const getUniverseFeed = async (req: Request, res: Response) => {
 };
 
 // Trending Feed - Für Entdecken-Seite
-export const getTrendingFeed = async (req: Request, res: Response) => {
+export const getTrendingFeed = async (req: Request, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    res.status(400).json({ errors: errors.array() });
+    return 
   }
 
   try {
@@ -94,10 +97,11 @@ export const getTrendingFeed = async (req: Request, res: Response) => {
 };
 
 // Check if user follows a universe
-export const checkUniverseFollowing = async (req: AuthRequest, res: Response) => {
+export const checkUniverseFollowing = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    res.status(400).json({ errors: errors.array() });
+    return 
   }
 
   try {
@@ -121,10 +125,11 @@ export const checkUniverseFollowing = async (req: AuthRequest, res: Response) =>
 };
 
 // Feed für spezifische Hashtags (für später)
-export const getHashtagFeed = async (req: Request, res: Response) => {
+export const getHashtagFeed = async (req: Request, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    res.status(400).json({ errors: errors.array() });
+    return 
   }
 
   try {

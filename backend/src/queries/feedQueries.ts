@@ -11,19 +11,19 @@ import { eq, desc, and, inArray, sql, isNull } from 'drizzle-orm';
 
 export interface FeedPost {
   id: string;
-  title?: string;
-  content?: string;
+  title: string | null;        
+  content: string | null;      
   contentType: string;
-  mediaIds?: string[];
-  hashtags?: string[];
-  tags?: string[];
+  mediaIds: unknown;           
+  hashtags: unknown;           
+  tags: unknown;               
   universeId?: string;
   universeName?: string;
   universeSlug?: string;
   authorId: string;
   authorName: string;
   authorUsername: string;
-  authorAvatar?: string;
+  authorAvatar: string | null; 
   likeCount: number;
   commentCount: number;
   shareCount: number;
