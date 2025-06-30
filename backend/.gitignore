@@ -32,3 +32,6 @@ dist-ssr
 # Database files
 *.db
 *.sqlite
+
+drizzle
+drizzle-kit
