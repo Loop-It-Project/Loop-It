@@ -15,6 +15,27 @@
       "when": 1751283603961,
       "tag": "0001_absurd_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1751361566338,
+      "tag": "0002_pretty_clea",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1751361862841,
+      "tag": "0003_premium_wolverine",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1751366434561,
+      "tag": "0004_cooing_blizzard",
+      "breakpoints": true
     }
   ]
 }

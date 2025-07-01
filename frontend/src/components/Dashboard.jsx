@@ -296,7 +296,7 @@ const handleUniverseCreated = async (newUniverse) => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {universe.name}
+                          {universe.slug} {/* ✅ GEÄNDERT: Slug statt Name */}
                         </p>
                         <p className="text-xs text-gray-500">
                           {universe.memberCount} Mitglieder

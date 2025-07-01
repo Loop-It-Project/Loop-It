@@ -291,6 +291,123 @@ class FeedService {
       return { success: false, error: 'Network error' };
     }
   }
+
+  // Universe Details abrufen
+  static async getUniverseDetails(universeSlug) {
+    try {
+      console.log('🔍 FeedService: Getting universe details for:', universeSlug);
+      
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Token hinzufügen falls vorhanden (für Membership-Status)
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(
+        `${API_URL}/api/universes/${universeSlug}/details`,
+        { 
+          method: 'GET',
+          headers 
+        }
+      );
+      
+      console.log('🔍 FeedService: Response status:', response.status);
+      
+      const data = await response.json();
+      
+      console.log('🔍 FeedService: Response data:', data);
+      
+      if (response.ok) {
+        return { success: true, data: data.data };
+      } else {
+        return { success: false, error: data.error || 'Failed to get universe details' };
+      }
+    } catch (error) {
+      console.error('❌ FeedService: Error fetching universe details:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Universe Members abrufen
+  static async getUniverseMembers(universeSlug, page = 1, limit = 20) {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/universes/${universeSlug}/members?page=${page}&limit=${limit}`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      const data = await response.json();
+      return response.ok ? { success: true, data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Error fetching universe members:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Universe löschen
+  static async deleteUniverse(universeSlug) {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/universes/${universeSlug}`,
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      const data = await response.json();
+      return response.ok ? { success: true, data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Error deleting universe:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Eigentümerschaft übertragen
+  static async transferUniverseOwnership(universeSlug, newOwnerId) {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/universes/${universeSlug}/transfer-ownership`,
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ newOwnerId })
+        }
+      );
+    
+      const data = await response.json();
+      return response.ok ? { success: true, data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Error transferring ownership:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+  
+  // Universe-Name prüfen
+  static async checkUniverseName(name) {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/universes/check-name?name=${encodeURIComponent(name)}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    
+      const data = await response.json();
+      return response.ok ? { success: true, data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Error checking universe name:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default FeedService;
