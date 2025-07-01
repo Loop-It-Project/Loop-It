@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Image, Hash, Globe, Lock, Send, X } from 'lucide-react';
 import FeedService from '../../services/feedServices';
 
-const PostComposer = ({ onPostCreated, onClose }) => {
+const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -16,6 +16,7 @@ const PostComposer = ({ onPostCreated, onClose }) => {
   const [userUniverses, setUserUniverses] = useState([]);
   const [loadingUniverses, setLoadingUniverses] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   // Lade User's Universes (sowohl erstellte als auch beigetretene)
   useEffect(() => {
@@ -65,6 +66,9 @@ const PostComposer = ({ onPostCreated, onClose }) => {
     }
 
     setLoading(true);
+    setIsCreatingPost(true);
+
+
     try {
       const postData = {
         ...formData,
@@ -74,7 +78,9 @@ const PostComposer = ({ onPostCreated, onClose }) => {
       const response = await FeedService.createPost(postData);
       
       if (response.success) {
-        onPostCreated(response.data);
+        // console.log('✅ Post erfolgreich erstellt:', response.data);
+        
+
         // Form zurücksetzen
         setFormData({
           title: '',
@@ -85,6 +91,27 @@ const PostComposer = ({ onPostCreated, onClose }) => {
         });
         setIsExpanded(false);
         setErrors({});
+
+        // DEBUGGING
+        console.log('Available handlers:', {
+          onFeedReload: !!onFeedReload,
+          onPostCreated: !!onPostCreated
+        });
+
+        // Feed-Reload (empfohlen)
+        if (onFeedReload) {
+          console.log('🔄 Starte Feed-Reload...');
+          await onFeedReload();
+          console.log('✅ Feed-Reload abgeschlossen');
+        }
+        // Fallback - Post manuell hinzufügen
+        else if (onPostCreated) {
+          console.log('⚠️ Fallback: Füge Post manuell hinzu');
+          onPostCreated(response.data);
+        } else {
+          console.error('❌ Keine Handler verfügbar!');
+        }
+
       } else {
         setErrors({ submit: response.error || 'Fehler beim Erstellen des Posts' });
       }
@@ -93,6 +120,7 @@ const PostComposer = ({ onPostCreated, onClose }) => {
       setErrors({ submit: 'Fehler beim Erstellen des Posts' });
     } finally {
       setLoading(false);
+      setIsCreatingPost(false);
     }
   };
 
@@ -221,11 +249,13 @@ const PostComposer = ({ onPostCreated, onClose }) => {
               </button>
               <button
                 type="submit"
-                disabled={loading || !formData.content.trim() || !formData.universeId}
+                disabled={loading || isCreatingPost || !formData.content.trim() || !formData.universeId}
                 className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Send size={16} />
-                <span>{loading ? 'Erstelle...' : 'Posten'}</span>
+              <Send size={16} className={isCreatingPost ? 'animate-pulse' : ''} />
+              <span>
+                {isCreatingPost ? 'Wird gepostet...' : loading ? 'Erstelle...' : 'Posten'}
+              </span>
               </button>
             </div>
           </div>

@@ -259,6 +259,38 @@ class FeedService {
       throw error;
     }
   }
+
+  // Post löschen
+  static async deletePost(postId) {
+    try {
+      const response = await fetch(`${API_URL}/api/posts/${postId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Delete post error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Post liken (für später)
+  static async likePost(postId) {
+    try {
+      const response = await fetch(`${API_URL}/api/posts/${postId}/like`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Like post error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default FeedService;
