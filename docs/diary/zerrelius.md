@@ -1,3 +1,26 @@
+# Projekttagebuch – 02.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Bugs ausbessern, Feed Logik und Universe Pages weiter ausbauen, das Frontend auf React Router umstellen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Leider nicht viel durch die Affenhitze von 38°C. Quasi nur die Bug Fixes
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Niergendswo wirklich, es ging nur nicht wirklich vorran wegen der Hitze
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Das React Router deutlich mehr Sinn und Zweck hat als nur die Aufteilung der Routen usw. Es dient auch zur besseren Ladbarkeit der Seite usw.
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Das Frontend auf React Router umstellen und anschließend die Filter für den Feed einbauen
+
+___
 # Projekttagebuch – 01.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)
