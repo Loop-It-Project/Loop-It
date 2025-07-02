@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X } from 'lucide-react';
 import Feed from './feed/Feed';
 import FeedService from '../services/feedServices';
 import useEscapeKey from '../hooks/useEscapeKey';
 
-const UniversePage = ({ universeSlug, onNavigate, user }) => {
+const UniversePage = ({ user }) => {
+  const { universeSlug } = useParams(); // URL Parameter aus Router
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // Query Parameter aus Router
+  const fromHashtag = searchParams.get('hashtag'); // Optional: Hashtag aus URL
   const [universe, setUniverse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,7 +55,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     }
   }, [universeSlug, user?.id]);
 
-  // Handle Escape key to close settings or transfer ownership
+  // ESC-Key Handler
   useEscapeKey(() => {
     if (showSettings) {
       setShowSettings(false);
@@ -120,7 +125,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
       const response = await FeedService.deleteUniverse(universeSlug);
       if (response.success) {
         alert('Universe wurde erfolgreich gelöscht.');
-        onNavigate('dashboard');
+        onNavigate('/dashboard');
       } else {
         throw new Error(response.error || 'Failed to delete universe');
       }
@@ -224,7 +229,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
             <p className="text-sm">{error}</p>
           </div>
           <button
-            onClick={() => onNavigate('dashboard')}
+            onClick={() => onNavigate('/dashboard')}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
           >
             Zurück zum Dashboard
@@ -243,7 +248,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => onNavigate('dashboard')}
+                onClick={() => navigate('/dashboard')} // Router Navigation
                 className="text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeft size={24} />
@@ -447,8 +452,8 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
         <Feed
           type="universe"
           universeSlug={universeSlug}
-          onUniverseClick={(slug) => onNavigate('universe', { universeSlug: slug })}
-          onHashtagClick={(slug, hashtag) => onNavigate('universe', { universeSlug: slug, fromHashtag: hashtag })}
+          fromHashtag={fromHashtag} // Optional: Hashtag Filter
+          onUniverseClick={(slug) => navigate(`/universe/${slug}`)} // Router Navigation
         />
       </div>
     </div>

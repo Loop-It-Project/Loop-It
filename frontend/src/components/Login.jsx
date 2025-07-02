@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
-const Login = ({ onNavigate, onLogin }) => {
+const Login = ({ onLogin }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -46,6 +48,7 @@ const Login = ({ onNavigate, onLogin }) => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         onLogin(data.user);
+        navigate('/dashboard');
       } else {
         if (data.errors) {
           // Handle validation errors
@@ -70,13 +73,13 @@ const Login = ({ onNavigate, onLogin }) => {
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
         {/* Back Button */}
-        <button 
-          onClick={() => onNavigate('landing')}
+        <Link 
+          to="/"
           className="flex items-center text-white mb-8 hover:text-gray-200 transition"
         >
           <ArrowLeft size={20} className="mr-2" />
           Zurück
-        </button>
+        </Link>
 
         {/* Login Card */}
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
@@ -157,12 +160,12 @@ const Login = ({ onNavigate, onLogin }) => {
           <div className="text-center mt-6">
             <p className="text-gray-600">
               Noch kein Account?{' '}
-              <button
-                onClick={() => onNavigate('register')}
+              <Link
+                to="/register"
                 className="text-purple-600 font-semibold hover:text-purple-700 transition"
               >
                 Jetzt registrieren
-              </button>
+              </Link>
             </p>
           </div>
         </div>
