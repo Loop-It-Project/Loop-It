@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Crown } from 'lucide-react';
+import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X } from 'lucide-react';
 import Feed from './feed/Feed';
 import FeedService from '../services/feedServices';
 
@@ -13,6 +13,9 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
+  // Load Universe details on mount
+  // and whenever universeSlug or user changes
+  // Added user?.id to dependencies to ensure it reloads when user changes
   useEffect(() => {
     const loadUniverse = async () => {
       try {
@@ -45,6 +48,21 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
       loadUniverse();
     }
   }, [universeSlug, user?.id]);
+
+  // Handle Escape key to close settings or transfer ownership
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowSettings(false);
+        setShowTransferOwnership(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Handle Join/Leave Universe
   const handleJoinLeave = async () => {
@@ -105,6 +123,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     }
   };
 
+  // Handle Show Settings
   const loadMembers = async () => {
     if (loadingMembers) return;
     
@@ -124,6 +143,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     }
   };
 
+  // Handle Transfer Ownership
   const handleTransferOwnership = async (newOwnerId) => {
     if (!window.confirm('Möchtest du wirklich die Eigentümerschaft übertragen? Du wirst dann nur noch ein normales Mitglied sein.')) {
       return;
@@ -146,12 +166,14 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     }
   };
 
+  // Check if user is the owner
   const isOwner = user && universe && (
     universe.creatorId === user.id || 
     universe.userRole === 'creator' ||
     universe.userRole === 'owner'
   );
 
+  // Debugging information
   console.log('🔍 Debug Info:', {
     user: user?.id,
     universe: {
@@ -168,6 +190,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     universeSlug
   });
 
+  // Render loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -176,6 +199,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     );
   }
 
+  // Render error state
   if (error || !universe) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -195,6 +219,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     );
   }
 
+  // Render Universe Page
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -294,45 +319,49 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
               {isOwner && (
                 <div className="relative">
                   <button 
-                    onClick={() => setShowSettings(true)}
+                    onClick={() => setShowSettings(!showSettings)}
                     className="p-3 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                   >
                     <Settings size={20} />
                   </button>
 
-                  {/* Settings Modal */}
+                  {/* Settings Dropdown Menu */}
                   {showSettings && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white rounded-lg max-w-md w-full mx-4">
-                        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                          <h3 className="text-lg font-semibold">Universe-Einstellungen</h3>
-                          <button
-                            onClick={() => setShowSettings(false)}
-                            className="text-gray-400 hover:text-gray-600"
-                          >
-                            <X size={20} />
-                          </button>
+                    <>
+                      {/* Unsichtbarer Overlay zum Wegklicken */}
+                      <div 
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowSettings(false)}
+                      />
+
+                      {/* Dropdown Menu */}
+                      <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                        <div className="p-4 border-b border-gray-100">
+                          <h3 className="font-semibold text-gray-900">Universe-Einstellungen</h3>
                         </div>
-                        
-                        <div className="p-6 space-y-4">
+
+                        <div className="p-2">
                           <button
                             onClick={() => {
                               setShowSettings(false);
                               setShowTransferOwnership(true);
                               loadMembers();
                             }}
-                            className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                            className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
                           >
                             <Crown className="text-purple-600" size={20} />
                             <div>
-                              <div className="font-medium">Eigentümerschaft übertragen</div>
+                              <div className="font-medium text-gray-900">Eigentümerschaft übertragen</div>
                               <div className="text-sm text-gray-500">Einem anderen Mitglied die Kontrolle geben</div>
                             </div>
                           </button>
-
+                          
                           <button
-                            onClick={handleDeleteUniverse}
-                            className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-red-50 rounded-lg transition-colors text-red-600"
+                            onClick={() => {
+                              setShowSettings(false);
+                              handleDeleteUniverse();
+                            }}
+                            className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-red-50 rounded-lg transition-colors text-red-600"
                           >
                             <Trash2 className="text-red-600" size={20} />
                             <div>
@@ -342,7 +371,7 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
                           </button>
                         </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               )}

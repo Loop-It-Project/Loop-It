@@ -187,53 +187,56 @@ export const getOwnedUniverses = async (req: AuthRequest, res: Response): Promis
   }
 };
 
-// Universe löschen
+// Universe löschen (Soft Delete)
 export const deleteUniverse = async (req: AuthRequest, res: Response): Promise<void> => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() });
-    return;
-  }
-
   try {
     const { universeSlug } = req.params;
     const userId = req.user!.id;
 
     const result = await UniverseService.deleteUniverse(userId, universeSlug);
     
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
   } catch (error) {
     console.error('Delete universe error:', error);
     const message = error instanceof Error ? error.message : 'Failed to delete universe';
-    res.status(400).json({ error: message });
+    res.status(400).json({ 
+      success: false,
+      error: message 
+    });
   }
 };
 
-// Eigentümerschaft übertragen
+// Ownership übertragen
 export const transferOwnership = async (req: AuthRequest, res: Response): Promise<void> => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() });
-    return;
-  }
-
   try {
     const { universeSlug } = req.params;
     const { newOwnerId } = req.body;
     const userId = req.user!.id;
 
     if (!newOwnerId) {
-      res.status(400).json({ error: 'New owner ID is required' });
+      res.status(400).json({ 
+        success: false,
+        error: 'New owner ID is required' 
+      });
       return;
     }
 
     const result = await UniverseService.transferOwnership(userId, universeSlug, newOwnerId);
     
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
   } catch (error) {
     console.error('Transfer ownership error:', error);
     const message = error instanceof Error ? error.message : 'Failed to transfer ownership';
-    res.status(400).json({ error: message });
+    res.status(400).json({ 
+      success: false,
+      error: message 
+    });
   }
 };
 

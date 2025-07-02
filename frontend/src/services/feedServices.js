@@ -295,18 +295,16 @@ class FeedService {
   // Universe Details abrufen
   static async getUniverseDetails(universeSlug) {
     try {
-      console.log('🔍 FeedService: Getting universe details for:', universeSlug);
-      
       const token = localStorage.getItem('token');
       const headers = {
         'Content-Type': 'application/json',
       };
-      
+
       // Token hinzufügen falls vorhanden (für Membership-Status)
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(
         `${API_URL}/api/universes/${universeSlug}/details`,
         { 
@@ -314,20 +312,16 @@ class FeedService {
           headers 
         }
       );
-      
-      console.log('🔍 FeedService: Response status:', response.status);
-      
+
       const data = await response.json();
-      
-      console.log('🔍 FeedService: Response data:', data);
-      
+
       if (response.ok) {
-        return { success: true, data: data.data };
+        return { success: true, data: data.data || data };
       } else {
         return { success: false, error: data.error || 'Failed to get universe details' };
       }
     } catch (error) {
-      console.error('❌ FeedService: Error fetching universe details:', error);
+      console.error('Error fetching universe details:', error);
       return { success: false, error: 'Network error' };
     }
   }
@@ -344,7 +338,12 @@ class FeedService {
       );
 
       const data = await response.json();
-      return response.ok ? { success: true, data } : { success: false, error: data.error };
+
+      if (response.ok) {
+        return { success: true, data: data.data || data };
+      } else {
+        return { success: false, error: data.error || 'Failed to get universe members' };
+      }
     } catch (error) {
       console.error('Error fetching universe members:', error);
       return { success: false, error: 'Network error' };
@@ -363,7 +362,12 @@ class FeedService {
       );
 
       const data = await response.json();
-      return response.ok ? { success: true, data } : { success: false, error: data.error };
+
+      if (response.ok) {
+        return { success: true, data };
+      } else {
+        return { success: false, error: data.error || 'Failed to delete universe' };
+      }
     } catch (error) {
       console.error('Error deleting universe:', error);
       return { success: false, error: 'Network error' };
@@ -383,7 +387,12 @@ class FeedService {
       );
     
       const data = await response.json();
-      return response.ok ? { success: true, data } : { success: false, error: data.error };
+      
+      if (response.ok) {
+        return { success: true, data };
+      } else {
+        return { success: false, error: data.error || 'Failed to transfer ownership' };
+      }
     } catch (error) {
       console.error('Error transferring ownership:', error);
       return { success: false, error: 'Network error' };

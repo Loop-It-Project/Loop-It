@@ -262,14 +262,14 @@ export class UniverseService {
           createdAt: universesTable.createdAt,
           creatorId: universesTable.creatorId,
           isActive: universesTable.isActive,
-          //isDeleted: universesTable.isDeleted
+          isDeleted: universesTable.isDeleted // ✅ JETZT verfügbar
         })
         .from(universesTable)
         .where(
           and(
             eq(universesTable.slug, universeSlug),
             eq(universesTable.isActive, true),
-            //eq(universesTable.isDeleted, false)
+            eq(universesTable.isDeleted, false) // ✅ JETZT verfügbar
           )
         )
         .limit(1);
@@ -277,7 +277,7 @@ export class UniverseService {
       const universe = await universeQuery;
       
       if (universe.length === 0) {
-        throw new Error('Universe not found or inactive');
+        throw new Error('Universe not found or deleted');
       }
     
       const universeData = universe[0];
@@ -306,14 +306,12 @@ export class UniverseService {
         }
       }
     
-      const result = {
+      return {
         ...universeData,
         membershipStatus,
         userRole,
         isMember: membershipStatus === 'member'
       };
-
-      return result;
     } catch (error) {
       console.error('Error fetching universe details:', error);
       throw error;
@@ -597,29 +595,32 @@ export class UniverseService {
     // Name-Eindeutigkeit prüfen
     static async checkUniverseNameExists(name: string, excludeId?: string): Promise<boolean> {
       try {
-        // ✅ TypeScript-sichere Implementierung
         if (excludeId) {
-          // Wenn excludeId vorhanden, beide Bedingungen kombinieren
           const existing = await db
             .select()
             .from(universesTable)
             .where(
               and(
                 eq(universesTable.name, name.trim()),
-                not(eq(universesTable.id, excludeId))
+                not(eq(universesTable.id, excludeId)),
+                eq(universesTable.isDeleted, false) // ✅ Nur aktive Universes prüfen
               )
             )
             .limit(1);
           
           return existing.length > 0;
         } else {
-          // Wenn keine excludeId, nur Name prüfen
           const existing = await db
             .select()
             .from(universesTable)
-            .where(eq(universesTable.name, name.trim()))
+            .where(
+              and(
+                eq(universesTable.name, name.trim()),
+                eq(universesTable.isDeleted, false) // ✅ Nur aktive Universes prüfen
+              )
+            )
             .limit(1);
-
+          
           return existing.length > 0;
         }
       } catch (error) {
@@ -650,7 +651,7 @@ export class UniverseService {
           throw new Error('Only the creator can delete this universe');
         }
       
-        // Soft Delete
+        // ✅ Soft Delete - Name wird durch isDeleted wieder frei
         await db
           .update(universesTable)
           .set({

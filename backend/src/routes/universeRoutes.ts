@@ -92,19 +92,17 @@ router.delete(
   leaveUniverse
 );
 
-// Universe löschen (nur für Creator)
+// Universe löschen (nur für Owner)
 router.delete(
   '/:universeSlug', 
   authenticateToken, 
-  universeSlugValidation, 
   deleteUniverse
 );
 
-// Eigentümerschaft übertragen (nur für Creator)
+// Eigentümerschaft übertragen (nur für Owner)
 router.post(
   '/:universeSlug/transfer-ownership', 
   authenticateToken, 
-  universeSlugValidation, 
   transferOwnership
 );
 
