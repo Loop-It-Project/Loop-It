@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Globe, Lock, Users, CheckCircle, Settings } from 'lucide-react';
 import FeedService from '../services/feedServices';
 import useEscapeKey from '../hooks/useEscapeKey';

@@ -42,11 +42,33 @@ export const leaveUniverse = async (req: AuthRequest, res: Response): Promise<vo
 
     const result = await UniverseService.leaveUniverse(userId, universeSlug);
     
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      ...result
+    });
   } catch (error) {
     console.error('Leave universe error:', error);
     const message = error instanceof Error ? error.message : 'Failed to leave universe';
-    res.status(400).json({ error: message });
+    
+    // ✅ Detaillierte Error-Responses
+    if (message.includes('creator cannot leave')) {
+      res.status(400).json({ 
+        success: false,
+        error: message,
+        errorCode: 'CREATOR_CANNOT_LEAVE'
+      });
+    } else if (message.includes('Not a member')) {
+      res.status(404).json({ 
+        success: false,
+        error: message,
+        errorCode: 'NOT_A_MEMBER'
+      });
+    } else {
+      res.status(400).json({ 
+        success: false,
+        error: message 
+      });
+    }
   }
 };
 

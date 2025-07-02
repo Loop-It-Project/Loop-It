@@ -67,7 +67,14 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
     setActionLoading(true);
     try {
       if (universe.isMember) {
+        // User is Owner and cannot Leave as Owner if correctly set
+        if (isOwner) {
+          alert('Als Creator/Owner kannst du das Universe nicht verlassen. Übertrage zuerst die Eigentümerschaft oder lösche das Universe.');
+          return;
+        }
+
         const result = await FeedService.leaveUniverse(universeSlug);
+
         if (result.success) {
           setUniverse(prev => ({
             ...prev,
@@ -76,7 +83,11 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
             memberCount: prev.memberCount - 1
           }));
         } else {
-          throw new Error(result.error || 'Failed to leave universe');
+          if (result.errorCode === 'CREATOR_CANNOT_LEAVE') {
+            alert('Als Creator/Owner kannst du das Universe nicht verlassen. Nutze die Einstellungen um die Eigentümerschaft zu übertragen oder das Universe zu löschen.');
+          } else {
+            alert(result.error || 'Fehler beim Verlassen des Universes');
+          }
         }
       } else {
         const result = await FeedService.joinUniverse(universeSlug);
@@ -141,24 +152,32 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
 
   // Handle Transfer Ownership
   const handleTransferOwnership = async (newOwnerId) => {
-    if (!window.confirm('Möchtest du wirklich die Eigentümerschaft übertragen? Du wirst dann nur noch ein normales Mitglied sein.')) {
-      return;
-    }
-
     try {
-      const response = await FeedService.transferUniverseOwnership(universeSlug, newOwnerId);
-      if (response.success) {
-        alert('Eigentümerschaft wurde erfolgreich übertragen.');
+      setLoadingMembers(true);
+      
+      const result = await FeedService.transferUniverseOwnership(universeSlug, newOwnerId);
+      
+      if (result.success) {
+        // Nach erfolgreichem Transfer ist User kein Owner mehr
+        setUniverse(prev => ({
+          ...prev,
+          creatorId: newOwnerId,
+          userRole: 'member' // User wird zu normalem Member
+        }));
+        
         setShowTransferOwnership(false);
-        setShowSettings(false);
-        // Universe neu laden
+        alert('Eigentümerschaft erfolgreich übertragen!');
+        
+        // Seite neu laden um korrekte Permissions zu zeigen
         window.location.reload();
       } else {
-        throw new Error(response.error || 'Failed to transfer ownership');
+        alert(result.error || 'Fehler beim Übertragen der Eigentümerschaft');
       }
     } catch (error) {
-      console.error('❌ Error transferring ownership:', error);
-      alert('Fehler beim Übertragen der Eigentümerschaft: ' + error.message);
+      console.error('Transfer ownership error:', error);
+      alert('Fehler beim Übertragen der Eigentümerschaft');
+    } finally {
+      setLoadingMembers(false);
     }
   };
 

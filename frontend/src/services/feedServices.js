@@ -138,15 +138,25 @@ class FeedService {
           headers: this.getAuthHeaders(),
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    
+      const data = await response.json();
+    
+      if (response.ok) {
+        return { success: true, ...data };
+      } else {
+        // ✅ Erweiterte Error-Information weiterleiten
+        return { 
+          success: false, 
+          error: data.error || 'Failed to leave universe',
+          errorCode: data.errorCode || null
+        };
       }
-
-      return await response.json();
     } catch (error) {
       console.error('Error leaving universe:', error);
-      throw error;
+      return { 
+        success: false, 
+        error: 'Network error' 
+      };
     }
   }
 
@@ -385,9 +395,9 @@ class FeedService {
           body: JSON.stringify({ newOwnerId })
         }
       );
-    
+
       const data = await response.json();
-      
+
       if (response.ok) {
         return { success: true, data };
       } else {

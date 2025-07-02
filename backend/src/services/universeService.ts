@@ -178,7 +178,7 @@ export class UniverseService {
 
       // Creator kann nicht verlassen (außer er überträgt ownership)
       if (role === 'creator') {
-        throw new Error('Universe creator cannot leave. Please transfer ownership first.');
+        throw new Error('Universe creator cannot leave. Please transfer ownership first or delete the universe.');
       }
 
       // Membership entfernen
