@@ -22,6 +22,10 @@ COPY package*.json ./
 COPY drizzle.config.ts ./
 COPY entrypoint.sh ./
 
+# FIX: Konvertiere Windows Line-Endings zu Unix
+RUN sed -i 's/\r$//' entrypoint.sh
+
+# Make executable
 RUN chmod +x entrypoint.sh
 
 EXPOSE 3000

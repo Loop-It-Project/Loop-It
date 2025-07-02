@@ -18,9 +18,6 @@ build
 README.md
 .eslintrc*
 .prettierrc*
-vite.config.*
-tailwind.config.*
-postcss.config.*
 
 # IDE files
 .vscode/
