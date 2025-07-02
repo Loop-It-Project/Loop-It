@@ -4,6 +4,7 @@ import Feed from './feed/Feed';
 import FeedService from '../services/feedServices';
 import CreateUniverse from './CreateUniverse';
 import CreatePost from './CreatePost';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const Dashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('feed');
@@ -14,6 +15,12 @@ const Dashboard = ({ user, onLogout, onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // ESC-Key Handler für Suchergebnisse
+  useEscapeKey(() => {
+    setShowSearchResults(false);
+    setSearchQuery('');
+  }, showSearchResults);
 
 // User's Universes laden für Sidebar
   useEffect(() => {
@@ -63,17 +70,27 @@ const Dashboard = ({ user, onLogout, onNavigate }) => {
     loadUserUniverses();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    onLogout();
-  };
+  // ESC-Key Handler für CreatePost Modal
+  useEscapeKey(() => {
+    if (showSearchResults) {
+      setShowSearchResults(false);
+      setSearchQuery('');
+    }
+    if (showCreateUniverse) {
+      setShowCreateUniverse(false);
+    }
+    if (showCreatePost) {
+      setShowCreatePost(false);
+    }
+  }, showSearchResults || showCreateUniverse || showCreatePost);
 
+  // ESC-Key Handler für CreatePost Modal
   const handleUniverseClick = (universeSlug) => {
     // Navigate to universe page
     onNavigate('universe', { universeSlug });
   };
 
+  // ESC-Key Handler für Hashtag Click
   const handleHashtagClick = (universeSlug, originalHashtag) => {
     onNavigate('universe', { 
       universeSlug, 
@@ -218,7 +235,7 @@ const handleUniverseCreated = async (newUniverse) => {
               </button>
               
               <button 
-                onClick={handleLogout}
+                onClick={onLogout}
                 className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
               >
                 <LogOut size={16} />

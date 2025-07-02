@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Image, Hash, Globe, Lock, Send, X } from 'lucide-react';
 import FeedService from '../../services/feedServices';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
 const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,16 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
   const [loadingUniverses, setLoadingUniverses] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+
+  // Close modal on Escape key press
+  // This effect listens for the Escape key and closes the composer when pressed
+  // It cleans up the event listener on component unmount
+  useEscapeKey(() => {
+    if (isExpanded) {
+      setIsExpanded(false);
+      setErrors({});
+    }
+  }, isExpanded);
 
   // Lade User's Universes (sowohl erstellte als auch beigetretene)
   useEffect(() => {

@@ -9,11 +9,15 @@ import {
   Hash
 } from 'lucide-react';
 import HashtagService from '../../services/hashtagService';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
 const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete }) => {
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+  // Escape Key Handler:
+  useEscapeKey(() => setShowMoreMenu(false), showMoreMenu);
 
   // Debug: Schaue was im Post-Objekt steht
   console.log('Post data in PostCard:', post);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X } from 'lucide-react';
 import Feed from './feed/Feed';
 import FeedService from '../services/feedServices';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const UniversePage = ({ universeSlug, onNavigate, user }) => {
   const [universe, setUniverse] = useState(null);
@@ -50,19 +51,14 @@ const UniversePage = ({ universeSlug, onNavigate, user }) => {
   }, [universeSlug, user?.id]);
 
   // Handle Escape key to close settings or transfer ownership
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setShowSettings(false);
-        setShowTransferOwnership(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
+  useEscapeKey(() => {
+    if (showSettings) {
+      setShowSettings(false);
+    }
+    if (showTransferOwnership) {
+      setShowTransferOwnership(false);
+    }
+  }, showSettings || showTransferOwnership);
 
   // Handle Join/Leave Universe
   const handleJoinLeave = async () => {

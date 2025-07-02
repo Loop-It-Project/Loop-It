@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Globe, Lock, Users, CheckCircle, Settings } from 'lucide-react';
 import FeedService from '../services/feedServices';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const CreateUniverse = ({ onClose, onUniverseCreated }) => {
   const [formData, setFormData] = useState({
@@ -37,6 +38,10 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
     { value: 'other', label: 'Andere' }
   ];
 
+  // Escape key handler to close the modal
+  useEscapeKey(() => onClose(), true);
+
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -50,6 +55,7 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
     }
   };
 
+  // Add and remove rules
   const addRule = () => {
     if (ruleText.trim()) {
       setFormData(prev => ({
