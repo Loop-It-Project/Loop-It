@@ -71,6 +71,14 @@ function App() {
               </PublicRoute>
             } 
           />
+          <Route 
+            path="/hobbies"
+            element={
+              <PublicRoute user={user}>
+                <Hobbies />
+              </PublicRoute>
+            }
+          />
 
           {/* Protected Routes - nur für eingeloggte User */}
           <Route 
