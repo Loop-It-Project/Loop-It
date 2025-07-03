@@ -151,6 +151,13 @@ export class PostService {
             name: universe[0].name,
             slug: universe[0].slug
           },
+          // Legacy-Felder für Rückwärtskompatibilität
+          authorName: author[0].displayName || author[0].username,
+          authorUsername: author[0].username,
+          authorDisplayName: author[0].displayName,
+          authorAvatar: profile.length > 0 ? profile[0].avatarId : null,
+          universeName: universe[0].name,
+          universeSlug: universe[0].slug,
           // Frontend-spezifische Felder
           isLikedByUser: false,
           timeAgo: 'Gerade eben'

@@ -9,12 +9,22 @@ import {
   Hash
 } from 'lucide-react';
 import HashtagService from '../../services/hashtagService';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
-const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment }) => {
+const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete }) => {
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
+  // Escape Key Handler:
+  useEscapeKey(() => setShowMoreMenu(false), showMoreMenu);
 
+  // Debug: Schaue was im Post-Objekt steht
+  console.log('Post data in PostCard:', post);
+
+  // Like Handler:
+  // Hier wird der Like-Status geändert und die Anzahl aktualisiert
+  // Bei Fehlern wird der Status revertiert
   const handleLike = async () => {
     try {
       const newLikedState = !isLiked;
@@ -69,6 +79,32 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment }) 
       }
     };
 
+    // Delete Post Handler:
+    const handleDeletePost = async () => {
+      if (!window.confirm('Möchtest du diesen Post wirklich löschen?')) {
+        return;
+      }
+
+      try {
+        if (onDelete) {
+            await onDelete(post.id);
+        } else {
+            console.error('onDelete handler is not provided');
+            alert('Delete-Funktion ist nicht verfügbar');
+        }
+      } catch (error) {
+        console.error('Error deleting post:', error);
+        alert('Fehler beim Löschen des Posts');
+      } finally {
+        setShowMoreMenu(false);
+      }
+    };
+
+    const authorName = post.author?.displayName || post.author?.username || post.authorDisplayName || post.authorUsername || 'Unbekannt';
+    const authorUsername = post.author?.username || post.authorUsername || 'unknown';
+    const universeName = post.universe?.name || post.universeName || 'Unbekannt';
+    const authorAvatar = post.author?.profileImage || post.authorAvatar;
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4 hover:shadow-md transition-shadow">
       {/* Header */}
@@ -76,10 +112,10 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment }) 
         <div className="flex items-center space-x-3">
           {/* Avatar */}
           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-            {post.authorAvatar ? (
+            {authorAvatar ? (
               <img 
-                src={`/api/media/${post.authorAvatar}`} 
-                alt={post.authorName}
+                src={`/api/media/${authorAvatar}`} 
+                alt={authorName}
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
@@ -91,21 +127,21 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment }) 
           <div>
             <div className="flex items-center space-x-2">
               <h3 className="font-semibold text-gray-900">
-                {post.authorName || post.authorUsername}
+                {authorName || authorUsername}
               </h3>
-              <span className="text-gray-500 text-sm">@{post.authorUsername}</span>
+              <span className="text-gray-500 text-sm">@{authorUsername}</span>
             </div>
             
             {/* Universe & Time */}
             <div className="flex items-center space-x-2 text-sm text-gray-500">
-              {post.universeName && (
+              {universeName && (
                 <>
                   <button
                     onClick={handleUniverseClick}
                     className="flex items-center space-x-1 hover:text-purple-600 transition-colors"
                   >
                     <Hash size={14} />
-                    <span>{post.universeName}</span>
+                    <span>{universeName}</span>
                   </button>
                   <span>•</span>
                 </>
@@ -119,9 +155,33 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment }) 
         </div>
         
         {/* More Options */}
-        <button className="text-gray-400 hover:text-gray-600 transition-colors">
-          <MoreHorizontal size={20} />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+          >
+            <MoreHorizontal size={20} />
+          </button>
+
+          {/* Dropdown Menu */}
+          {showMoreMenu && (
+            <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-[120px] z-10">
+              <button
+                onClick={handleDeletePost}
+                className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm"
+              >
+                Post löschen
+              </button>
+              {/* Weitere Optionen können hier hinzugefügt werden */}
+              <button
+                onClick={() => setShowMoreMenu(false)}
+                className="w-full px-4 py-2 text-left text-gray-600 hover:bg-gray-50 transition-colors text-sm"
+              >
+                Abbrechen
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -199,6 +259,14 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment }) 
           </button>
         </div>
       </div>
+
+      {/* Click away to close menu */}
+      {showMoreMenu && (
+        <div 
+          className="fixed inset-0 z-5" 
+          onClick={() => setShowMoreMenu(false)}
+        />
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Globe, Lock, Users, CheckCircle, Settings } from 'lucide-react';
 import FeedService from '../services/feedServices';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const CreateUniverse = ({ onClose, onUniverseCreated }) => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,8 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [ruleText, setRuleText] = useState('');
+  const [nameCheckLoading, setNameCheckLoading] = useState(false);
+  const [nameAvailable, setNameAvailable] = useState(null);
 
   const categories = [
     { value: 'technology', label: 'Technologie' },
@@ -35,6 +38,10 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
     { value: 'other', label: 'Andere' }
   ];
 
+  // Escape key handler to close the modal
+  useEscapeKey(() => onClose(), true);
+
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -48,6 +55,7 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
     }
   };
 
+  // Add and remove rules
   const addRule = () => {
     if (ruleText.trim()) {
       setFormData(prev => ({
@@ -64,6 +72,37 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
       rules: prev.rules.filter(rule => rule.id !== ruleId)
     }));
   };
+
+  // Name-Eindeutigkeit prüfen
+  const checkNameAvailability = useCallback(async (name) => {
+    if (!name || name.length < 3) {
+      setNameAvailable(null);
+      return;
+    }
+
+    setNameCheckLoading(true);
+    try {
+      const response = await FeedService.checkUniverseName(name);
+      if (response.success) {
+        setNameAvailable(response.data.available);
+      }
+    } catch (error) {
+      console.error('Error checking name:', error);
+    } finally {
+      setNameCheckLoading(false);
+    }
+  }, []);
+
+  // Debounced Name Check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.name) {
+        checkNameAvailability(formData.name);
+      }
+    }, 500);
+  
+    return () => clearTimeout(timer);
+  }, [formData.name, checkNameAvailability]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -142,18 +181,37 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Universe-Name *
               </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="z.B. React Entwickler Deutschland"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.name ? 'border-red-500' : nameAvailable === false ? 'border-red-500' : nameAvailable === true ? 'border-green-500' : 'border-gray-300'
+                  }`}
+                  placeholder="z.B. React Entwickler Deutschland"
+                />
+
+                {/* Loading/Status Indicator */}
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  {nameCheckLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  ) : nameAvailable === true ? (
+                    <div className="text-green-600">✓</div>
+                  ) : nameAvailable === false ? (
+                    <div className="text-red-600">✗</div>
+                  ) : null}
+                </div>
+              </div>
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+              {nameAvailable === false && !errors.name && (
+                <p className="text-red-500 text-sm mt-1">Dieser Name ist bereits vergeben</p>
+              )}
+              {nameAvailable === true && (
+                <p className="text-green-500 text-sm mt-1">Name ist verfügbar</p>
+              )}
             </div>
 
             <div>

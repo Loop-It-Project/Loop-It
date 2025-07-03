@@ -1,5 +1,5 @@
 {
-  "id": "9812c2cd-9e05-4766-85f3-2bcfbe5cbb1a",
+  "id": "e280abd2-f7f3-499b-b45d-fc6b390c90ff",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -23,9 +23,10 @@
         },
         "createdAt": {
           "name": "createdAt",
-          "type": "integer",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "creatorId": {
           "name": "creatorId",
@@ -35,7 +36,7 @@
         },
         "pictureId": {
           "name": "pictureId",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
@@ -814,9 +815,10 @@
         },
         "postedAt": {
           "name": "postedAt",
-          "type": "integer",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "userId": {
           "name": "userId",
@@ -1469,36 +1471,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "posts_tags_idx": {
-          "name": "posts_tags_idx",
-          "columns": [
-            {
-              "expression": "tags",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "posts_hashtags_idx": {
-          "name": "posts_hashtags_idx",
-          "columns": [
-            {
-              "expression": "hashtags",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1649,23 +1621,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "profiles_interests_idx": {
-          "name": "profiles_interests_idx",
-          "columns": [
-            {
-              "expression": "interests",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "profiles_userId_users_id_fk": {
           "name": "profiles_userId_users_id_fk",
@@ -2446,21 +2402,6 @@
           "columns": [
             {
               "expression": "authorId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "search_location_idx": {
-          "name": "search_location_idx",
-          "columns": [
-            {
-              "expression": "location",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3374,6 +3315,13 @@
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
@@ -3599,6 +3547,13 @@
           "notNull": true,
           "default": false
         },
+        "isDeleted": {
+          "name": "isDeleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "createdAt": {
           "name": "createdAt",
           "type": "timestamp",
@@ -3650,21 +3605,6 @@
           "columns": [
             {
               "expression": "category",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "universes_tags_idx": {
-          "name": "universes_tags_idx",
-          "columns": [
-            {
-              "expression": "tags",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4577,21 +4517,6 @@
           "columns": [
             {
               "expression": "username",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "users_location_idx": {
-          "name": "users_location_idx",
-          "columns": [
-            {
-              "expression": "location",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

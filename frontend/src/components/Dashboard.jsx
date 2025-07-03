@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
 import Feed from './feed/Feed';
 import FeedService from '../services/feedServices';
 import CreateUniverse from './CreateUniverse';
 import CreatePost from './CreatePost';
+import useEscapeKey from '../hooks/useEscapeKey';
 
-const Dashboard = ({ user, onLogout, onNavigate }) => {
+// Dashboard Component
+// Zeigt den Haupt-Dashboard-Bereich mit Feed, Universes und Navigation
+const Dashboard = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('feed');
   const [userUniverses, setUserUniverses] = useState([]);
   const [loadingUniverses, setLoadingUniverses] = useState(true);
@@ -15,7 +20,21 @@ const Dashboard = ({ user, onLogout, onNavigate }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
-// User's Universes laden für Sidebar
+  // ESC-Key Handler für Suchergebnisse
+  useEscapeKey(() => {
+    if (showSearchResults) {
+      setShowSearchResults(false);
+      setSearchQuery('');
+    }
+    if (showCreateUniverse) {
+      setShowCreateUniverse(false);
+    }
+    if (showCreatePost) {
+      setShowCreatePost(false);
+    }
+  }, showSearchResults || showCreateUniverse || showCreatePost);
+
+  // User's Universes laden für Sidebar
   useEffect(() => {
     const loadUserUniverses = async () => {
       try {
@@ -63,46 +82,48 @@ const Dashboard = ({ user, onLogout, onNavigate }) => {
     loadUserUniverses();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    onLogout();
-  };
-
-  const handleUniverseClick = (universeSlug) => {
-    // Navigate to universe page
-    onNavigate('universe', { universeSlug });
-  };
-
-  const handleHashtagClick = (universeSlug, originalHashtag) => {
-    onNavigate('universe', { 
-      universeSlug, 
-      fromHashtag: originalHashtag 
-    });
-  };
-
-const handleUniverseCreated = async (newUniverse) => {
-  // Universe zur Liste hinzufügen
-  setUserUniverses(prev => [newUniverse, ...prev]);
-  
-  // Modal schließen
-  setShowCreateUniverse(false);
-  
-  // Kurz warten und dann neu laden
-  setTimeout(async () => {
-    try {
-      const response = await FeedService.getUserUniverses(1, 10);
-      if (response.success) {
-        setUserUniverses(response.data.universes || []);
-      }
-    } catch (error) {
-      console.error('Error reloading user universes:', error);
+  // ESC-Key Handler für CreatePost Modal
+  useEscapeKey(() => {
+    if (showSearchResults) {
+      setShowSearchResults(false);
+      setSearchQuery('');
     }
-  }, 500);
+    if (showCreateUniverse) {
+      setShowCreateUniverse(false);
+    }
+    if (showCreatePost) {
+      setShowCreatePost(false);
+    }
+  }, showSearchResults || showCreateUniverse || showCreatePost);
 
-  // Zur neuen Universe-Seite navigieren
-  onNavigate('universe', { universeSlug: newUniverse.slug });
-};
+  // ESC-Key Handler für CreatePost Modal
+  const handleUniverseClick = (universeSlug) => {
+    navigate(`/universe/${universeSlug}`);
+  };
+
+  // ESC-Key Handler für Hashtag Click
+  const handleHashtagClick = (universeSlug, originalHashtag) => {
+    navigate(`/universe/${universeSlug}?hashtag=${originalHashtag}`);
+  };
+
+  const handleUniverseCreated = async (newUniverse) => {
+    setUserUniverses(prev => [newUniverse, ...prev]);
+    setShowCreateUniverse(false);
+
+    setTimeout(async () => {
+      try {
+        const response = await FeedService.getUserUniverses(1, 10);
+        if (response.success) {
+          setUserUniverses(response.data.universes || []);
+        }
+      } catch (error) {
+        console.error('Error reloading user universes:', error);
+      }
+    }, 500);
+
+    // Router Navigation
+    navigate(`/universe/${newUniverse.slug}`);
+  };
 
   // Search Handler
   const handleSearch = async (query) => {
@@ -121,6 +142,11 @@ const handleUniverseCreated = async (newUniverse) => {
     } catch (error) {
       console.error('Search error:', error);
     }
+  };
+
+  const handleLogout = () => {
+    onLogout();
+    navigate('/');
   };
 
   const tabs = [
@@ -205,6 +231,7 @@ const handleUniverseCreated = async (newUniverse) => {
                 <span className="text-gray-700">Hallo, {user.displayName || user.username}!</span>
               </div>
 
+              {/* Create Universe Button */}
               <button
                 onClick={() => setShowCreateUniverse(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -213,10 +240,12 @@ const handleUniverseCreated = async (newUniverse) => {
                 <span>Universe</span>
               </button>
               
+              {/* Settings Button */}
               <button className="p-2 text-gray-400 hover:text-gray-600 transition">
                 <Settings size={20} />
               </button>
               
+              {/* Logout Button */}
               <button 
                 onClick={handleLogout}
                 className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
@@ -296,7 +325,7 @@ const handleUniverseCreated = async (newUniverse) => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {universe.name}
+                          {universe.slug} {/* ✅ GEÄNDERT: Slug statt Name */}
                         </p>
                         <p className="text-xs text-gray-500">
                           {universe.memberCount} Mitglieder

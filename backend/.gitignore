@@ -33,5 +33,5 @@ dist-ssr
 *.db
 *.sqlite
 
-drizzle
+drizzle/*
 drizzle-kit
