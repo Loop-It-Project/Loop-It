@@ -52,7 +52,7 @@ done
 if [ "$SQL_EXECUTED" = false ]; then
     echo "Keine SQL-Dateien gefunden oder ausgeführt!"
     echo "4. Fallback: Verwende drizzle-kit push..."
-    npm run db:push
+    npm run db:push -- --force
     if [ $? -eq 0 ]; then
         echo "✓ drizzle-kit push erfolgreich ausgeführt"
     else
