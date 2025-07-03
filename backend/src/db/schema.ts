@@ -421,6 +421,7 @@ export const universesTable = pgTable("universes", {
   isVerified: boolean().default(false).notNull(),
   isActive: boolean().default(true).notNull(),
   isFeatured: boolean().default(false).notNull(),
+  isDeleted: boolean().default(false).notNull(),
   
   createdAt: timestamp().defaultNow().notNull(),
   updatedAt: timestamp().defaultNow().notNull(),
@@ -447,6 +448,9 @@ export const universeMembersTable = pgTable("universe_members", {
   notificationsEnabled: boolean().default(true).notNull(),
   nickname: varchar({ length: 50 }), // Universe-specific nickname
   customRole: varchar({ length: 50 }), // Custom role title
+
+  // Timestamp für Updates
+  updatedAt: timestamp().defaultNow().notNull(),
   
 }, (table) => ({
   universeUserUnique: unique().on(table.universeId, table.userId),
@@ -478,9 +482,9 @@ export const universeJoinRequestsTable = pgTable("universe_join_requests", {
 export const chatRoomsTable = pgTable("chat_rooms", {
     id: uuid().primaryKey().defaultRandom(),
     name: varchar({ length: 255 }).notNull(), // Name of the chat room
-    createdAt: integer().notNull(), // Assuming created at is stored as a timestamp in milliseconds
+    createdAt: timestamp().defaultNow().notNull(), // Assuming created at is stored as a timestamp in milliseconds
     creatorId: uuid().notNull(), // Foreign key to users table, assuming the creator is a user
-    pictureId: integer(), // Foreign key to user pictures table, optional
+    pictureId: uuid(), // Foreign key to user pictures table, optional
     description: varchar({ length: 1000 }), // Assuming a reasonable limit for room description
     universeId: uuid().notNull(), // Foreign key to universes table
 }, (table) => ({
@@ -499,7 +503,7 @@ export const messagesInChatRoomsTable = pgTable("messages_in_chat_rooms", {
     id: uuid().primaryKey().defaultRandom(),
     chatRoomId: uuid().notNull(), // Foreign key to chat rooms table
     message: varchar({ length: 1000 }), // Assuming a reasonable limit for chat room messages
-    postedAt: integer().notNull(), // Assuming posted at is stored as a timestamp in milliseconds
+    postedAt: timestamp().defaultNow().notNull(), // Assuming posted at is stored as a timestamp in milliseconds
     userId: uuid().notNull(), // Foreign key to users table
 });
 

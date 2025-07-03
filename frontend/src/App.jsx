@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import UniversePage from './components/UniversePage';
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 
 function App() {
-  const [currentView, setCurrentView] = useState('landing');
-  const [viewData, setViewData] = useState({}); // Für zusätzliche Navigation-Daten
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,25 +19,18 @@ function App() {
     
     if (token && savedUser) {
       setUser(JSON.parse(savedUser));
-      setCurrentView('dashboard');
     }
     setIsLoading(false);
   }, []);
 
-  const handleNavigate = (view, data = {}) => {
-    setCurrentView(view);
-    setViewData(data);
-  };
-
   const handleLogin = (userData) => {
     setUser(userData);
-    setCurrentView('dashboard');
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
-    setViewData({});
-    setCurrentView('landing');
   };
 
   if (isLoading) {
@@ -48,31 +42,61 @@ function App() {
   }
 
   return (
-    <div className="App">
-      {currentView === 'landing' && (
-        <LandingPage onNavigate={handleNavigate} />
-      )}
-      {currentView === 'login' && (
-        <Login onNavigate={handleNavigate} onLogin={handleLogin} />
-      )}
-      {currentView === 'register' && (
-        <Register onNavigate={handleNavigate} onLogin={handleLogin} />
-      )}
-      {currentView === 'dashboard' && user && (
-        <Dashboard 
-          user={user} 
-          onLogout={handleLogout} 
-          onNavigate={handleNavigate}
-        />
-      )}
-      {currentView === 'universe' && user && (
-        <UniversePage
-          universeSlug={viewData.universeSlug}
-          user={user}
-          onNavigate={handleNavigate}
-        />
-      )}
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          {/* Public Routes - nur für nicht-eingeloggte User */}
+          <Route 
+            path="/" 
+            element={
+              <PublicRoute user={user}>
+                <LandingPage />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/login" 
+            element={
+              <PublicRoute user={user}>
+                <Login onLogin={handleLogin} />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/register" 
+            element={
+              <PublicRoute user={user}>
+                <Register onLogin={handleLogin} />
+              </PublicRoute>
+            } 
+          />
+
+          {/* Protected Routes - nur für eingeloggte User */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute user={user}>
+                <Dashboard user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/universe/:universeSlug" 
+            element={
+              <ProtectedRoute user={user}>
+                <UniversePage user={user} />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Fallback Route */}
+          <Route 
+            path="*" 
+            element={<Navigate to={user ? "/dashboard" : "/"} replace />} 
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
