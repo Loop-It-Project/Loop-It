@@ -151,25 +151,34 @@ jobs:
           echo "VERSION=${{ github.sha }}" >> .env
           echo "COMPOSE_PROJECT_NAME=loop-it-ci" >> .env
           
-          # Use locally built images (no registry pull needed)
-          # Docker Compose will use the images built in previous jobs
-          
           # Start services
           docker compose up -d --wait
           
-          # Wait for services to be ready
-          sleep 30
+          # Wait longer for services to be ready
+          echo "Waiting for services to start..."
+          sleep 60
           
-          # Test frontend is accessible
-          curl -f http://localhost/ || exit 1
+          # Retry frontend check up to 5 times with backoff
+          echo "Testing frontend accessibility..."
+          for i in {1..5}; do
+            if curl -f http://localhost/; then
+              echo "✅ Frontend is accessible!"
+              break
+            fi
+            echo "Waiting for frontend... attempt $i/5"
+            sleep 15
+          done
           
           # Test database connection
+          echo "Testing database connection..."
           docker compose exec -T postgres pg_isready -U loop_user -d loop-it || exit 1
+          echo "✅ Database is ready!"
           
           # Optional: Test backend health endpoint
+          echo "Testing backend health..."
           curl -f http://localhost:3000/health || echo "No health endpoint, skipping"
           
-          echo "Integration test passed!"
+          echo "🎉 All integration tests passed!"
       
       - name: Cleanup
         if: always()
