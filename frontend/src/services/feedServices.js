@@ -11,10 +11,10 @@ class FeedService {
   }
 
   // Personal Feed abrufen
-  static async getPersonalFeed(page = 1, limit = 20) {
+  static async getPersonalFeed(page = 1, limit = 20, sortBy = 'newest') {
     try {
       const response = await fetch(
-        `${API_URL}/api/feed/personal?page=${page}&limit=${limit}`,
+        `${API_URL}/api/feed/personal?page=${page}&limit=${limit}&sortBy=${sortBy}`,
         {
           method: 'GET',
           headers: this.getAuthHeaders(),
@@ -33,10 +33,10 @@ class FeedService {
   }
 
   // Universe Feed abrufen
-  static async getUniverseFeed(universeSlug, page = 1, limit = 20) {
+  static async getUniverseFeed(universeSlug, page = 1, limit = 20, sortBy = 'newest') {
     try {
       const response = await fetch(
-        `${API_URL}/api/feed/universe/${universeSlug}?page=${page}&limit=${limit}`,
+        `${API_URL}/api/feed/universe/${universeSlug}?page=${page}&limit=${limit}&sortBy=${sortBy}`,
         {
           method: 'GET',
           headers: {

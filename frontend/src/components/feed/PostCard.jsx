@@ -15,6 +15,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [hashtagLoading, setHashtagLoading] = useState(null);
 
   // Escape Key Handler:
   useEscapeKey(() => setShowMoreMenu(false), showMoreMenu);
@@ -60,24 +61,32 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     }
   };
 
-    // Hashtag Click Handler:
-    const handleHashtagClick = async (hashtag) => {
-      if (!onHashtagClick) return;
+  // Hashtag Click Handler mit besserer Fehlerbehandlung
+  const handleHashtagClick = async (hashtag) => {
+    if (!onHashtagClick) return;
 
-      try {
-        const result = await HashtagService.findUniverseByHashtag(hashtag);
+    try {
+      const result = await HashtagService.findUniverseByHashtag(hashtag);
 
-        if (result.success) {
-          // Navigiere zu Universe
-          onHashtagClick(result.universe.slug, hashtag);
-        } else {
-          // Hashtag existiert nicht
-          alert(`Kein Universe für #${hashtag} gefunden`);
+      if (result.success) {
+        // Navigiere zu Universe
+        onHashtagClick(result.universe.slug, hashtag);
+      } else {
+        // Bessere Fehlerbehandlung
+        console.log(`Kein Universe für #${hashtag} gefunden`);
+        
+        // Optional: User benachrichtigen
+        if (window.confirm(`Kein Universe für #${hashtag} gefunden. Möchtest du ein neues Universe erstellen?`)) {
+          // Navigiere zu Universe-Erstellung mit vorausgefülltem Hashtag
+          // Das müsste in der Parent-Komponente implementiert werden
+          console.log('Navigate to create universe with hashtag:', hashtag);
         }
-      } catch (error) {
-        console.error('Error handling hashtag click:', error);
       }
-    };
+    } catch (error) {
+      console.error('Error handling hashtag click:', error);
+      alert('Fehler beim Suchen des Hashtags. Bitte versuche es später erneut.');
+    }
+  };
 
     // Delete Post Handler:
     const handleDeletePost = async () => {
@@ -208,20 +217,27 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           </div>
         )}
 
-        {/* Hashtags */}
-        {post.hashtags && post.hashtags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {post.hashtags.map((hashtag, index) => (
-              <button
-                key={index}
-                onClick={() => handleHashtagClick(hashtag)}
-                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors text-sm font-medium"
-              >
-                #{hashtag}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Hashtags mit Loading-State */}
+      {post.hashtags && post.hashtags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {post.hashtags.map((hashtag, index) => (
+            <button
+              key={index}
+              onClick={() => handleHashtagClick(hashtag)}
+              disabled={hashtagLoading === hashtag}
+              className={`text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors text-sm font-medium flex items-center space-x-1 ${
+                hashtagLoading === hashtag ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              title={`Zum #${hashtag} Universe`}
+            >
+              <span>#{hashtag}</span>
+              {hashtagLoading === hashtag && (
+                <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       </div>
 
       {/* Actions */}

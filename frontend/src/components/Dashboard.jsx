@@ -101,9 +101,12 @@ const Dashboard = ({ user, onLogout }) => {
     navigate(`/universe/${universeSlug}`);
   };
 
-  // ESC-Key Handler für Hashtag Click
-  const handleHashtagClick = (universeSlug, originalHashtag) => {
-    navigate(`/universe/${universeSlug}?hashtag=${originalHashtag}`);
+  // Hashtag Navigation
+  const handleHashtagClick = async (universeSlug, hashtag) => {
+    console.log(`Navigating to universe: ${universeSlug} for hashtag: #${hashtag}`);
+    
+    // Router-Navigation mit Hashtag-Parameter
+    navigate(`/universe/${universeSlug}?hashtag=${hashtag}`);
   };
 
   const handleUniverseCreated = async (newUniverse) => {
@@ -167,7 +170,7 @@ const Dashboard = ({ user, onLogout }) => {
               <h1 className="text-2xl font-bold text-purple-600">Loop-It</h1>
             </div>
             
-            {/* Search Bar - MITTIG */}
+            {/* Search Bar */}
             <div className="flex-1 max-w-md mx-8 relative">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />

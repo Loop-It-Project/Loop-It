@@ -6,11 +6,11 @@ import { eq, and } from 'drizzle-orm';
 export class FeedService {
   
   // Personal Feed mit Pagination
-  static async getPersonalFeed(userId: string, page = 1, limit = 20) {
+  static async getPersonalFeed(userId: string, page = 1, limit = 20, sortBy = 'newest') {
     const offset = (page - 1) * limit;
     
     try {
-      const posts = await getPersonalFeed(userId, limit, offset);
+      const posts = await getPersonalFeed(userId, limit, offset, sortBy); 
       
       return {
         posts,
@@ -27,11 +27,11 @@ export class FeedService {
   }
 
   // Universe Feed
-  static async getUniverseFeed(universeSlug: string, userId?: string, page = 1, limit = 20) {
+  static async getUniverseFeed(universeSlug: string, userId?: string, page = 1, limit = 20, sortBy = 'newest') {
     const offset = (page - 1) * limit;
     
     try {
-      const posts = await getUniverseFeed(universeSlug, userId, limit, offset);
+      const posts = await getUniverseFeed(universeSlug, userId, limit, offset, sortBy); // ✅ sortBy hinzugefügt
       
       // Check if user is member of this universe
       let isMember = false;

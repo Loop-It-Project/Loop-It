@@ -65,6 +65,13 @@ const UniversePage = ({ user }) => {
     }
   }, showSettings || showTransferOwnership);
 
+  // Hashtag Click Handler
+  const handleHashtagClick = async (clickedUniverseSlug, hashtag) => {
+    if (onHashtagClick) {
+      onHashtagClick(clickedUniverseSlug, hashtag);
+    }
+  };
+
   // Handle Join/Leave Universe
   const handleJoinLeave = async () => {
     if (!universe) return;
@@ -454,6 +461,7 @@ const UniversePage = ({ user }) => {
           universeSlug={universeSlug}
           fromHashtag={fromHashtag} // Optional: Hashtag Filter
           onUniverseClick={(slug) => navigate(`/universe/${slug}`)} // Router Navigation
+          onHashtagClick={handleHashtagClick} // Pass Hashtag Click Handler
         />
       </div>
     </div>
