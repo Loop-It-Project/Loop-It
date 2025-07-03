@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Loader } from 'lucide-react';
 import PostCard from './PostCard';
 import FeedService from '../../services/feedServices';
@@ -18,6 +18,7 @@ const Feed = ({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   // Feed laden
   const loadFeed = useCallback(async (pageNum = 1, isRefresh = false) => {
@@ -90,8 +91,40 @@ const Feed = ({
     }
   };
 
+  // Feed-Reload Funktion nach Post-Erstellung
+  const handleFeedReload = useCallback(async () => {
+    // console.log('🔄 Feed wird nach Post-Erstellung neu geladen...');
+    setIsCreatingPost(true);
+    try {
+      await loadFeed(1, true); // Seite 1, Refresh-Modus
+      // console.log('✅ Feed-Reload erfolgreich');
+    } catch (error) {
+      // console.error('❌ Feed-Reload Fehler:', error);
+    } finally {
+      setIsCreatingPost(false);
+    }
+  }, [loadFeed]);
+
+  // Fallback: Post manuell hinzufügen
   const handlePostCreated = (newPost) => {
+    // console.log('⚠️ Fallback: Post wird manuell hinzugefügt');
     setPosts(prev => [newPost, ...prev]);
+  };
+
+  const handleDeletePost = async (postId) => {
+    try {
+      const response = await FeedService.deletePost(postId);
+      
+      if (response.success) {
+        // Post aus der Liste entfernen
+        setPosts(prev => prev.filter(post => post.id !== postId));
+      } else {
+        throw new Error(response.error || 'Failed to delete post');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      throw error; // Re-throw für PostCard error handling
+    }
   };
 
   // Post Actions
@@ -137,7 +170,22 @@ const Feed = ({
     <div className="max-w-2xl mx-auto">
       {/* Post Composer - nur bei personal und universe feed */}
       {(type === 'personal' || type === 'universe') && (
-        <PostComposer onPostCreated={handlePostCreated} />
+      <PostComposer 
+        onPostCreated={handlePostCreated}    // Fallback
+        onFeedReload={handleFeedReload}      // Hauptmethode
+      />
+    )}
+
+      {/* Loading-Feedback anzeigen */}
+      {isCreatingPost && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+            <span className="text-blue-700 font-medium">
+              Post wird erstellt und Feed aktualisiert...
+            </span>
+          </div>
+        </div>
       )}
 
       {/* Header */}
@@ -159,7 +207,27 @@ const Feed = ({
       </div>
 
       {/* Posts */}
-      {posts.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center space-x-2 text-gray-500">
+            <Loader className="animate-spin" size={20} />
+            <span>Feed wird geladen...</span>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <div className="text-red-500 mb-4">
+            <p className="text-lg font-semibold">Fehler beim Laden des Feeds</p>
+            <p className="text-sm">{error}</p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Erneut versuchen
+          </button>
+        </div>
+      ) : posts.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-gray-500">
             <p className="text-lg font-medium mb-2">Keine Posts gefunden</p>
@@ -180,6 +248,7 @@ const Feed = ({
               onHashtagClick={onHashtagClick}
               onLike={handleLike}
               onComment={handleComment}
+              onDelete={handleDeletePost}
             />
           ))}
 

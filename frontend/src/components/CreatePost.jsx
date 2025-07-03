@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, } from 'react';
 import { X, Hash, Image, MapPin } from 'lucide-react';
+import FeedService from '../services/feedServices';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
   const [formData, setFormData] = useState({
@@ -13,6 +15,10 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Close modal on Escape key press
+  useEscapeKey(() => onClose(), true);
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     

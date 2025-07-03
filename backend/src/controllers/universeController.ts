@@ -6,6 +6,7 @@ interface AuthRequest extends Request {
   user?: { id: string; email: string };
 }
 
+// Universum beitreten
 export const joinUniverse = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -27,6 +28,7 @@ export const joinUniverse = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+// Universum verlassen
 export const leaveUniverse = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -40,14 +42,39 @@ export const leaveUniverse = async (req: AuthRequest, res: Response): Promise<vo
 
     const result = await UniverseService.leaveUniverse(userId, universeSlug);
     
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      ...result
+    });
   } catch (error) {
     console.error('Leave universe error:', error);
     const message = error instanceof Error ? error.message : 'Failed to leave universe';
-    res.status(400).json({ error: message });
+    
+    // ✅ Detaillierte Error-Responses
+    if (message.includes('creator cannot leave')) {
+      res.status(400).json({ 
+        success: false,
+        error: message,
+        errorCode: 'CREATOR_CANNOT_LEAVE'
+      });
+    } else if (message.includes('Not a member')) {
+      res.status(404).json({ 
+        success: false,
+        error: message,
+        errorCode: 'NOT_A_MEMBER'
+      });
+    } else {
+      res.status(400).json({ 
+        success: false,
+        error: message 
+      });
+    }
   }
 };
 
+// Universen des Nutzers abrufen
+// Diese Funktion gibt alle Universen zurück, denen der Nutzer beigetreten ist
+// oder die er erstellt hat. Die Ergebnisse werden paginiert.
 export const getUserUniverses = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -63,34 +90,38 @@ export const getUserUniverses = async (req: AuthRequest, res: Response): Promise
   }
 };
 
-export const getUniverseDetails = async (req: Request, res: Response): Promise<void> => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() });
-    return;
-  }
-
+// Details eines Universums abrufen
+// Diese Funktion gibt Details zu einem bestimmten Universum zurück, einschließlich
+// der Mitglieder, Beiträge und anderer relevanter Informationen.
+export const getUniverseDetails = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { universeSlug } = req.params;
-    const userId = (req as AuthRequest).user?.id; // Optional - kann auch ohne Login aufgerufen werden
+    const userId = req.user?.id; // Optional - falls User eingeloggt
 
-    const result = await UniverseService.getUniverseDetails(universeSlug, userId);
+    console.log('🔍 Getting universe details for:', universeSlug, 'User:', userId); // Debug
+
+    const universeDetails = await UniverseService.getUniverseDetails(universeSlug, userId);
     
-    res.status(200).json(result);
+    console.log('✅ Universe details retrieved:', universeDetails); // Debug
+    
+    res.status(200).json({
+      success: true,
+      data: universeDetails
+    });
   } catch (error) {
-    console.error('Get universe details error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch universe details';
-    res.status(404).json({ error: message });
+    console.error('❌ Get universe details error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to get universe details';
+    res.status(404).json({ 
+      success: false,
+      error: message 
+    });
   }
 };
 
-export const getUniverseMembers = async (req: Request, res: Response): Promise<void> => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() });
-    return;
-  }
-
+// Details eines Universums abrufen
+// Diese Funktion gibt Details zu einem bestimmten Universum zurück, einschließlich
+// der Mitglieder, Beiträge und anderer relevanter Informationen.
+export const getUniverseMembers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { universeSlug } = req.params;
     const page = parseInt(req.query.page as string) || 1;
@@ -98,13 +129,23 @@ export const getUniverseMembers = async (req: Request, res: Response): Promise<v
 
     const result = await UniverseService.getUniverseMembers(universeSlug, page, limit);
     
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      data: result
+    });
   } catch (error) {
     console.error('Get universe members error:', error);
-    res.status(500).json({ error: 'Failed to fetch universe members' });
+    const message = error instanceof Error ? error.message : 'Failed to get universe members';
+    res.status(400).json({ 
+      success: false,
+      error: message 
+    });
   }
 };
 
+// Universen entdecken
+// Diese Funktion ermöglicht es Nutzern, neue Universen zu entdecken.
+// Sie kann nach Kategorie gefiltert und paginiert werden.
 export const discoverUniverses = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).user?.id; // Optional
@@ -121,6 +162,9 @@ export const discoverUniverses = async (req: Request, res: Response): Promise<vo
   }
 };
 
+// Universum erstellen
+// Diese Funktion ermöglicht es Nutzern, ein neues Universum zu erstellen.
+// Die erforderlichen Felder werden im Request-Body übergeben.
 export const createUniverse = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -162,6 +206,81 @@ export const getOwnedUniverses = async (req: AuthRequest, res: Response): Promis
       success: false, 
       error: 'Failed to retrieve owned universes' 
     });
+  }
+};
+
+// Universe löschen (Soft Delete)
+export const deleteUniverse = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { universeSlug } = req.params;
+    const userId = req.user!.id;
+
+    const result = await UniverseService.deleteUniverse(userId, universeSlug);
+    
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Delete universe error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to delete universe';
+    res.status(400).json({ 
+      success: false,
+      error: message 
+    });
+  }
+};
+
+// Ownership übertragen
+export const transferOwnership = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { universeSlug } = req.params;
+    const { newOwnerId } = req.body;
+    const userId = req.user!.id;
+
+    if (!newOwnerId) {
+      res.status(400).json({ 
+        success: false,
+        error: 'New owner ID is required' 
+      });
+      return;
+    }
+
+    const result = await UniverseService.transferOwnership(userId, universeSlug, newOwnerId);
+    
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Transfer ownership error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to transfer ownership';
+    res.status(400).json({ 
+      success: false,
+      error: message 
+    });
+  }
+};
+
+// Name-Eindeutigkeit prüfen
+export const checkUniverseName = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.query;
+    
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ error: 'Name parameter is required' });
+      return;
+    }
+
+    const exists = await UniverseService.checkUniverseNameExists(name);
+    
+    res.status(200).json({
+      available: !exists,
+      exists
+    });
+  } catch (error) {
+    console.error('Check universe name error:', error);
+    res.status(500).json({ error: 'Failed to check universe name' });
   }
 };
 

@@ -1,20 +1,29 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth';
 import {
-    joinUniverse,
-    leaveUniverse,
-    getUserUniverses,
-    getUniverseDetails,
-    getUniverseMembers,
-    discoverUniverses,
-    universeSlugValidation,
-    paginationValidation,
-    createUniverse,
-    createUniverseValidation,
-    getOwnedUniverses
+  paginationValidation,
+  universeSlugValidation,
+  createUniverseValidation,
+  discoverUniverses, 
+  createUniverse, 
+  joinUniverse, 
+  leaveUniverse, 
+  getUserUniverses,
+  getOwnedUniverses,
+  getUniverseDetails,
+  getUniverseMembers,
+  deleteUniverse,
+  transferOwnership,
+  checkUniverseName
 } from '../controllers/universeController';
 
 const router = express.Router();
+
+// Name-Verfügbarkeit prüfen
+router.get(
+  '/check-name', 
+  checkUniverseName
+);
 
 // Universe Discovery (Public)
 router.get(
@@ -23,19 +32,40 @@ router.get(
   discoverUniverses
 );
 
-// Get Universe Details (Public, aber mit optionalem User Context)
+// User's eigene Universes
 router.get(
-  '/:universeSlug',
-  universeSlugValidation,
+    '/user/owned', 
+    authenticateToken, 
+    getOwnedUniverses
+);
+
+router.get(
+  '/user', 
+  authenticateToken, 
+  getUserUniverses
+);
+
+router.get(
+  '/:universeSlug/details',
+  authenticateToken, 
   getUniverseDetails
 );
 
 // Get Universe Members (Public)
 router.get(
   '/:universeSlug/members',
+  authenticateToken,
   universeSlugValidation,
   paginationValidation,
   getUniverseMembers
+);
+
+// POST /api/universes/
+router.post(
+  '/',
+  authenticateToken,
+  createUniverseValidation,
+  createUniverse
 );
 
 // User-specific Universe Routes (Authentication required)
@@ -62,19 +92,18 @@ router.delete(
   leaveUniverse
 );
 
-// POST /api/universes/
-router.post(
-  '/',
-  authenticateToken,
-  createUniverseValidation,
-  createUniverse
+// Universe löschen (nur für Owner)
+router.delete(
+  '/:universeSlug', 
+  authenticateToken, 
+  deleteUniverse
 );
 
-// User's eigene Universes
-router.get(
-    '/user/owned', 
-    authenticateToken, 
-    getOwnedUniverses
+// Eigentümerschaft übertragen (nur für Owner)
+router.post(
+  '/:universeSlug/transfer-ownership', 
+  authenticateToken, 
+  transferOwnership
 );
 
 export default router;

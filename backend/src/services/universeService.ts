@@ -6,7 +6,7 @@ import {
   usersTable,
   profilesTable 
 } from '../db/schema';
-import { eq, and, desc, sql, count } from 'drizzle-orm';
+import { eq, and, desc, sql, count, not } from 'drizzle-orm';
 
 export interface CreateUniverseData {
   name: string;
@@ -178,7 +178,7 @@ export class UniverseService {
 
       // Creator kann nicht verlassen (außer er überträgt ownership)
       if (role === 'creator') {
-        throw new Error('Universe creator cannot leave. Please transfer ownership first.');
+        throw new Error('Universe creator cannot leave. Please transfer ownership first or delete the universe.');
       }
 
       // Membership entfernen
@@ -243,7 +243,7 @@ export class UniverseService {
     }
   }
 
-  // Universe Details mit Membership Status
+  // Universe Details mit echten Daten
   static async getUniverseDetails(universeSlug: string, userId?: string) {
     try {
       const universeQuery = db
@@ -260,22 +260,30 @@ export class UniverseService {
           isPublic: universesTable.isPublic,
           requireApproval: universesTable.requireApproval,
           createdAt: universesTable.createdAt,
-          creatorId: universesTable.creatorId
+          creatorId: universesTable.creatorId,
+          isActive: universesTable.isActive,
+          isDeleted: universesTable.isDeleted // ✅ JETZT verfügbar
         })
         .from(universesTable)
-        .where(eq(universesTable.slug, universeSlug))
+        .where(
+          and(
+            eq(universesTable.slug, universeSlug),
+            eq(universesTable.isActive, true),
+            eq(universesTable.isDeleted, false) // ✅ JETZT verfügbar
+          )
+        )
         .limit(1);
-
+      
       const universe = await universeQuery;
       
       if (universe.length === 0) {
-        throw new Error('Universe not found');
+        throw new Error('Universe not found or deleted');
       }
-
+    
       const universeData = universe[0];
       let membershipStatus = 'none';
       let userRole = null;
-
+    
       // Membership Status prüfen wenn User eingeloggt
       if (userId) {
         const membership = await db
@@ -291,30 +299,13 @@ export class UniverseService {
             )
           )
           .limit(1);
-
+        
         if (membership.length > 0) {
           membershipStatus = 'member';
           userRole = membership[0].role;
-        } else {
-          // Prüfen ob Join Request pending
-          const pendingRequest = await db
-            .select()
-            .from(universeJoinRequestsTable)
-            .where(
-              and(
-                eq(universeJoinRequestsTable.universeId, universeData.id),
-                eq(universeJoinRequestsTable.userId, userId),
-                eq(universeJoinRequestsTable.status, 'pending')
-              )
-            )
-            .limit(1);
-
-          if (pendingRequest.length > 0) {
-            membershipStatus = 'pending';
-          }
         }
       }
-
+    
       return {
         ...universeData,
         membershipStatus,
@@ -598,6 +589,173 @@ export class UniverseService {
       } catch (error) {
         console.error('Error fetching owned universes:', error);
         throw new Error('Failed to fetch owned universes');
+      }
+    }
+
+    // Name-Eindeutigkeit prüfen
+    static async checkUniverseNameExists(name: string, excludeId?: string): Promise<boolean> {
+      try {
+        if (excludeId) {
+          const existing = await db
+            .select()
+            .from(universesTable)
+            .where(
+              and(
+                eq(universesTable.name, name.trim()),
+                not(eq(universesTable.id, excludeId)),
+                eq(universesTable.isDeleted, false) // ✅ Nur aktive Universes prüfen
+              )
+            )
+            .limit(1);
+          
+          return existing.length > 0;
+        } else {
+          const existing = await db
+            .select()
+            .from(universesTable)
+            .where(
+              and(
+                eq(universesTable.name, name.trim()),
+                eq(universesTable.isDeleted, false) // ✅ Nur aktive Universes prüfen
+              )
+            )
+            .limit(1);
+          
+          return existing.length > 0;
+        }
+      } catch (error) {
+        console.error('Error checking universe name:', error);
+        return false;
+      }
+    }
+
+    // Universe löschen (Soft Delete)
+    static async deleteUniverse(userId: string, universeSlug: string) {
+      try {
+        // Universe finden und Berechtigung prüfen
+        const universe = await db
+          .select({
+            id: universesTable.id,
+            name: universesTable.name,
+            creatorId: universesTable.creatorId
+          })
+          .from(universesTable)
+          .where(eq(universesTable.slug, universeSlug))
+          .limit(1);
+        
+        if (universe.length === 0) {
+          throw new Error('Universe not found');
+        }
+      
+        if (universe[0].creatorId !== userId) {
+          throw new Error('Only the creator can delete this universe');
+        }
+      
+        // ✅ Soft Delete - Name wird durch isDeleted wieder frei
+        await db
+          .update(universesTable)
+          .set({
+            isActive: false,
+            isDeleted: true,
+            updatedAt: new Date()
+          })
+          .where(eq(universesTable.id, universe[0].id));
+        
+        return {
+          success: true,
+          message: 'Universe successfully deleted'
+        };
+      } catch (error) {
+        console.error('Error deleting universe:', error);
+        throw error;
+      }
+    }
+
+    // Eigentümerschaft übertragen
+    static async transferOwnership(userId: string, universeSlug: string, newOwnerId: string) {
+      try {
+        // Universe und aktuelle Berechtigung prüfen
+        const universe = await db
+          .select({
+            id: universesTable.id,
+            name: universesTable.name,
+            creatorId: universesTable.creatorId
+          })
+          .from(universesTable)
+          .where(eq(universesTable.slug, universeSlug))
+          .limit(1);
+        
+        if (universe.length === 0) {
+          throw new Error('Universe not found');
+        }
+      
+        if (universe[0].creatorId !== userId) {
+          throw new Error('Only the creator can transfer ownership');
+        }
+      
+        // Prüfen ob neuer Owner Mitglied ist
+        const newOwnerMembership = await db
+          .select()
+          .from(universeMembersTable)
+          .where(
+            and(
+              eq(universeMembersTable.universeId, universe[0].id),
+              eq(universeMembersTable.userId, newOwnerId)
+            )
+          )
+          .limit(1);
+        
+        if (newOwnerMembership.length === 0) {
+          throw new Error('New owner must be a member of the universe');
+        }
+      
+        // Transaction für Ownership-Transfer
+        await db.transaction(async (tx) => {
+          // 1. Universe creatorId ändern
+          await tx
+            .update(universesTable)
+            .set({
+              creatorId: newOwnerId,
+              updatedAt: new Date()
+            })
+            .where(eq(universesTable.id, universe[0].id));
+          
+          // 2. Alte Creator-Rolle zu 'member' ändern
+          await tx
+            .update(universeMembersTable)
+            .set({
+              role: 'member',
+              updatedAt: new Date()
+            })
+            .where(
+              and(
+                eq(universeMembersTable.universeId, universe[0].id),
+                eq(universeMembersTable.userId, userId)
+              )
+            );
+          
+          // 3. Neue Creator-Rolle setzen
+          await tx
+            .update(universeMembersTable)
+            .set({
+              role: 'creator',
+              updatedAt: new Date()
+            })
+            .where(
+              and(
+                eq(universeMembersTable.universeId, universe[0].id),
+                eq(universeMembersTable.userId, newOwnerId)
+              )
+            );
+        });
+      
+        return {
+          success: true,
+          message: 'Ownership successfully transferred'
+        };
+      } catch (error) {
+        console.error('Error transferring ownership:', error);
+        throw error;
       }
     }
 }
