@@ -1,20 +1,24 @@
-# Projekttagebuch Marc Droit - 30.06.2025
+# Projekttagebuch Marc Droit - 03.07.2025
 
 ## Heutige Hauptaufgabe(n):
 
-Einarbeitung in bereits vorhandenen Code, Wochensprint besprechen, Hobbys-Page
+Hobbies und LandingPage bauen und umstylen und auf React-Router umstellen
 
-## Fortschritt & Ergebnisse:
+## Fortschritte & Ergebnisse
 
-Vorhandenen Code fast vollständig aufgearbeitet, Hobbys-Komponente begonnen, Wochensprint geplant
+React-Router integriert, HeadlessUI installiert, Dropdown-Menüs in Hobbies eingerichtet
 
 ## Herausforderungen & Blockaden:
 
-Lokalen git feature branch auf den Stand des main branches updaten, ohne code zu verlieren und zu pushen
+Auswählbare Dropdown-Menüs mit HTML
 
 ## Was ich heute gelernt habe:
 
-Branches über den VS Code Editor mergen
+HeadlessUI kennegelernt und eingearbeitet
+
+## Plan für morgen:
+
+Hobbies fertigstellen, LandingPage festigstellen und Design festlegen, Komponenten isolieren/Verzeichnisstruktur im Frontend anpassen
 
 # Projekttagebuch Marc Droit - 02.07.2025
 
@@ -33,3 +37,43 @@ Identifizieren von zu isolierenden Komponenten
 ## Plan für morgen:
 
 React Router Struktur implementieren
+
+# Projekttagebuch Marc Droit 01.07.2025
+
+## Heutige Hauptaufgabe(n):
+
+Planung neuer Projektstruktur
+
+## Fortschritt & Ergebisse:
+
+Struktur auf React Router umstellen
+
+## Herausfordeurngen & Blockaden:
+
+/
+
+## Was ich heute gelernt habe:
+
+/
+
+## Plan für morgen:
+
+/
+
+# Projekttagebuch Marc Droit - 30.06.2025
+
+## Heutige Hauptaufgabe(n):
+
+Einarbeitung in bereits vorhandenen Code, Wochensprint besprechen, Hobbys-Page
+
+## Fortschritt & Ergebnisse:
+
+Vorhandenen Code fast vollständig aufgearbeitet, Hobbys-Komponente begonnen, Wochensprint geplant
+
+## Herausforderungen & Blockaden:
+
+Lokalen git feature branch auf den Stand des main branches updaten, ohne code zu verlieren und zu pushen
+
+## Was ich heute gelernt habe:
+
+Branches über den VS Code Editor mergen
