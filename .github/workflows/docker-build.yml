@@ -167,49 +167,102 @@ jobs:
           echo "VERSION=${{ github.sha }}" >> .env
           echo "COMPOSE_PROJECT_NAME=loop-it-ci" >> .env
           
-          # Start services
+          # Start services with wait
+          echo "Starting services..."
           docker compose up -d --wait
           
-          # Debug: Show container status
-          echo "=== Container Status ==="
+          # Debug: Show initial container status
+          echo "=== Initial Container Status ==="
           docker compose ps
           
-          # Debug: Show frontend logs immediately
-          echo "=== Frontend Logs ==="
-          docker compose logs frontend
+          # Extended wait for backend warmup (based on local testing)
+          echo "Waiting for backend warmup..."
+          sleep 90
           
-          # Wait longer for services to be ready
-          echo "Waiting for services to start..."
-          sleep 60
-          
-          # Debug: Show container status again
-          echo "=== Container Status After Wait ==="
+          # Debug: Show container status after warmup
+          echo "=== Container Status After Warmup ==="
           docker compose ps
           
-          # Retry frontend check up to 5 times with backoff
-          echo "Testing frontend accessibility..."
-          for i in {1..5}; do
-            if curl -f http://localhost/; then
-              echo "✅ Frontend is accessible!"
-              break
-            fi
-            echo "Waiting for frontend... attempt $i/5"
-            # Debug: Show more logs
-            echo "Frontend logs (attempt $i):"
-            docker compose logs --tail=10 frontend
-            sleep 15
-          done
-          
-          # Test database connection
-          echo "Testing database connection..."
+          # Test services in order
+          echo "=== Testing Database ==="
           docker compose exec -T postgres pg_isready -U loop_user -d loop-it || exit 1
           echo "✅ Database is ready!"
           
-          # Optional: Test backend health endpoint
-          echo "Testing backend health..."
-          curl -f http://localhost:3000/health || echo "No health endpoint, skipping"
+          echo "=== Testing Backend Direct ==="
+          curl -f http://localhost:3000/health || exit 1
+          echo "✅ Backend is ready!"
+          
+          echo "=== Testing Frontend ==="
+          for i in {1..8}; do
+            if curl -f --connect-timeout 10 --max-time 30 http://localhost/; then
+              echo "✅ Frontend is accessible!"
+              break
+            fi
+            echo "Frontend test attempt $i/8..."
+            if [ $i -eq 8 ]; then
+              echo "❌ Frontend failed after 8 attempts"
+              exit 1
+            fi
+            sleep 15
+          done
+          
+          echo "=== Testing Reverse Proxy API ==="
+          for i in {1..5}; do
+            if curl -f --connect-timeout 10 --max-time 30 http://localhost/api/health; then
+              echo "✅ Reverse Proxy API is working!"
+              break
+            fi
+            echo "API proxy test attempt $i/5..."
+            if [ $i -eq 5 ]; then
+              echo "❌ API Proxy failed after 5 attempts"
+              exit 1
+            fi
+            sleep 10
+          done
+          
+          echo "=== Testing Authentication Endpoint ==="
+          AUTH_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://localhost/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"test@test.com","password":"test123"}' \
+            -o /tmp/auth_response.txt)
+          
+          if [ "$AUTH_RESPONSE" -eq 200 ] || [ "$AUTH_RESPONSE" -eq 400 ] || [ "$AUTH_RESPONSE" -eq 401 ]; then
+            echo "✅ Auth endpoint is reachable! (HTTP $AUTH_RESPONSE)"
+            cat /tmp/auth_response.txt
+          else
+            echo "❌ Auth endpoint failed with HTTP $AUTH_RESPONSE"
+            cat /tmp/auth_response.txt
+            exit 1
+          fi
           
           echo "🎉 All integration tests passed!"
+      
+      - name: Debug on Failure
+        if: failure()
+        run: |
+          echo "=== DEBUGGING FAILED PIPELINE ==="
+          
+          echo "=== Final Container Status ==="
+          docker compose ps
+          
+          echo "=== Frontend Logs ==="
+          docker compose logs frontend
+          
+          echo "=== Backend Logs ==="
+          docker compose logs backend | tail -100
+          
+          echo "=== Postgres Logs ==="
+          docker compose logs postgres | tail -50
+          
+          echo "=== System Resources ==="
+          df -h
+          free -h
+          docker system df
+          
+          echo "=== Network Test ==="
+          curl -v http://localhost/ || echo "Frontend connection failed"
+          curl -v http://localhost/api/health || echo "API connection failed"
+          curl -v http://localhost:3000/health || echo "Backend direct connection failed"
       
       - name: Cleanup
         if: always()

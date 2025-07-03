@@ -4,7 +4,6 @@ npm-debug.log
 yarn-error.log
 
 # Build output (will be built in container)
-dist
 build
 
 # Environment files
