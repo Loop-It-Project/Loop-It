@@ -16,7 +16,6 @@ echo "DATABASE_URL: $DATABASE_URL"
 echo "DB_HOST: $DB_HOST"
 echo "POSTGRES_USER: $POSTGRES_USER"
 echo "POSTGRES_DB: $POSTGRES_DB"
-# POSTGRES_PASSWORD nicht loggen aus Sicherheitsgründen!
 
 echo "Dateisystem Check:"
 echo "Drizzle Ordner:"
@@ -52,8 +51,14 @@ done
 
 if [ "$SQL_EXECUTED" = false ]; then
     echo "Keine SQL-Dateien gefunden oder ausgeführt!"
-    echo "Inhalt des drizzle Ordners:"
-    ls -la drizzle/ 2>/dev/null || echo "Drizzle Ordner existiert nicht"
+    echo "4. Fallback: Verwende drizzle-kit push..."
+    npm run db:push
+    if [ $? -eq 0 ]; then
+        echo "✓ drizzle-kit push erfolgreich ausgeführt"
+    else
+        echo "✗ Fehler bei drizzle-kit push"
+        exit 1
+    fi
 fi
 
 echo "Vorhandene Tabellen NACHHER:"
