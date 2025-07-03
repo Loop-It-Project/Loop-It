@@ -21,6 +21,14 @@ jobs:
         with:
           node-version: 'lts/*'
       
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-
+      
       - name: Install Backend Dependencies
         working-directory: ./backend
         run: npm ci
@@ -80,6 +88,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
+      
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-
       
       - name: Install Frontend Dependencies
         working-directory: ./frontend
@@ -154,9 +170,21 @@ jobs:
           # Start services
           docker compose up -d --wait
           
+          # Debug: Show container status
+          echo "=== Container Status ==="
+          docker compose ps
+          
+          # Debug: Show frontend logs immediately
+          echo "=== Frontend Logs ==="
+          docker compose logs frontend
+          
           # Wait longer for services to be ready
           echo "Waiting for services to start..."
           sleep 60
+          
+          # Debug: Show container status again
+          echo "=== Container Status After Wait ==="
+          docker compose ps
           
           # Retry frontend check up to 5 times with backoff
           echo "Testing frontend accessibility..."
@@ -166,6 +194,9 @@ jobs:
               break
             fi
             echo "Waiting for frontend... attempt $i/5"
+            # Debug: Show more logs
+            echo "Frontend logs (attempt $i):"
+            docker compose logs --tail=10 frontend
             sleep 15
           done
           
