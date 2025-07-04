@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, Check} from 'lucide-react';
+import Header from '../components/Header';
 
 const Hobbies = ({ onNavigate }) => {
   const navigate = useNavigate();
