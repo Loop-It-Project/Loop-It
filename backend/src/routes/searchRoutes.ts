@@ -5,7 +5,7 @@ import { search, trending } from '../controllers/searchController';
 const router = Router();
 
 // Search endpoints
-router.get('/search', search);
+router.get('/', search);
 router.get('/trending', trending);
 //router.get('/suggestions', searchController.suggestions);
 

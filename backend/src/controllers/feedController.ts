@@ -18,8 +18,9 @@ export const getPersonalFeed = async (req: AuthRequest, res: Response): Promise<
     const userId = req.user!.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
+    const sortBy = req.query.sortBy as string || 'newest';
 
-    const result = await FeedService.getPersonalFeed(userId, page, limit);
+    const result = await FeedService.getPersonalFeed(userId, page, limit, sortBy); 
     
     res.status(200).json({
       success: true,
@@ -46,11 +47,12 @@ export const getUniverseFeed = async (req: Request, res: Response): Promise<void
 
   try {
     const { universeSlug } = req.params;
-    const userId = (req as AuthRequest).user?.id; // Optional für nicht-eingeloggte User
+    const userId = (req as AuthRequest).user?.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
+    const sortBy = req.query.sortBy as string || 'newest'; 
 
-    const result = await FeedService.getUniverseFeed(universeSlug, userId, page, limit);
+    const result = await FeedService.getUniverseFeed(universeSlug, userId, page, limit, sortBy);
     
     res.status(200).json({
       success: true,
@@ -157,12 +159,16 @@ export const getHashtagFeed = async (req: Request, res: Response): Promise<void>
 export const feedPaginationValidation = [
   query('page')
     .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Page must be between 1 and 100'),
   query('limit')
     .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
+    .isInt({ min: 1, max: 20 })
+    .withMessage('Limit must be between 1 and 20'),
+  query('sortBy')
+    .optional()
+    .isIn(['newest', 'oldest', 'trending'])
+    .withMessage('SortBy must be newest, oldest, or trending'),
 ];
 
 export const universeSlugValidation = [

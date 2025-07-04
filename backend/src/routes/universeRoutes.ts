@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { auth } from '../middleware/auth';
 import {
   paginationValidation,
   universeSlugValidation,
@@ -19,91 +19,38 @@ import {
 
 const router = express.Router();
 
-// Name-Verfügbarkeit prüfen
-router.get(
-  '/check-name', 
-  checkUniverseName
-);
+// Statische Routes zuerst, dann dynamische
+// Name-Verfügbarkeit prüfen (statisch)
+router.get('/check-name', checkUniverseName);
 
-// Universe Discovery (Public)
-router.get(
-  '/discover',
-  paginationValidation,
-  discoverUniverses
-);
+// Universe Discovery (statisch)
+router.get('/discover', paginationValidation, discoverUniverses);
 
-// User's eigene Universes
-router.get(
-    '/user/owned', 
-    authenticateToken, 
-    getOwnedUniverses
-);
+// User-spezifische Routes (statisch)
+router.get('/user/owned', auth, paginationValidation, getOwnedUniverses); 
+router.get('/user/my-universes', auth, paginationValidation, getUserUniverses);
+router.get('/user', auth, getUserUniverses);
 
-router.get(
-  '/user', 
-  authenticateToken, 
-  getUserUniverses
-);
+// Universe erstellen (statisch)
+router.post('/', auth, createUniverseValidation, createUniverse);
 
-router.get(
-  '/:universeSlug/details',
-  authenticateToken, 
-  getUniverseDetails
-);
+// DYNAMISCHE Routes am Ende (diese könnten das Problem verursachen)
+// Universe Details
+router.get('/:universeSlug/details', auth, universeSlugValidation, getUniverseDetails);
 
-// Get Universe Members (Public)
-router.get(
-  '/:universeSlug/members',
-  authenticateToken,
-  universeSlugValidation,
-  paginationValidation,
-  getUniverseMembers
-);
+// Universe Members
+router.get('/:universeSlug/members', auth, universeSlugValidation, paginationValidation, getUniverseMembers);
 
-// POST /api/universes/
-router.post(
-  '/',
-  authenticateToken,
-  createUniverseValidation,
-  createUniverse
-);
+// Join Universe
+router.post('/:universeSlug/join', auth, universeSlugValidation, joinUniverse);
 
-// User-specific Universe Routes (Authentication required)
-router.get(
-  '/user/my-universes',
-  authenticateToken,
-  paginationValidation,
-  getUserUniverses
-);
+// Leave Universe
+router.delete('/:universeSlug/leave', auth, universeSlugValidation, leaveUniverse);
 
-// Join Universe (Authentication required)
-router.post(
-  '/:universeSlug/join',
-  authenticateToken,
-  universeSlugValidation,
-  joinUniverse
-);
+// Universe löschen
+router.delete('/:universeSlug', auth, universeSlugValidation, deleteUniverse);
 
-// Leave Universe (Authentication required)
-router.delete(
-  '/:universeSlug/leave',
-  authenticateToken,
-  universeSlugValidation,
-  leaveUniverse
-);
-
-// Universe löschen (nur für Owner)
-router.delete(
-  '/:universeSlug', 
-  authenticateToken, 
-  deleteUniverse
-);
-
-// Eigentümerschaft übertragen (nur für Owner)
-router.post(
-  '/:universeSlug/transfer-ownership', 
-  authenticateToken, 
-  transferOwnership
-);
+// Ownership übertragen
+router.post('/:universeSlug/transfer-ownership', auth, universeSlugValidation, transferOwnership);
 
 export default router;

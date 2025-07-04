@@ -4,7 +4,6 @@ import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 
 import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
 import CreateUniverse from '../components/CreateUniverse';
-import CreatePost from '../components/CreatePost';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 // Dashboard Component
@@ -16,94 +15,59 @@ const Dashboard = ({ user, onLogout }) => {
   const [loadingUniverses, setLoadingUniverses] = useState(true);
   const [showCreateUniverse, setShowCreateUniverse] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // ESC-Key Handler für Suchergebnisse
+  // ESC-Key Handler für Modals
   useEscapeKey(() => {
-    if (showSearchResults) {
-      setShowSearchResults(false);
-      setSearchQuery('');
-    }
     if (showCreateUniverse) {
       setShowCreateUniverse(false);
     }
-    if (showCreatePost) {
-      setShowCreatePost(false);
-    }
-  }, showSearchResults || showCreateUniverse || showCreatePost);
+  }, showCreateUniverse);
 
   // User's Universes laden für Sidebar
   useEffect(() => {
     const loadUserUniverses = async () => {
       try {
-        // ✅ BEIDE laden - eigene UND beigetretene Universes
+        setLoadingUniverses(true);
+
         const [ownedResponse, memberResponse] = await Promise.all([
-          FeedService.getOwnedUniverses().catch(() => ({ success: false })), // Falls Methode fehlt
+          FeedService.getOwnedUniverses().catch(() => ({ success: false })),
           FeedService.getUserUniverses(1, 50).catch(() => ({ success: false }))
         ]);
       
         const allUniverses = [];
         
-        // Eigene Universes hinzufügen
         if (ownedResponse.success) {
           allUniverses.push(...ownedResponse.data.universes);
-          console.log('Owned Universes:', ownedResponse.data.universes); // Debug
         }
         
-        // Beigetretene Universes hinzufügen (ohne Duplikate)
         if (memberResponse.success) {
           const ownedIds = new Set(allUniverses.map(u => u.id));
           const memberUniverses = memberResponse.data.universes.filter(u => !ownedIds.has(u.id));
           allUniverses.push(...memberUniverses);
-          console.log('Member Universes:', memberUniverses); // Debug
         }
       
-        console.log('All Universes combined:', allUniverses); // Debug
         setUserUniverses(allUniverses);
         
       } catch (error) {
         console.error('Error loading user universes:', error);
-        // Fallback: Nur Member-Universes laden
-        try {
-          const response = await FeedService.getUserUniverses(1, 50);
-          if (response.success) {
-            setUserUniverses(response.data.universes || []);
-          }
-        } catch (fallbackError) {
-          console.error('Fallback error:', fallbackError);
+        if (error.message.includes('Session abgelaufen')) {
+          return;
         }
+        setUserUniverses([]);
       } finally {
         setLoadingUniverses(false);
       }
     };
-  
+
     loadUserUniverses();
   }, []);
 
-  // ESC-Key Handler für CreatePost Modal
-  useEscapeKey(() => {
-    if (showSearchResults) {
-      setShowSearchResults(false);
-      setSearchQuery('');
-    }
-    if (showCreateUniverse) {
-      setShowCreateUniverse(false);
-    }
-    if (showCreatePost) {
-      setShowCreatePost(false);
-    }
-  }, showSearchResults || showCreateUniverse || showCreatePost);
-
-  // ESC-Key Handler für CreatePost Modal
   const handleUniverseClick = (universeSlug) => {
     navigate(`/universe/${universeSlug}`);
   };
 
-  // ESC-Key Handler für Hashtag Click
-  const handleHashtagClick = (universeSlug, originalHashtag) => {
-    navigate(`/universe/${universeSlug}?hashtag=${originalHashtag}`);
+  const handleHashtagClick = async (universeSlug, hashtag) => {
+    navigate(`/universe/${universeSlug}?hashtag=${hashtag}`);
   };
 
   const handleUniverseCreated = async (newUniverse) => {
@@ -121,32 +85,7 @@ const Dashboard = ({ user, onLogout }) => {
       }
     }, 500);
 
-    // Router Navigation
     navigate(`/universe/${newUniverse.slug}`);
-  };
-
-  // Search Handler
-  const handleSearch = async (query) => {
-    if (!query.trim()) {
-      setShowSearchResults(false);
-      return;
-    }
-
-    try {
-      // TODO: Implement search in FeedService
-      const response = await FeedService.searchUniversesAndHashtags(query);
-      if (response.success) {
-        setSearchResults(response.data);
-        setShowSearchResults(true);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    }
-  };
-
-  const handleLogout = () => {
-    onLogout();
-    navigate('/');
   };
 
   const tabs = [
@@ -156,115 +95,15 @@ const Dashboard = ({ user, onLogout }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            {/* Logo */}
-            <div className="flex items-center space-x-4">
-              <img src="/logo.png" alt="Loop-It Logo" className="h-8 w-8" />
-              <h1 className="text-2xl font-bold text-purple-600">Loop-It</h1>
-            </div>
-            
-            {/* Search Bar - MITTIG */}
-            <div className="flex-1 max-w-md mx-8 relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Universes oder Hashtags suchen..."
-                />
-              </div>
-              
-              {/* Search Results Dropdown */}
-              {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-64 overflow-y-auto z-50">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.id}
-                      onClick={() => {
-                        if (result.type === 'universe') {
-                          handleUniverseClick(result.slug);
-                        } else if (result.type === 'hashtag') {
-                          handleHashtagClick(result.universeSlug, result.hashtag);
-                        }
-                        setShowSearchResults(false);
-                        setSearchQuery('');
-                      }}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center space-x-3"
-                    >
-                      {result.type === 'universe' ? (
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                          <Hash className="text-white" size={14} />
-                        </div>
-                      ) : (
-                        <Hash className="text-purple-500" size={20} />
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {result.type === 'universe' ? result.name : `#${result.hashtag}`}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {result.type === 'universe' 
-                            ? `${result.memberCount} Mitglieder` 
-                            : `Universe: ${result.universeName}`
-                          }
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right Side Actions */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User size={20} className="text-gray-400" />
-                <span className="text-gray-700">Hallo, {user.displayName || user.username}!</span>
-              </div>
-
-              {/* Create Universe Button */}
-              <button
-                onClick={() => setShowCreateUniverse(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus size={20} />
-                <span>Universe</span>
-              </button>
-              
-              {/* Settings Button */}
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition">
-                <Settings size={20} />
-              </button>
-              
-              {/* Logout Button */}
-              <button 
-                onClick={handleLogout}
-                className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-              >
-                <LogOut size={16} />
-                <span>Abmelden</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-secondary">
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex gap-8">
           {/* Sidebar */}
           <div className="w-64 flex-shrink-0">
             {/* Navigation Tabs */}
-            <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Navigation</h3>
+            <div className="bg-card rounded-lg shadow-sm border p-4 mb-6">
+              <h3 className="font-semibold text-primary mb-4">Navigation</h3>
               <div className="space-y-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -272,10 +111,10 @@ const Dashboard = ({ user, onLogout }) => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:cursor-pointer transition-colors ${
                         activeTab === tab.id
                           ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          : 'text-secondary hover:bg-hover'
                       }`}
                     >
                       <Icon size={20} />
@@ -287,27 +126,27 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
 
             {/* Meine Universes */}
-            <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="bg-card rounded-lg shadow-sm border p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Meine Universes</h3>
+                <h3 className="font-semibold text-primary">Meine Universes</h3>
                 <button 
                   onClick={() => setActiveTab('discover')}
-                  className="text-purple-600 hover:text-purple-700"
+                  className="text-purple-600 hover:text-purple-700 hover:cursor-pointer"
                 >
                   <Plus size={20} />
                 </button>
               </div>
               
               {loadingUniverses ? (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-4 text-tertiary">
                   Lädt...
                 </div>
               ) : userUniverses.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-4 text-tertiary">
                   <p className="text-sm mb-2">Noch keine Universes</p>
                   <button
                     onClick={() => setActiveTab('discover')}
-                    className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                    className="text-purple-600 hover:text-purple-700 text-sm font-medium hover:cursor-pointer transition"
                   >
                     Universes entdecken
                   </button>
@@ -318,16 +157,16 @@ const Dashboard = ({ user, onLogout }) => {
                     <button
                       key={universe.id}
                       onClick={() => handleUniverseClick(universe.slug)}
-                      className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left"
+                      className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-hover hover:cursor-pointer transition-colors text-left"
                     >
                       <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
                         <Hash className="text-white" size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-primary truncate">
                           {universe.slug} {/* ✅ GEÄNDERT: Slug statt Name */}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-tertiary">
                           {universe.memberCount} Mitglieder
                         </p>
                       </div>
@@ -337,7 +176,7 @@ const Dashboard = ({ user, onLogout }) => {
                   {userUniverses.length > 8 && (
                     <button
                       onClick={() => {/* TODO: Show all universes */}}
-                      className="w-full text-sm text-purple-600 hover:text-purple-700 py-2"
+                      className="w-full text-sm text-purple-600 hover:text-purple-700 hover:cursor-pointer py-2"
                     >
                       Alle anzeigen ({userUniverses.length})
                     </button>
@@ -358,7 +197,7 @@ const Dashboard = ({ user, onLogout }) => {
                 </p>
                 <button
                   onClick={() => setActiveTab('discover')}
-                  className="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+                  className="bg-card text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-hover hover:cursor-pointer transition"
                 >
                   Universes entdecken
                 </button>
@@ -446,7 +285,7 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-500">Universes werden geladen...</div>
+        <div className="text-tertiary">Universes werden geladen...</div>
       </div>
     );
   }
@@ -465,27 +304,27 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Universes entdecken</h2>
-        <p className="text-gray-600">Finde Communities zu deinen Hobbys und Interessen</p>
+        <h2 className="text-2xl font-bold text-primary mb-2">Universes entdecken</h2>
+        <p className="text-secondary">Finde Communities zu deinen Hobbys und Interessen</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {universes.map((universe) => (
-          <div key={universe.id} className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+          <div key={universe.id} className="bg-card rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                   <Hash className="text-white" size={20} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{universe.name}</h3>
-                  <p className="text-sm text-gray-500">{universe.memberCount} Mitglieder</p>
+                  <h3 className="font-semibold text-primary">{universe.name}</h3>
+                  <p className="text-sm text-tertiary">{universe.memberCount} Mitglieder</p>
                 </div>
               </div>
             </div>
 
             {universe.description && (
-              <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+              <p className="text-secondary text-sm mb-4 line-clamp-3">
                 {universe.description}
               </p>
             )}
@@ -493,7 +332,7 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => onUniverseClick(universe.slug)}
-                className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                className="text-purple-600 hover:text-purple-700 font-medium text-sm hover:cursor-pointer transition"
               >
                 Ansehen
               </button>
@@ -505,7 +344,7 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
               ) : (
                 <button
                   onClick={() => handleJoinUniverse(universe.slug)}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm font-medium"
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 hover:cursor-pointer transition text-sm font-medium"
                 >
                   Beitreten
                 </button>

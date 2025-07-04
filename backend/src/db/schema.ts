@@ -11,6 +11,7 @@ import {
   text,
   uuid,
   json,
+  jsonb,
   unique,
   foreignKey,
   index
@@ -865,6 +866,28 @@ export const searchClicksTable = pgTable("search_clicks", {
   resultIdx: index("clicks_result_idx").on(table.resultType, table.resultId),
   clickTimeIdx: index("clicks_time_idx").on(table.clickTime),
 }));
+
+// Refresh Tokens Table
+export const refreshTokensTable = pgTable('refresh_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  isRevoked: boolean('is_revoked').default(false),
+  revokedAt: timestamp('revoked_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  lastUsedAt: timestamp('last_used_at'),
+  userAgent: text('user_agent'),
+  ipAddress: varchar('ip_address', { length: 45 }), // IPv6 support
+}, (table) => ({
+  userIdIdx: index('refresh_tokens_user_id_idx').on(table.userId),
+  tokenIdx: index('refresh_tokens_token_idx').on(table.token),
+  expiresAtIdx: index('refresh_tokens_expires_at_idx').on(table.expiresAt),
+}));
+
+// Export all tables for use in the application
+export type RefreshToken = typeof refreshTokensTable.$inferSelect;
+export type NewRefreshToken = typeof refreshTokensTable.$inferInsert;
 
 // Schema Overview
 // This schema defines the structure of the Loop-It application database using Drizzle ORM with PostgreSQL.

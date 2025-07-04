@@ -1,9 +1,19 @@
 import { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
 import { db } from '../db/index';
 import { universesTable } from '../db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 
 export const getUniverseByHashtag = async (req: Request, res: Response): Promise<void> => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ 
+      success: false,
+      errors: errors.array() 
+    });
+    return;
+  }
+
   try {
     const { hashtag } = req.params;
     
@@ -67,8 +77,17 @@ export const getUniverseByHashtag = async (req: Request, res: Response): Promise
   }
 };
 
-// Hashtag-Suche (alle Universes mit ähnlichen Hashtags)
+// Hashtag-Suche implementieren
 export const searchHashtags = async (req: Request, res: Response): Promise<void> => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ 
+      success: false,
+      errors: errors.array() 
+    });
+    return;
+  }
+
   try {
     const { query } = req.query;
     
@@ -92,7 +111,7 @@ export const searchHashtags = async (req: Request, res: Response): Promise<void>
         and(
           eq(universesTable.isPublic, true),
           eq(universesTable.isActive, true),
-          // Einfache Hashtag-Suche (kann später verbessert werden)
+          // Hashtag-Suche (case-insensitive)
           sql`${universesTable.hashtag} ILIKE ${`%${query.toLowerCase()}%`}`
         )
       )
