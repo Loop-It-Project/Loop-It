@@ -21,7 +21,7 @@ const Header = ({ user, setUser }) => {
         >
         <div className="relative">
             <img
-            src="public/logo.png"
+            src="/logo.png"
             alt="Loop-It Logo"
             className="h-8 w-8 sm:h-10 sm:w-10 transition-transform group-hover:scale-110"
             />
