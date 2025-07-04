@@ -15,6 +15,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [hashtagLoading, setHashtagLoading] = useState(null);
 
   // Escape Key Handler:
   useEscapeKey(() => setShowMoreMenu(false), showMoreMenu);
@@ -60,24 +61,32 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     }
   };
 
-    // Hashtag Click Handler:
-    const handleHashtagClick = async (hashtag) => {
-      if (!onHashtagClick) return;
+  // Hashtag Click Handler mit besserer Fehlerbehandlung
+  const handleHashtagClick = async (hashtag) => {
+    if (!onHashtagClick) return;
 
-      try {
-        const result = await HashtagService.findUniverseByHashtag(hashtag);
+    try {
+      const result = await HashtagService.findUniverseByHashtag(hashtag);
 
-        if (result.success) {
-          // Navigiere zu Universe
-          onHashtagClick(result.universe.slug, hashtag);
-        } else {
-          // Hashtag existiert nicht
-          alert(`Kein Universe für #${hashtag} gefunden`);
+      if (result.success) {
+        // Navigiere zu Universe
+        onHashtagClick(result.universe.slug, hashtag);
+      } else {
+        // Bessere Fehlerbehandlung
+        console.log(`Kein Universe für #${hashtag} gefunden`);
+        
+        // Optional: User benachrichtigen
+        if (window.confirm(`Kein Universe für #${hashtag} gefunden. Möchtest du ein neues Universe erstellen?`)) {
+          // Navigiere zu Universe-Erstellung mit vorausgefülltem Hashtag
+          // Das müsste in der Parent-Komponente implementiert werden
+          console.log('Navigate to create universe with hashtag:', hashtag);
         }
-      } catch (error) {
-        console.error('Error handling hashtag click:', error);
       }
-    };
+    } catch (error) {
+      console.error('Error handling hashtag click:', error);
+      alert('Fehler beim Suchen des Hashtags. Bitte versuche es später erneut.');
+    }
+  };
 
     // Delete Post Handler:
     const handleDeletePost = async () => {
@@ -106,7 +115,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     const authorAvatar = post.author?.profileImage || post.authorAvatar;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4 hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-lg shadow-sm border border-primary p-6 mb-4 hover:shadow-md transition-shadow">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -126,19 +135,19 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           {/* Author Info */}
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="font-semibold text-gray-900">
+              <h3 className="font-semibold text-primary">
                 {authorName || authorUsername}
               </h3>
-              <span className="text-gray-500 text-sm">@{authorUsername}</span>
+              <span className="text-tertiary text-sm">@{authorUsername}</span>
             </div>
             
             {/* Universe & Time */}
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="flex items-center space-x-2 text-sm text-tertiary">
               {universeName && (
                 <>
                   <button
                     onClick={handleUniverseClick}
-                    className="flex items-center space-x-1 hover:text-purple-600 transition-colors"
+                    className="flex items-center space-x-1 hover:text-purple-600 hover:cursor-pointer transition-colors"
                   >
                     <Hash size={14} />
                     <span>{universeName}</span>
@@ -158,24 +167,24 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
         <div className="relative">
           <button 
             onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            className="text-muted hover:text-secondary transition-colors p-1 rounded-lg hover:bg-hover hover:cursor-pointer"
           >
             <MoreHorizontal size={20} />
           </button>
 
           {/* Dropdown Menu */}
           {showMoreMenu && (
-            <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-[120px] z-10">
+            <div className="absolute right-0 top-8 bg-card border border-primary rounded-lg shadow-lg py-2 min-w-[120px] z-10">
               <button
                 onClick={handleDeletePost}
-                className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm"
+                className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors text-sm"
               >
                 Post löschen
               </button>
               {/* Weitere Optionen können hier hinzugefügt werden */}
               <button
                 onClick={() => setShowMoreMenu(false)}
-                className="w-full px-4 py-2 text-left text-gray-600 hover:bg-gray-50 transition-colors text-sm"
+                className="w-full px-4 py-2 text-left text-secondary hover:bg-secondary hover:cursor-pointer transition-colors text-sm"
               >
                 Abbrechen
               </button>
@@ -187,13 +196,13 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
       {/* Content */}
       <div className="mb-4">
         {post.title && (
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+          <h2 className="text-lg font-semibold text-primary mb-2">
             {post.title}
           </h2>
         )}
         
         {post.content && (
-          <p className="text-gray-700 whitespace-pre-wrap">
+          <p className="text-secondary whitespace-pre-wrap">
             {post.content}
           </p>
         )}
@@ -202,26 +211,33 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
         {post.mediaIds && post.mediaIds.length > 0 && (
           <div className="mt-3 rounded-lg overflow-hidden">
             {/* Placeholder für Media - später implementieren */}
-            <div className="bg-gray-100 h-48 flex items-center justify-center text-gray-500">
+            <div className="bg-hover h-48 flex items-center justify-center text-tertiary">
               Media wird bald unterstützt
             </div>
           </div>
         )}
 
-        {/* Hashtags */}
-        {post.hashtags && post.hashtags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {post.hashtags.map((hashtag, index) => (
-              <button
-                key={index}
-                onClick={() => handleHashtagClick(hashtag)}
-                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors text-sm font-medium"
-              >
-                #{hashtag}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Hashtags mit Loading-State */}
+      {post.hashtags && post.hashtags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {post.hashtags.map((hashtag, index) => (
+            <button
+              key={index}
+              onClick={() => handleHashtagClick(hashtag)}
+              disabled={hashtagLoading === hashtag}
+              className={`text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:cursor-pointer px-2 py-1 rounded transition-colors text-sm font-medium flex items-center space-x-1 ${
+                hashtagLoading === hashtag ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              title={`Zum #${hashtag} Universe`}
+            >
+              <span>#{hashtag}</span>
+              {hashtagLoading === hashtag && (
+                <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       </div>
 
       {/* Actions */}
@@ -230,10 +246,10 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           {/* Like */}
           <button
             onClick={handleLike}
-            className={`flex items-center space-x-2 transition-colors ${
+            className={`flex items-center space-x-2 hover:cursor-pointer transition-colors ${
               isLiked 
                 ? 'text-red-500 hover:text-red-600' 
-                : 'text-gray-500 hover:text-red-500'
+                : 'text-tertiary hover:text-red-500'
             }`}
           >
             <Heart 
@@ -246,14 +262,14 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           {/* Comment */}
           <button
             onClick={() => onComment && onComment(post.id)}
-            className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
+            className="flex items-center space-x-2 text-tertiary hover:text-blue-500 hover:cursor-pointer transition-colors"
           >
             <MessageCircle size={20} />
             <span className="text-sm font-medium">{post.commentCount || 0}</span>
           </button>
 
           {/* Share */}
-          <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
+          <button className="flex items-center space-x-2 text-tertiary hover:text-green-500 hover:cursor-pointer transition-colors">
             <Share2 size={20} />
             <span className="text-sm font-medium">{post.shareCount || 0}</span>
           </button>

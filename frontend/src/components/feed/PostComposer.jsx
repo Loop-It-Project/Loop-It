@@ -136,12 +136,12 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <div className="bg-card rounded-lg shadow-sm border border-primary p-4 mb-6">
       {/* Compact View */}
       {!isExpanded && (
         <button
           onClick={() => setIsExpanded(true)}
-          className="w-full text-left p-3 border border-gray-300 rounded-lg text-gray-500 hover:border-purple-300 hover:text-purple-600 transition-colors"
+          className="w-full text-left p-3 border border-secondary rounded-lg text-tertiary hover:border-purple-300 hover:text-purple-600 hover:cursor-pointer transition-colors"
         >
           Was möchtest du teilen?
         </button>
@@ -152,14 +152,14 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">Neuen Post erstellen</h3>
+            <h3 className="font-semibold text-primary">Neuen Post erstellen</h3>
             <button
               type="button"
               onClick={() => {
                 setIsExpanded(false);
                 setErrors({});
               }}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-muted hover:text-secondary hover:cursor-pointer transition-colors"
             >
               <X size={20} />
             </button>
@@ -167,16 +167,16 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
 
           {/* Universe Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Universe auswählen *
             </label>
             {loadingUniverses ? (
-              <div className="text-sm text-gray-500">Lade Universes...</div>
+              <div className="text-sm text-tertiary">Lade Universes...</div>
             ) : (
               <select
                 value={formData.universeId}
                 onChange={(e) => setFormData(prev => ({ ...prev, universeId: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="">Universe wählen...</option>
                 {userUniverses.map((universe) => (
@@ -195,7 +195,7 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
               type="text"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="Titel (optional)..."
             />
           </div>
@@ -206,7 +206,7 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
               value={formData.content}
               onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+              className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
               placeholder="Was möchtest du teilen? Teile deine Gedanken, Erfahrungen oder stelle eine Frage..."
             />
             {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
@@ -214,18 +214,18 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
 
           {/* Hashtags */}
           <div className="relative">
-            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={16} />
             <input
               type="text"
               value={formData.hashtags}
               onChange={(e) => setFormData(prev => ({ ...prev, hashtags: e.target.value }))}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full pl-10 pr-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="Hashtags (durch Komma getrennt)"
             />
           </div>
 
           {/* Privacy & Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between pt-3 border-t border-primary">
             <div className="flex items-center space-x-4">
               {/* Privacy Toggle */}
               <label className="flex items-center space-x-2 text-sm">
@@ -235,14 +235,14 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
                   onChange={(e) => setFormData(prev => ({ ...prev, isPublic: e.target.checked }))}
                   className="text-purple-600 focus:ring-purple-500"
                 />
-                <Globe size={16} className={formData.isPublic ? 'text-green-500' : 'text-gray-400'} />
-                <span className="text-gray-700">Öffentlich</span>
+                <Globe size={16} className={formData.isPublic ? 'text-green-500' : 'text-muted'} />
+                <span className="text-secondary">Öffentlich</span>
               </label>
 
               {/* Future: Media Upload */}
               <button
                 type="button"
-                className="text-gray-400 hover:text-purple-600 transition-colors"
+                className="text-muted hover:text-purple-600 hover:cursor-pointer transition-colors"
                 title="Bilder (bald verfügbar)"
               >
                 <Image size={16} />
@@ -254,14 +254,14 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
               <button
                 type="button"
                 onClick={() => setIsExpanded(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-secondary hover:text-primary hover:cursor-pointer transition-colors"
               >
                 Abbrechen
               </button>
               <button
                 type="submit"
                 disabled={loading || isCreatingPost || !formData.content.trim() || !formData.universeId}
-                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
               <Send size={16} className={isCreatingPost ? 'animate-pulse' : ''} />
               <span>

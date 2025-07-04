@@ -50,7 +50,7 @@ export const leaveUniverse = async (req: AuthRequest, res: Response): Promise<vo
     console.error('Leave universe error:', error);
     const message = error instanceof Error ? error.message : 'Failed to leave universe';
     
-    // ✅ Detaillierte Error-Responses
+    // Detaillierte Error-Responses
     if (message.includes('creator cannot leave')) {
       res.status(400).json({ 
         success: false,

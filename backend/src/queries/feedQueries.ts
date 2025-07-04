@@ -7,7 +7,7 @@ import {
   profilesTable,
   mediaTable 
 } from '../db/schema';
-import { eq, desc, and, inArray, sql, isNull } from 'drizzle-orm';
+import { eq, desc, asc, and, inArray, sql, isNull } from 'drizzle-orm';
 
 export interface FeedPost {
   id: string;
@@ -31,8 +31,28 @@ export interface FeedPost {
   isLikedByUser?: boolean;
 }
 
+// Helper function für Sortierung
+const getSortOrder = (sortBy: string) => {
+  switch (sortBy) {
+    case 'oldest':
+      return asc(postsTable.createdAt);
+    case 'trending':
+      return desc(
+        sql`(${postsTable.likeCount} * 3 + ${postsTable.commentCount} * 2 + ${postsTable.shareCount} * 5)`
+      );
+    case 'newest':
+    default:
+      return desc(postsTable.createdAt);
+  }
+};
+
 // Personal Feed - Posts aus gefolgten Universes
-export const getPersonalFeed = async (userId: string, limit = 20, offset = 0): Promise<FeedPost[]> => {
+export const getPersonalFeed = async (
+  userId: string, 
+  limit = 20, 
+  offset = 0,
+  sortBy: string = 'newest'
+): Promise<FeedPost[]> => {
   const query = db
     .select({
       // Post data
@@ -72,7 +92,7 @@ export const getPersonalFeed = async (userId: string, limit = 20, offset = 0): P
         eq(universesTable.isActive, true)
       )
     )
-    .orderBy(desc(postsTable.createdAt))
+    .orderBy(getSortOrder(sortBy))
     .limit(limit)
     .offset(offset);
 
@@ -84,7 +104,8 @@ export const getUniverseFeed = async (
   universeSlug: string, 
   userId?: string, 
   limit = 20, 
-  offset = 0
+  offset = 0,
+  sortBy: string = 'newest'
 ): Promise<FeedPost[]> => {
   const query = db
     .select({
@@ -124,7 +145,7 @@ export const getUniverseFeed = async (
         eq(universesTable.isActive, true)
       )
     )
-    .orderBy(desc(postsTable.createdAt))
+    .orderBy(getSortOrder(sortBy))
     .limit(limit)
     .offset(offset);
 
