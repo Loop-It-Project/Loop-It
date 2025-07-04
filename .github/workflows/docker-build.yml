@@ -4,10 +4,20 @@ on:
   push:
     branches:
       - main
-      - feature/docker
+      - feature/**
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'README.md'
+      - '**/diary.md'
+      - '**/tagebuch.md'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 jobs:
   build-backend:
