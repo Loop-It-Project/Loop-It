@@ -1,4 +1,16 @@
-# Projekttagebuch Marc Droit - 03.07.2025
+# **Projekttagebuch Marc Droit - 04.07.2025**
+
+## Heutige Hauptaufgabe(n):
+
+## Fortschritte & Ergebnisse:
+
+## Herausforderungen & Blockaden:
+
+## Was ich heute gelernt habe:
+
+## Plan für morgen:
+
+# **Projekttagebuch Marc Droit - 03.07.2025**
 
 ## Heutige Hauptaufgabe(n):
 
