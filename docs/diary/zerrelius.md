@@ -1,3 +1,26 @@
+# Projekttagebuch – 03.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Frontend umzustellen auf Pages und Componenten Trennung, Filter final einbauen und überprüfen, Profil Pages im backend vorbereiten, bugs fixen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles was ich mir vorgenommen hatte
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Teilweise beim überarbeiten der Komponenten und Pages im Frontend, war einfach Zeitaufwendig
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Wie sehr es doch ein quality of Life Feature ist, ein gut strukturiertes Projekt zu haben und Dinge auslagern zu können statt alles in einer Datei zu sammeln
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Comment und Like Section einbauen bei den Posts, Datei Upload, Chats, Friendship und Matchmaking System
+
+___
 # Projekttagebuch – 02.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)
