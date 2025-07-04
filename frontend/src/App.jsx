@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthInterceptor from './utils/authInterceptor';
-import LandingPage from './components/LandingPage';
-import Login from './components/Login';
-import Register from './components/Register';
-import Dashboard from './components/Dashboard';
-import UniversePage from './components/UniversePage';
 import Settings from './pages/Settings';
+import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import UniversePage from './pages/UniversePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import Hobbies from './pages/Hobbies';
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // API_URL für die gesamte App definieren
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   // Enhanced Login Handler mit Token-Monitoring
   const handleLogin = (userData, tokens) => {
@@ -33,7 +39,7 @@ function App() {
       
       if (refreshToken) {
         // Backend über Logout informieren
-        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
+        await fetch(`${API_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -154,6 +160,9 @@ function App() {
 
   return (
     <Router>
+      {/* ✅ Header nur für eingeloggte User anzeigen */}
+      {user && <Header user={user} setUser={setUser} onLogout={handleLogout} />}
+      
       <div className="App">
         <Routes>
           {/* Public Routes - nur für nicht-eingeloggte User */}
@@ -181,6 +190,14 @@ function App() {
               </PublicRoute>
             } 
           />
+          <Route 
+            path="/hobbies"
+            element={
+              <PublicRoute user={user}>
+                <Hobbies />
+              </PublicRoute>
+            }
+          />
 
           {/* Protected Routes - nur für eingeloggte User */}
           <Route 
@@ -199,7 +216,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          {/* Settings Route hinzufügen */}
           <Route 
             path="/settings" 
             element={
@@ -216,6 +232,8 @@ function App() {
           />
         </Routes>
       </div>
+      
+      <Footer />
     </Router>
   );
 }

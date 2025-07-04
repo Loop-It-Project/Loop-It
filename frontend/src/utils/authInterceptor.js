@@ -1,7 +1,12 @@
 class AuthInterceptor {
-  static handleLogout = null; // Wird von App.jsx gesetzt
+  static handleLogout = null;
   static isRefreshing = false;
   static refreshPromise = null;
+
+  // API_URL korrekt definieren
+  static get API_URL() {
+    return import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  }
 
     // Token automatisch erneuern
   static async refreshTokens() {
@@ -19,7 +24,7 @@ class AuthInterceptor {
           throw new Error('No refresh token available');
         }
 
-        const response = await fetch(`${API_URL}/api/auth/refresh`, {
+        const response = await fetch(`${this.API_URL}/api/auth/refresh`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

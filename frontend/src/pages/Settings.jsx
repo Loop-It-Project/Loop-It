@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // ✅ Navigation Hook hinzufügen
+import { ArrowLeft } from 'lucide-react'; // ✅ Back Icon hinzufügen
 import UserService from '../services/userService';
 
 const Settings = ({ user, onLogout }) => {
+  const navigate = useNavigate(); // ✅ Navigation Hook verwenden
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -103,7 +106,7 @@ const Settings = ({ user, onLogout }) => {
         >
           <span className="sr-only">Toggle theme</span>
           <span
-            className={`inline-block h-4 w-4 rounded-full bg-card transition-transform duration-300 ${
+            className={`inline-block h-4 w-4 rounded-full bg-white transition-transform duration-300 ${
               isDark ? 'translate-x-6' : 'translate-x-1'
             }`}
           />
@@ -230,6 +233,17 @@ const Settings = ({ user, onLogout }) => {
     <div className="min-h-screen bg-card dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 py-8">
         
+        {/* ✅ Back Navigation */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-secondary dark:text-muted hover:text-primary hover:cursor-pointer dark:hover:text-white transition-colors duration-200"
+          >
+            <ArrowLeft size={20} />
+            <span className="font-medium">Back to Dashboard</span>
+          </button>
+        </div>
+        
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-primary dark:text-white mb-2">Settings</h1>
@@ -271,16 +285,45 @@ const Settings = ({ user, onLogout }) => {
                 ))}
               </nav>
             </div>
+
+            {/* Quick Actions im Sidebar */}
+            <div className="mt-6 bg-card dark:bg-gray-800 border border-primary dark:border-gray-700 rounded-lg p-4">
+              <h4 className="font-medium text-primary dark:text-white mb-3">Quick Actions</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="w-full text-left p-2 text-sm text-secondary dark:text-muted hover:bg-hover hover:cursor-pointer dark:hover:bg-gray-700 rounded transition-colors"
+                >
+                  🏠 Dashboard
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="w-full text-left p-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 hover:cursor-pointer dark:hover:bg-red-900/20 rounded transition-colors"
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Content */}
+          {/* Content bleibt gleich... */}
           <div className="lg:w-3/4">
             <div className="bg-card dark:bg-gray-800 border border-primary dark:border-gray-700 rounded-lg p-6">
               
               {/* Profile Tab */}
               {activeTab === 'profile' && (
                 <form onSubmit={handleProfileSubmit} className="space-y-6">
-                  <h2 className="text-2xl font-semibold text-primary dark:text-white mb-6">Profile Information</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold text-primary dark:text-white">Profile Information</h2>
+                    {/* Save & Close Button */}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/dashboard')}
+                      className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-secondary dark:text-muted rounded-lg hover:bg-gray-200 hover:cursor-pointer dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Save & Close
+                    </button>
+                  </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -429,7 +472,17 @@ const Settings = ({ user, onLogout }) => {
                     </button>
                   </div>
 
-                  <div className="flex justify-end pt-4">
+                  <div className="flex justify-between pt-4">
+                    {/* ✅ Back Button links */}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/dashboard')}
+                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 hover:cursor-pointer transition-colors"
+                    >
+                      Back to Dashboard
+                    </button>
+                    
+                    {/* Save Button rechts */}
                     <button
                       type="submit"
                       disabled={saving}
@@ -444,7 +497,15 @@ const Settings = ({ user, onLogout }) => {
               {/* Appearance Tab */}
               {activeTab === 'appearance' && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-semibold text-primary dark:text-white mb-6">Appearance</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold text-primary dark:text-white">Appearance</h2>
+                    <button
+                      onClick={() => navigate('/dashboard')}
+                      className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-secondary dark:text-muted rounded-lg hover:bg-gray-200 hover:cursor-pointer dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Back to Dashboard
+                    </button>
+                  </div>
                   
                   <div className="space-y-6">
                     <div>
@@ -463,7 +524,7 @@ const Settings = ({ user, onLogout }) => {
                       <div className="grid grid-cols-2 gap-4">
                         {/* Light Theme Preview */}
                         <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${theme === 'light' ? 'border-blue-500' : 'border-primary dark:border-gray-700'}`}>
-                          <div className="bg-card p-3 rounded shadow-sm">
+                          <div className="bg-white p-3 rounded shadow-sm">
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-6 h-6 bg-blue-500 rounded-full"></div>
                               <div className="h-3 bg-gray-800 rounded w-16"></div>
@@ -481,7 +542,7 @@ const Settings = ({ user, onLogout }) => {
                           <div className="bg-gray-800 p-3 rounded shadow-sm">
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-6 h-6 bg-blue-400 rounded-full"></div>
-                              <div className="h-3 bg-tertiary rounded w-16"></div>
+                              <div className="h-3 bg-gray-200 rounded w-16"></div>
                             </div>
                             <div className="space-y-1">
                               <div className="h-2 bg-gray-600 rounded w-full"></div>
@@ -499,7 +560,16 @@ const Settings = ({ user, onLogout }) => {
               {/* Security Tab */}
               {activeTab === 'security' && (
                 <form onSubmit={handlePasswordSubmit} className="space-y-6">
-                  <h2 className="text-2xl font-semibold text-primary dark:text-white mb-6">Security</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold text-primary dark:text-white">Security</h2>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/dashboard')}
+                      className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-secondary dark:text-muted rounded-lg hover:bg-gray-200 hover:cursor-pointer dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Back to Dashboard
+                    </button>
+                  </div>
                   
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-primary dark:text-white">Change Password</h3>
@@ -549,7 +619,15 @@ const Settings = ({ user, onLogout }) => {
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-4">
+                  <div className="flex justify-between pt-4">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/dashboard')}
+                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 hover:cursor-pointer transition-colors"
+                    >
+                      Back to Dashboard
+                    </button>
+                    
                     <button
                       type="submit"
                       disabled={saving}

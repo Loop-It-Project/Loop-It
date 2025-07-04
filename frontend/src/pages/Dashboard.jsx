@@ -1,40 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
-//import { useTheme } from '../contexts/ThemeContext';
-import Feed from './feed/Feed';
+import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
-import CreateUniverse from './CreateUniverse';
-import CreatePost from './CreatePost';
+import CreateUniverse from '../components/CreateUniverse';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 // Dashboard Component
 // Zeigt den Haupt-Dashboard-Bereich mit Feed, Universes und Navigation
 const Dashboard = ({ user, onLogout }) => {
-  //const { isDark } = useTheme();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('feed');
   const [userUniverses, setUserUniverses] = useState([]);
   const [loadingUniverses, setLoadingUniverses] = useState(true);
   const [showCreateUniverse, setShowCreateUniverse] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // ESC-Key Handler für Suchergebnisse
+  // ESC-Key Handler für Modals
   useEscapeKey(() => {
-    if (showSearchResults) {
-      setShowSearchResults(false);
-      setSearchQuery('');
-    }
     if (showCreateUniverse) {
       setShowCreateUniverse(false);
     }
-    if (showCreatePost) {
-      setShowCreatePost(false);
-    }
-  }, showSearchResults || showCreateUniverse || showCreatePost);
+  }, showCreateUniverse);
 
   // User's Universes laden für Sidebar
   useEffect(() => {
@@ -42,41 +29,30 @@ const Dashboard = ({ user, onLogout }) => {
       try {
         setLoadingUniverses(true);
 
-        // BEIDE laden - eigene UND beigetretene Universes
         const [ownedResponse, memberResponse] = await Promise.all([
-          FeedService.getOwnedUniverses().catch(() => ({ success: false })), // Falls Methode fehlt
+          FeedService.getOwnedUniverses().catch(() => ({ success: false })),
           FeedService.getUserUniverses(1, 50).catch(() => ({ success: false }))
         ]);
       
         const allUniverses = [];
         
-        // Eigene Universes hinzufügen
         if (ownedResponse.success) {
           allUniverses.push(...ownedResponse.data.universes);
-          console.log('Owned Universes:', ownedResponse.data.universes); // Debug
         }
         
-        // Beigetretene Universes hinzufügen (ohne Duplikate)
         if (memberResponse.success) {
           const ownedIds = new Set(allUniverses.map(u => u.id));
           const memberUniverses = memberResponse.data.universes.filter(u => !ownedIds.has(u.id));
           allUniverses.push(...memberUniverses);
-          console.log('Member Universes:', memberUniverses); // Debug
         }
       
-        console.log('All Universes combined:', allUniverses); // Debug
         setUserUniverses(allUniverses);
         
       } catch (error) {
         console.error('Error loading user universes:', error);
-      
-        // Prüfe ob es ein Auth-Error ist
         if (error.message.includes('Session abgelaufen')) {
-          // User wird automatisch ausgeloggt - keine weitere Aktion nötig
           return;
         }
-
-        // Andere Fehler normal behandeln
         setUserUniverses([]);
       } finally {
         setLoadingUniverses(false);
@@ -86,30 +62,11 @@ const Dashboard = ({ user, onLogout }) => {
     loadUserUniverses();
   }, []);
 
-  // ESC-Key Handler für CreatePost Modal
-  useEscapeKey(() => {
-    if (showSearchResults) {
-      setShowSearchResults(false);
-      setSearchQuery('');
-    }
-    if (showCreateUniverse) {
-      setShowCreateUniverse(false);
-    }
-    if (showCreatePost) {
-      setShowCreatePost(false);
-    }
-  }, showSearchResults || showCreateUniverse || showCreatePost);
-
-  // ESC-Key Handler für CreatePost Modal
   const handleUniverseClick = (universeSlug) => {
     navigate(`/universe/${universeSlug}`);
   };
 
-  // Hashtag Navigation
   const handleHashtagClick = async (universeSlug, hashtag) => {
-    console.log(`Navigating to universe: ${universeSlug} for hashtag: #${hashtag}`);
-    
-    // Router-Navigation mit Hashtag-Parameter
     navigate(`/universe/${universeSlug}?hashtag=${hashtag}`);
   };
 
@@ -128,32 +85,7 @@ const Dashboard = ({ user, onLogout }) => {
       }
     }, 500);
 
-    // Router Navigation
     navigate(`/universe/${newUniverse.slug}`);
-  };
-
-  // Search Handler
-  const handleSearch = async (query) => {
-    if (!query.trim()) {
-      setShowSearchResults(false);
-      return;
-    }
-
-    try {
-      // TODO: Implement search in FeedService
-      const response = await FeedService.searchUniversesAndHashtags(query);
-      if (response.success) {
-        setSearchResults(response.data);
-        setShowSearchResults(true);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    }
-  };
-
-  const handleLogout = () => {
-    onLogout();
-    navigate('/');
   };
 
   const tabs = [
@@ -164,109 +96,6 @@ const Dashboard = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-secondary">
-      {/* Header */}
-      <header className="bg-card shadow-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            {/* Logo */}
-            <div className="flex items-center space-x-4">
-              <img src="/logo.png" alt="Loop-It Logo" className="h-8 w-8" />
-              <h1 className="text-2xl font-bold text-purple-600">Loop-It</h1>
-            </div>
-            
-            {/* Search Bar */}
-            <div className="flex-1 max-w-md mx-8 relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={20} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
-                  className="w-full pl-10 pr-4 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Universes oder Hashtags suchen..."
-                />
-              </div>
-              
-              {/* Search Results Dropdown */}
-              {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-card border border-primary rounded-lg shadow-lg mt-1 max-h-64 overflow-y-auto z-50">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.id}
-                      onClick={() => {
-                        if (result.type === 'universe') {
-                          handleUniverseClick(result.slug);
-                        } else if (result.type === 'hashtag') {
-                          handleHashtagClick(result.universeSlug, result.hashtag);
-                        }
-                        setShowSearchResults(false);
-                        setSearchQuery('');
-                      }}
-                      className="w-full px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer flex items-center space-x-3"
-                    >
-                      {result.type === 'universe' ? (
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                          <Hash className="text-white" size={14} />
-                        </div>
-                      ) : (
-                        <Hash className="text-purple-500" size={20} />
-                      )}
-                      <div>
-                        <p className="font-medium text-primary">
-                          {result.type === 'universe' ? result.name : `#${result.hashtag}`}
-                        </p>
-                        <p className="text-sm text-tertiary">
-                          {result.type === 'universe' 
-                            ? `${result.memberCount} Mitglieder` 
-                            : `Universe: ${result.universeName}`
-                          }
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right Side Actions */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User size={20} className="text-muted" />
-                <span className="text-secondary">Hallo, {user.displayName || user.username}!</span>
-              </div>
-
-              {/* Create Universe Button */}
-              <button
-                onClick={() => setShowCreateUniverse(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:cursor-pointer transition-colors"
-              >
-                <Plus size={20} />
-                <span>Universe</span>
-              </button>
-              
-              {/* Settings Button */}
-              <button 
-                onClick={() => navigate('/settings')} // Navigiere zu Settings
-                className="p-2 text-muted hover:text-secondary hover:cursor-pointer transition"
-              >
-                <Settings size={20} />
-              </button>
-              
-              {/* Logout Button */}
-              <button 
-                onClick={handleLogout}
-                className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 hover:cursor-pointer transition"
-              >
-                <LogOut size={16} />
-                <span>Abmelden</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex gap-8">

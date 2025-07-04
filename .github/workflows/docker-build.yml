@@ -1,0 +1,306 @@
+name: Loop-It Docker Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'README.md'
+      - '**/diary.md'
+      - '**/tagebuch.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-
+      
+      - name: Install Backend Dependencies
+        working-directory: ./backend
+        run: npm ci
+      
+      - name: Check for Backend Vulnerabilities
+        working-directory: ./backend
+        run: npm audit --audit-level=high || echo "Vulnerabilities found, continuing build"
+      
+      - name: Run Backend Linter (if available)
+        working-directory: ./backend
+        run: npm run lint || echo "No linter configured, skipping"
+      
+      - name: Build Backend Application
+        working-directory: ./backend
+        run: |
+          export BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          export VERSION=${{ github.sha }}
+          npm run build
+      
+      - name: Save Backend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-artifact
+          path: ./backend/dist
+      
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and Push Backend Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/loop-it-backend:${{ github.sha }}
+            ${{ vars.DOCKERHUB_USERNAME }}/loop-it-backend:latest
+          platforms: linux/amd64,linux/arm64
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-
+      
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+      
+      - name: Check for Frontend Vulnerabilities
+        working-directory: ./frontend
+        run: npm audit --audit-level=high || echo "Vulnerabilities found, continuing build"
+      
+      - name: Run Frontend Linter (if available)
+        working-directory: ./frontend
+        run: npm run lint || echo "No linter configured, skipping"
+      
+      - name: Build Frontend Application
+        working-directory: ./frontend
+        run: |
+          export VITE_COMMIT_SHA=${{ github.sha }}
+          export VITE_BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          npm run build
+      
+      - name: Save Frontend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-artifact
+          path: ./frontend/dist
+      
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and Push Frontend Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/loop-it-frontend:${{ github.sha }}
+            ${{ vars.DOCKERHUB_USERNAME }}/loop-it-frontend:latest
+          platforms: linux/amd64,linux/arm64
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Test Docker Compose Setup
+        run: |
+          # Create test environment
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .env
+          echo "VERSION=${{ github.sha }}" >> .env
+          echo "COMPOSE_PROJECT_NAME=loop-it-ci" >> .env
+          
+          # Start services with wait
+          echo "Starting services..."
+          docker compose up -d --wait
+          
+          # Debug: Show initial container status
+          echo "=== Initial Container Status ==="
+          docker compose ps
+          
+          # Extended wait for backend warmup (based on local testing)
+          echo "Waiting for backend warmup..."
+          sleep 90
+          
+          # Debug: Show container status after warmup
+          echo "=== Container Status After Warmup ==="
+          docker compose ps
+          
+          # Test services in order
+          echo "=== Testing Database ==="
+          docker compose exec -T postgres pg_isready -U loop_user -d loop-it || exit 1
+          echo "✅ Database is ready!"
+          
+          echo "=== Testing Backend Direct ==="
+          curl -f http://localhost:3000/health || exit 1
+          echo "✅ Backend is ready!"
+          
+          echo "=== Testing Frontend ==="
+          for i in {1..8}; do
+            if curl -f --connect-timeout 10 --max-time 30 http://localhost/; then
+              echo "✅ Frontend is accessible!"
+              break
+            fi
+            echo "Frontend test attempt $i/8..."
+            if [ $i -eq 8 ]; then
+              echo "❌ Frontend failed after 8 attempts"
+              exit 1
+            fi
+            sleep 15
+          done
+          
+          echo "=== Testing Reverse Proxy API ==="
+          for i in {1..5}; do
+            if curl -f --connect-timeout 10 --max-time 30 http://localhost/api/health; then
+              echo "✅ Reverse Proxy API is working!"
+              break
+            fi
+            echo "API proxy test attempt $i/5..."
+            if [ $i -eq 5 ]; then
+              echo "❌ API Proxy failed after 5 attempts"
+              exit 1
+            fi
+            sleep 10
+          done
+          
+          echo "=== Testing Authentication Endpoint ==="
+          AUTH_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://localhost/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"test@test.com","password":"test123"}' \
+            -o /tmp/auth_response.txt)
+          
+          if [ "$AUTH_RESPONSE" -eq 200 ] || [ "$AUTH_RESPONSE" -eq 400 ] || [ "$AUTH_RESPONSE" -eq 401 ]; then
+            echo "✅ Auth endpoint is reachable! (HTTP $AUTH_RESPONSE)"
+            cat /tmp/auth_response.txt
+          else
+            echo "❌ Auth endpoint failed with HTTP $AUTH_RESPONSE"
+            cat /tmp/auth_response.txt
+            exit 1
+          fi
+          
+          echo "🎉 All integration tests passed!"
+      
+      - name: Debug on Failure
+        if: failure()
+        run: |
+          echo "=== DEBUGGING FAILED PIPELINE ==="
+          
+          echo "=== Final Container Status ==="
+          docker compose ps
+          
+          echo "=== Frontend Logs ==="
+          docker compose logs frontend
+          
+          echo "=== Backend Logs ==="
+          docker compose logs backend | tail -100
+          
+          echo "=== Postgres Logs ==="
+          docker compose logs postgres | tail -50
+          
+          echo "=== System Resources ==="
+          df -h
+          free -h
+          docker system df
+          
+          echo "=== Network Test ==="
+          curl -v http://localhost/ || echo "Frontend connection failed"
+          curl -v http://localhost/api/health || echo "API connection failed"
+          curl -v http://localhost:3000/health || echo "Backend direct connection failed"
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v
+          docker system prune -f
+
+  # Optional: Deploy job for later
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   needs: [build-backend, build-frontend, test-integration]
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - name: Deploy to Server
+  #       uses: appleboy/ssh-action@v1
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USERNAME }}
+  #         key: ${{ secrets.SSH_KEY }}
+  #         script: |
+  #           # Stop old containers
+  #           sudo docker stop loop-it-backend loop-it-frontend loop-it-postgres || true
+  #           sudo docker rm loop-it-backend loop-it-frontend loop-it-postgres || true
+  #           
+  #           # Pull and run new images
+  #           sudo docker pull ${{ vars.DOCKERHUB_USERNAME }}/loop-it-backend:${{ github.sha }}
+  #           sudo docker pull ${{ vars.DOCKERHUB_USERNAME }}/loop-it-frontend:${{ github.sha }}
+  #           
+  #           # Start with docker compose
+  #           cd /path/to/your/deployment
+  #           sudo docker compose up -d

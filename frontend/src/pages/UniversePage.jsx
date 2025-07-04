@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X } from 'lucide-react';
-import Feed from './feed/Feed';
+import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
 import useEscapeKey from '../hooks/useEscapeKey';
 
@@ -249,25 +249,6 @@ const UniversePage = ({ user }) => {
   // Render Universe Page
   return (
     <div className="min-h-screen bg-secondary">
-      {/* Header */}
-      <header className="bg-card shadow-sm border-b">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate('/dashboard')} // Router Navigation
-                className="text-tertiary hover:text-secondary hover:cursor-pointer"
-              >
-                <ArrowLeft size={24} />
-              </button>
-              <div className="flex items-center space-x-3">
-                <img src="/logo.png" alt="Loop-It Logo" className="h-8 w-8" />
-                <h1 className="text-2xl font-bold text-purple-600">Loop-It</h1>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Universe Header */}
       <div className="bg-card border-b">

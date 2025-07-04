@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 
 .env
+.env.migrate
 .env.local
 .env.development.local
 .env.test.local

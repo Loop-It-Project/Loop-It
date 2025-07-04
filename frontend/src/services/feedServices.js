@@ -1,5 +1,6 @@
 import AuthInterceptor from '../utils/authInterceptor';
 
+// API_URL korrekt definieren
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 class FeedService {
