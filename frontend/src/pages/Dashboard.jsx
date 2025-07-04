@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
-import Feed from './feed/Feed';
+import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
-import CreateUniverse from './CreateUniverse';
-import CreatePost from './CreatePost';
+import CreateUniverse from '../components/CreateUniverse';
+import CreatePost from '../components/CreatePost';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 // Dashboard Component

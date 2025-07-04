@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X } from 'lucide-react';
-import Feed from './feed/Feed';
+import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
 import useEscapeKey from '../hooks/useEscapeKey';
 

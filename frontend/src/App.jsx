@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import LandingPage from './components/LandingPage';
-import Login from './components/Login';
-import Register from './components/Register';
-import Dashboard from './components/Dashboard';
-import UniversePage from './components/UniversePage';
+import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import UniversePage from './pages/UniversePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import Hobbies from './pages/Hobbies';
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -43,6 +46,7 @@ function App() {
 
   return (
     <Router>
+      <Header user={user} setUser={setUser} />
       <div className="App">
         <Routes>
           {/* Public Routes - nur für nicht-eingeloggte User */}
@@ -70,6 +74,14 @@ function App() {
               </PublicRoute>
             } 
           />
+          <Route 
+            path="/hobbies"
+            element={
+              <PublicRoute user={user}>
+                <Hobbies />
+              </PublicRoute>
+            }
+          />
 
           {/* Protected Routes - nur für eingeloggte User */}
           <Route 
@@ -96,6 +108,7 @@ function App() {
           />
         </Routes>
       </div>
+      <Footer />
     </Router>
   );
 }
