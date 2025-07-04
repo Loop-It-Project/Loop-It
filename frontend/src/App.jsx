@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import LandingPage from './components/LandingPage';
-import Login from './components/Login';
-import Register from './components/Register';
+import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './components/Dashboard';
 import UniversePage from './components/UniversePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
-import Hobbies from './components/Hobbies';
+import Hobbies from './pages/Hobbies';
 
 function App() {
   const [user, setUser] = useState(null);

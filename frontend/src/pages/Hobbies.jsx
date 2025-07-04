@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Menu, MenuItem, MenuButton, MenuItems } from '@headlessui/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Check} from 'lucide-react';
 
 const Hobbies = ({ onNavigate }) => {
   const navigate = useNavigate();
@@ -70,17 +69,38 @@ const Hobbies = ({ onNavigate }) => {
       }
     };
 
+    const hobbies = [
+      { id: 1, name: 'Lesen' },
+      { id: 2, name: 'Nähen' },
+      { id: 3, name: 'Zeichnen' },
+      { id: 4, name: 'Spazieren' },
+      { id: 5, name: 'Schreiben' },
+    ]
+
+    const [query, setQuery] = useState('')
+    const [selected, setSelected] = useState(hobbies[1])
+
+    const filteredHobbies =
+      query === ''
+        ? hobbies
+        : hobbies.filter((hobby) => {
+          return hobby.name.toLowerCase().includes(query.toLowerCase())
+        })
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
-        <button 
-          onClick={() => onNavigate('landing')}
+
+        {/* Back Button */}
+        <Link 
+          to="/"
           className="flex items-center text-white mb-8 hover:text-gray-200 transition"
         >
           <ArrowLeft size={20} className="mr-2" />
           Zurück
-        </button>
+        </Link>
 
+        {/* Hobbies Form */}
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Teile deine Hoobbys mit uns!</h1>
@@ -96,58 +116,6 @@ const Hobbies = ({ onNavigate }) => {
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/*Dropdowns for Hobbies*/}
-            <Menu as="div" className="relative inline-block text-left">
-              <div>
-                <label classname="inline-flex text-sm font-medium text-gray-700 mb-2">
-                  1.
-                </label>
-                <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white mb-4 px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50">
-                  Wähle dein Hobby
-                </MenuButton>
-                <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white mb-4 px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50">
-                  Wähle dein Hobby
-                </MenuButton>
-                <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white mb-4 px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50">
-                  Wähle dein Hobby
-                </MenuButton>
-                <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white mb-4 px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50">
-                  Wähle dein Hobby
-                </MenuButton>
-              </div>
-
-              <MenuItems
-                transition
-                anchor="bottom start"
-                className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 transition focus:outline-hidden data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
-              >
-                <div className="py-1">
-                  <MenuItem>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:text-gray-900 data-focus:outline-hidden"
-                    >
-                      Lesen
-                    </a>
-                  </MenuItem>
-                  <MenuItem>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:text-gray-900 data-focus:outline-hidden"
-                    >
-                      Nähen
-                    </a>
-                  </MenuItem>
-                  <MenuItem>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:text-gray-900 data-focus:outline-hidden"
-                    >
-                      Zeichnen
-                    </a>
-                  </MenuItem>
-                </div>
-              </MenuItems>
-            </Menu>
 
             {/* Submit Button */}
             <button

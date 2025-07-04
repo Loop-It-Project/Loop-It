@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@headlessui/react": "^2.2.4",
     "@tailwindcss/vite": "^4.1.11",
     "lucide-react": "^0.524.0",
     "react": "^19.1.0",
