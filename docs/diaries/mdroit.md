@@ -2,15 +2,25 @@
 
 ## *Heutige Hauptaufgabe(n):*
 
+Hobbies/LandingPage fertigstellen, Header und Footer erstellen und als Komponenten isolieren, Projektstruktur umstellen auf Pages und Components
+
 ## *Fortschritte & Ergebnisse:*
 
-## Herausforderungen & Blockaden:
+Header unf Footer isoliert, Projektstruktur umgestellt, Hobbies/LandingPage nicht fertiggestellt
 
-## Was ich heute gelernt habe:
+## *Herausforderungen & Blockaden:*
 
-## Plan für morgen:
+Umfangreiches Einlesen in HeadlessUI war leider verschwendete Zeit, da Tool doch nicht genutzt wird, um den Tech-Stack möglichst überschaubar zu halten
 
-# **Projekttagebuch Marc Droit - 03.07.2025**
+## *Was ich heute gelernt habe:*
+
+Animated-ping und andere Animationen und Transitions in Tailwindcss um mit wenig Aufwand ansehnliche Effekte zu erzeugen
+
+## *Plan für morgen:*
+
+Hobbies und LandingPage fertigstellen, Styling der gesamten Anwendung überarbeiten und vereinheitlichen
+
+# Projekttagebuch Marc Droit - 03.07.2025
 
 ## *Heutige Hauptaufgabe(n):*
 
