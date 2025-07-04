@@ -43,11 +43,27 @@ const Login = ({ onLogin }) => {
 
       const data = await response.json();
 
+      // Debug
+      console.log('📥 Login response:', { 
+        status: response.status, 
+        success: data.success,
+        hasToken: !!data.token 
+      });
+
       if (response.ok) {
         // Save token to localStorage
         localStorage.setItem('token', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
-        onLogin(data.user);
+        
+        onLogin(data.user, {
+          token: data.token,
+          refreshToken: data.refreshToken,
+          expiresIn: data.expiresIn
+        });
+
+        console.log('✅ Login successful, navigating to dashboard');
+
         navigate('/dashboard');
       } else {
         if (data.errors) {
@@ -82,10 +98,10 @@ const Login = ({ onLogin }) => {
         </Link>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
+        <div className="bg-card rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Willkommen zurück!</h1>
-            <p className="text-gray-600">Melde dich in deinem Loop-It Account an</p>
+            <h1 className="text-3xl font-bold text-primary mb-2">Willkommen zurück!</h1>
+            <p className="text-secondary">Melde dich in deinem Loop-It Account an</p>
           </div>
 
           {errors.general && (
@@ -97,18 +113,18 @@ const Login = ({ onLogin }) => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 E-Mail Adresse
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={20} />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                    errors.email ? 'border-red-500' : 'border-gray-300'
+                    errors.email ? 'border-red-500' : 'border-secondary'
                   }`}
                   placeholder="deine@email.com"
                   required
@@ -119,18 +135,18 @@ const Login = ({ onLogin }) => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Passwort
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={20} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                    errors.password ? 'border-red-500' : 'border-gray-300'
+                    errors.password ? 'border-red-500' : 'border-secondary'
                   }`}
                   placeholder="Dein Passwort"
                   required
@@ -138,7 +154,7 @@ const Login = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-secondary hover:cursor-pointer transition-colors"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -150,7 +166,7 @@ const Login = ({ onLogin }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 hover:cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Wird angemeldet...' : 'Anmelden'}
             </button>
@@ -158,11 +174,11 @@ const Login = ({ onLogin }) => {
 
           {/* Register Link */}
           <div className="text-center mt-6">
-            <p className="text-gray-600">
+            <p className="text-secondary">
               Noch kein Account?{' '}
               <Link
                 to="/register"
-                className="text-purple-600 font-semibold hover:text-purple-700 transition"
+                className="text-purple-600 font-semibold hover:text-purple-700 hover:cursor-pointer transition"
               >
                 Jetzt registrieren
               </Link>

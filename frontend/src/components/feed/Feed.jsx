@@ -180,7 +180,7 @@ const Feed = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="flex items-center space-x-2 text-gray-500">
+        <div className="flex items-center space-x-2 text-tertiary">
           <Loader className="animate-spin" size={20} />
           <span>Feed wird geladen...</span>
         </div>
@@ -229,7 +229,7 @@ const Feed = ({
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">
+        <h2 className="text-xl font-bold text-primary">
           {type === 'personal' && 'Dein Feed'}
           {type === 'universe' && `${universeSlug} Universe`}
           {type === 'trending' && 'Trending Posts'}
@@ -241,7 +241,7 @@ const Feed = ({
             <div className="relative filter-dropdown">
               <button
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-card border border-secondary rounded-lg hover:bg-secondary hover:cursor-pointer transition-colors"
               >
                 <Filter size={16} />
                 <span className="text-sm font-medium">
@@ -252,13 +252,13 @@ const Feed = ({
 
               {/* Filter Dropdown */}
               {showFilterDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-[160px] z-50">
+                <div className="absolute right-0 top-full mt-2 bg-card border border-primary rounded-lg shadow-lg py-2 min-w-[160px] z-50">
                   {filterOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleFilterChange(option.value)}
-                      className={`w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
-                        sortBy === option.value ? 'bg-purple-50 text-purple-700' : 'text-gray-700'
+                      className={`w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-secondary hover:cursor-pointer transition-colors ${
+                        sortBy === option.value ? 'bg-purple-50 text-purple-700' : 'text-secondary'
                       }`}
                     >
                       <span>{option.icon}</span>
@@ -274,7 +274,7 @@ const Feed = ({
         <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-2 text-gray-500 hover:text-purple-600 transition-colors disabled:opacity-50"
+            className="flex items-center space-x-2 text-tertiary hover:text-purple-600 transition-colors hover:cursor-pointer disabled:opacity-50"
           >
             <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             <span className="text-sm">Aktualisieren</span>
@@ -285,7 +285,7 @@ const Feed = ({
       {/* Posts */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2 text-gray-500">
+          <div className="flex items-center space-x-2 text-tertiary">
             <Loader className="animate-spin" size={20} />
             <span>Feed wird geladen...</span>
           </div>
@@ -298,14 +298,14 @@ const Feed = ({
           </div>
           <button
             onClick={handleRefresh}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 hover:cursor-pointer transition-colors"
           >
             Erneut versuchen
           </button>
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-gray-500">
+          <div className="text-tertiary">
             <p className="text-lg font-medium mb-2">Keine Posts gefunden</p>
             <p className="text-sm">
               {type === 'personal' && 'Folge einigen Universes um Posts in deinem Feed zu sehen!'}
@@ -334,7 +334,7 @@ const Feed = ({
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center space-x-2 mx-auto"
+                className="bg-hover text-secondary px-6 py-3 rounded-lg hover:bg-tertiary hover:cursor-pointer transition-colors disabled:opacity-50 flex items-center space-x-2 mx-auto"
               >
                 {loadingMore ? (
                   <>

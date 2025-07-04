@@ -1,117 +1,212 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { db } from '../db/index';
-import { usersTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
 import { body, validationResult } from 'express-validator';
+import { AuthService } from '../services/authService';
 
+interface AuthRequest extends Request {
+  user?: { id: string; email: string; username: string };
+}
+
+// Helper function für Error-Handling
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Unknown error occurred';
+};
+
+// REGISTER
 export const register = async (req: Request, res: Response): Promise<void> => {
+  console.log('🔍 Register route called');
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() });
-    return 
+    res.status(400).json({ 
+      success: false,
+      errors: errors.array() 
+    });
+    return;
   }
 
   try {
-    const { email, password, username, firstName, lastName } = req.body;
+    const result = await AuthService.registerUser(req.body);
 
-    // Check if user already exists
-    const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, email));
-    if (existingUser.length > 0) {
-      res.status(400).json({ error: 'User already exists' });
-      return 
+    if (!result.success) {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+      return;
     }
-
-    // Hash password
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    // Create user
-    const newUser = await db.insert(usersTable).values({
-      email,
-      passwordHash,
-      username,
-      firstName,
-      lastName,
-      displayName: `${username}`,
-    }).returning({ id: usersTable.id, email: usersTable.email, username: usersTable.username });
-
-    // Generate JWT
-    const token = jwt.sign(
-      { id: newUser[0].id, email: newUser[0].email },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '24h' }
-    );
 
     res.status(201).json({
-      message: 'User created successfully',
-      token,
-      user: {
-        id: newUser[0].id,
-        email: newUser[0].email,
-        username: newUser[0].username
-      }
+      success: true,
+      message: result.message,
+      token: result.tokens!.accessToken,
+      refreshToken: result.tokens!.refreshToken,
+      expiresIn: result.tokens!.expiresIn,
+      user: result.user
     });
+
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined
+    });
   }
 };
 
+// LOGIN
 export const login = async (req: Request, res: Response): Promise<void> => {
+  console.log('🔍 Login route called with body:', Object.keys(req.body));
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() });
-    return 
+    console.log('❌ Validation errors:', errors.array());
+    res.status(400).json({ 
+      success: false,
+      errors: errors.array() 
+    });
+    return;
   }
 
   try {
-    const { email, password } = req.body;
+    const result = await AuthService.loginUser(req.body);
 
-    // Find user
-    const user = await db.select().from(usersTable).where(eq(usersTable.email, email));
-    if (user.length === 0) {
-      res.status(400).json({ error: 'Invalid credentials' });
-      return 
+    if (!result.success) {
+      res.status(401).json({
+        success: false,
+        error: result.error
+      });
+      return;
     }
 
-    // Check password
-    const isValidPassword = await bcrypt.compare(password, user[0].passwordHash);
-    if (!isValidPassword) {
-      res.status(400).json({ error: 'Invalid credentials' });
-      return 
-    }
-
-    // Update last login
-    await db.update(usersTable)
-      .set({ lastLoginAt: new Date() })
-      .where(eq(usersTable.id, user[0].id));
-
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user[0].id, email: user[0].email },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '24h' }
-    );
-
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user[0].id,
-        email: user[0].email,
-        username: user[0].username,
-        displayName: user[0].displayName
-      }
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      token: result.tokens!.accessToken,
+      refreshToken: result.tokens!.refreshToken,
+      expiresIn: result.tokens!.expiresIn,
+      user: result.user
     });
+
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Login error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined
+    });
   }
 };
 
-// Validation rules
+// TOKEN REFRESH
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ 
+      success: false,
+      errors: errors.array() 
+    });
+    return;
+  }
+
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      res.status(400).json({
+        success: false,
+        error: 'Refresh token is required'
+      });
+      return;
+    }
+
+    const result = await AuthService.refreshUserTokens(refreshToken);
+
+    if (!result.success) {
+      res.status(401).json({
+        success: false,
+        error: result.error
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      token: result.tokens!.accessToken,
+      refreshToken: result.tokens!.refreshToken,
+      expiresIn: result.tokens!.expiresIn
+    });
+
+  } catch (error) {
+    console.error('❌ Token refresh error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined
+    });
+  }
+};
+
+// LOGOUT
+export const logout = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const result = await AuthService.logoutUser(req.body.refreshToken);
+
+    res.status(200).json({
+      success: result.success,
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  }
+};
+
+// LOGOUT ALL
+export const logoutAll = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+      return;
+    }
+
+    const result = await AuthService.logoutUserFromAllDevices(
+      req.user.id, 
+      req.user.username
+    );
+
+    if (!result.success) {
+      res.status(500).json({
+        success: false,
+        error: result.error
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Logout all error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to logout from all devices'
+    });
+  }
+};
+
+// VALIDATION RULES
 export const registerValidation = [
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -123,4 +218,8 @@ export const registerValidation = [
 export const loginValidation = [
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('password').notEmpty().withMessage('Password is required'),
+];
+
+export const refreshTokenValidation = [
+  body('refreshToken').notEmpty().withMessage('Refresh token is required')
 ];

@@ -19,10 +19,8 @@ const searchValidation = [
     .withMessage('Search query must be between 1 and 50 characters'),
 ];
 
-// Universe für Hashtag finden
-router.get('/:hashtag/universe', hashtagValidation, getUniverseByHashtag);
-
-// Hashtag-Suche
+// Route-Reihenfolge (spezifischere Routes zuerst)
 router.get('/search', searchValidation, searchHashtags);
+router.get('/:hashtag/universe', hashtagValidation, getUniverseByHashtag);
 
 export default router;

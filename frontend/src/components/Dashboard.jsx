@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
+//import { useTheme } from '../contexts/ThemeContext';
 import Feed from './feed/Feed';
 import FeedService from '../services/feedServices';
 import CreateUniverse from './CreateUniverse';
@@ -10,6 +11,7 @@ import useEscapeKey from '../hooks/useEscapeKey';
 // Dashboard Component
 // Zeigt den Haupt-Dashboard-Bereich mit Feed, Universes und Navigation
 const Dashboard = ({ user, onLogout }) => {
+  //const { isDark } = useTheme();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('feed');
   const [userUniverses, setUserUniverses] = useState([]);
@@ -38,7 +40,9 @@ const Dashboard = ({ user, onLogout }) => {
   useEffect(() => {
     const loadUserUniverses = async () => {
       try {
-        // ✅ BEIDE laden - eigene UND beigetretene Universes
+        setLoadingUniverses(true);
+
+        // BEIDE laden - eigene UND beigetretene Universes
         const [ownedResponse, memberResponse] = await Promise.all([
           FeedService.getOwnedUniverses().catch(() => ({ success: false })), // Falls Methode fehlt
           FeedService.getUserUniverses(1, 50).catch(() => ({ success: false }))
@@ -65,20 +69,20 @@ const Dashboard = ({ user, onLogout }) => {
         
       } catch (error) {
         console.error('Error loading user universes:', error);
-        // Fallback: Nur Member-Universes laden
-        try {
-          const response = await FeedService.getUserUniverses(1, 50);
-          if (response.success) {
-            setUserUniverses(response.data.universes || []);
-          }
-        } catch (fallbackError) {
-          console.error('Fallback error:', fallbackError);
+      
+        // Prüfe ob es ein Auth-Error ist
+        if (error.message.includes('Session abgelaufen')) {
+          // User wird automatisch ausgeloggt - keine weitere Aktion nötig
+          return;
         }
+
+        // Andere Fehler normal behandeln
+        setUserUniverses([]);
       } finally {
         setLoadingUniverses(false);
       }
     };
-  
+
     loadUserUniverses();
   }, []);
 
@@ -159,9 +163,9 @@ const Dashboard = ({ user, onLogout }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <header className="bg-card shadow-sm border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             {/* Logo */}
@@ -173,7 +177,7 @@ const Dashboard = ({ user, onLogout }) => {
             {/* Search Bar */}
             <div className="flex-1 max-w-md mx-8 relative">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={20} />
                 <input
                   type="text"
                   value={searchQuery}
@@ -181,14 +185,14 @@ const Dashboard = ({ user, onLogout }) => {
                     setSearchQuery(e.target.value);
                     handleSearch(e.target.value);
                   }}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full pl-10 pr-4 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Universes oder Hashtags suchen..."
                 />
               </div>
               
               {/* Search Results Dropdown */}
               {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-64 overflow-y-auto z-50">
+                <div className="absolute top-full left-0 right-0 bg-card border border-primary rounded-lg shadow-lg mt-1 max-h-64 overflow-y-auto z-50">
                   {searchResults.map((result) => (
                     <button
                       key={result.id}
@@ -201,7 +205,7 @@ const Dashboard = ({ user, onLogout }) => {
                         setShowSearchResults(false);
                         setSearchQuery('');
                       }}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center space-x-3"
+                      className="w-full px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer flex items-center space-x-3"
                     >
                       {result.type === 'universe' ? (
                         <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
@@ -211,10 +215,10 @@ const Dashboard = ({ user, onLogout }) => {
                         <Hash className="text-purple-500" size={20} />
                       )}
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-primary">
                           {result.type === 'universe' ? result.name : `#${result.hashtag}`}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-tertiary">
                           {result.type === 'universe' 
                             ? `${result.memberCount} Mitglieder` 
                             : `Universe: ${result.universeName}`
@@ -230,28 +234,31 @@ const Dashboard = ({ user, onLogout }) => {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <User size={20} className="text-gray-400" />
-                <span className="text-gray-700">Hallo, {user.displayName || user.username}!</span>
+                <User size={20} className="text-muted" />
+                <span className="text-secondary">Hallo, {user.displayName || user.username}!</span>
               </div>
 
               {/* Create Universe Button */}
               <button
                 onClick={() => setShowCreateUniverse(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:cursor-pointer transition-colors"
               >
                 <Plus size={20} />
                 <span>Universe</span>
               </button>
               
               {/* Settings Button */}
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition">
+              <button 
+                onClick={() => navigate('/settings')} // Navigiere zu Settings
+                className="p-2 text-muted hover:text-secondary hover:cursor-pointer transition"
+              >
                 <Settings size={20} />
               </button>
               
               {/* Logout Button */}
               <button 
                 onClick={handleLogout}
-                className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 hover:cursor-pointer transition"
               >
                 <LogOut size={16} />
                 <span>Abmelden</span>
@@ -266,8 +273,8 @@ const Dashboard = ({ user, onLogout }) => {
           {/* Sidebar */}
           <div className="w-64 flex-shrink-0">
             {/* Navigation Tabs */}
-            <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Navigation</h3>
+            <div className="bg-card rounded-lg shadow-sm border p-4 mb-6">
+              <h3 className="font-semibold text-primary mb-4">Navigation</h3>
               <div className="space-y-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -275,10 +282,10 @@ const Dashboard = ({ user, onLogout }) => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:cursor-pointer transition-colors ${
                         activeTab === tab.id
                           ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          : 'text-secondary hover:bg-hover'
                       }`}
                     >
                       <Icon size={20} />
@@ -290,27 +297,27 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
 
             {/* Meine Universes */}
-            <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="bg-card rounded-lg shadow-sm border p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Meine Universes</h3>
+                <h3 className="font-semibold text-primary">Meine Universes</h3>
                 <button 
                   onClick={() => setActiveTab('discover')}
-                  className="text-purple-600 hover:text-purple-700"
+                  className="text-purple-600 hover:text-purple-700 hover:cursor-pointer"
                 >
                   <Plus size={20} />
                 </button>
               </div>
               
               {loadingUniverses ? (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-4 text-tertiary">
                   Lädt...
                 </div>
               ) : userUniverses.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-4 text-tertiary">
                   <p className="text-sm mb-2">Noch keine Universes</p>
                   <button
                     onClick={() => setActiveTab('discover')}
-                    className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                    className="text-purple-600 hover:text-purple-700 text-sm font-medium hover:cursor-pointer transition"
                   >
                     Universes entdecken
                   </button>
@@ -321,16 +328,16 @@ const Dashboard = ({ user, onLogout }) => {
                     <button
                       key={universe.id}
                       onClick={() => handleUniverseClick(universe.slug)}
-                      className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left"
+                      className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-hover hover:cursor-pointer transition-colors text-left"
                     >
                       <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
                         <Hash className="text-white" size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-primary truncate">
                           {universe.slug} {/* ✅ GEÄNDERT: Slug statt Name */}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-tertiary">
                           {universe.memberCount} Mitglieder
                         </p>
                       </div>
@@ -340,7 +347,7 @@ const Dashboard = ({ user, onLogout }) => {
                   {userUniverses.length > 8 && (
                     <button
                       onClick={() => {/* TODO: Show all universes */}}
-                      className="w-full text-sm text-purple-600 hover:text-purple-700 py-2"
+                      className="w-full text-sm text-purple-600 hover:text-purple-700 hover:cursor-pointer py-2"
                     >
                       Alle anzeigen ({userUniverses.length})
                     </button>
@@ -361,7 +368,7 @@ const Dashboard = ({ user, onLogout }) => {
                 </p>
                 <button
                   onClick={() => setActiveTab('discover')}
-                  className="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+                  className="bg-card text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-hover hover:cursor-pointer transition"
                 >
                   Universes entdecken
                 </button>
@@ -449,7 +456,7 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-500">Universes werden geladen...</div>
+        <div className="text-tertiary">Universes werden geladen...</div>
       </div>
     );
   }
@@ -468,27 +475,27 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Universes entdecken</h2>
-        <p className="text-gray-600">Finde Communities zu deinen Hobbys und Interessen</p>
+        <h2 className="text-2xl font-bold text-primary mb-2">Universes entdecken</h2>
+        <p className="text-secondary">Finde Communities zu deinen Hobbys und Interessen</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {universes.map((universe) => (
-          <div key={universe.id} className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+          <div key={universe.id} className="bg-card rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                   <Hash className="text-white" size={20} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{universe.name}</h3>
-                  <p className="text-sm text-gray-500">{universe.memberCount} Mitglieder</p>
+                  <h3 className="font-semibold text-primary">{universe.name}</h3>
+                  <p className="text-sm text-tertiary">{universe.memberCount} Mitglieder</p>
                 </div>
               </div>
             </div>
 
             {universe.description && (
-              <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+              <p className="text-secondary text-sm mb-4 line-clamp-3">
                 {universe.description}
               </p>
             )}
@@ -496,7 +503,7 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => onUniverseClick(universe.slug)}
-                className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                className="text-purple-600 hover:text-purple-700 font-medium text-sm hover:cursor-pointer transition"
               >
                 Ansehen
               </button>
@@ -508,7 +515,7 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
               ) : (
                 <button
                   onClick={() => handleJoinUniverse(universe.slug)}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm font-medium"
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 hover:cursor-pointer transition text-sm font-medium"
                 >
                   Beitreten
                 </button>

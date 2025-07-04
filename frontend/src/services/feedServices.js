@@ -1,13 +1,92 @@
+import AuthInterceptor from '../utils/authInterceptor';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 class FeedService {
-  // Helper für authentifizierte Requests
+  // Erweiterte Auth-Headers mit Token-Validation
   static getAuthHeaders() {
     const token = localStorage.getItem('token');
+    
+    // Prüfe Token vor jeder Request
+    if (AuthInterceptor.isTokenExpired(token)) {
+      console.warn('🔒 Token ist abgelaufen - initiiere Logout');
+      AuthInterceptor.handleLogout?.();
+      throw new Error('Session abgelaufen');
+    }
+    
     return {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',
     };
+  }
+
+  // Wrapper für fetch mit automatischem Token-Handling
+  static async fetchWithAuth(url, options = {}) {
+    try {
+      let token = localStorage.getItem('token');
+      
+      // Prüfe ob Token erneuert werden muss
+      if (AuthInterceptor.isTokenExpired(token)) {
+        console.log('🔄 Token läuft bald ab - erneuere präventiv...');
+        try {
+          token = await AuthInterceptor.refreshTokens();
+        } catch (refreshError) {
+          console.error('Preventive token refresh failed:', refreshError);
+          // Verwende alten Token und lass Backend entscheiden
+        }
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+          ...options.headers
+        }
+      });
+
+      // Response durch Interceptor leiten
+      return await AuthInterceptor.handleResponse(response, { url, options });
+      
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Beispiel-Methode mit neuem fetchWithAuth
+  static async getUserUniverses(page = 1, limit = 20) {
+    try {
+      const response = await this.fetchWithAuth(
+        `${API_URL}/api/universes/user/my-universes?page=${page}&limit=${limit}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching user universes:', error);
+      throw error;
+    }
+  }
+
+  // Weitere Methoden mit fetchWithAuth aktualisieren
+  static async getOwnedUniverses(page = 1, limit = 20) {
+    try {
+      const response = await this.fetchWithAuth(
+        `${API_URL}/api/universes/user/owned?page=${page}&limit=${limit}`
+      );
+    
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching owned universes:', error);
+      throw error;
+    }
   }
 
   // Personal Feed abrufen
