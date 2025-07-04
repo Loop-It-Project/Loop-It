@@ -2,7 +2,7 @@
 
 ## *Heutige Hauptaufgabe(n):*
 
-## Fortschritte & Ergebnisse:
+## *Fortschritte & Ergebnisse:*
 
 ## Herausforderungen & Blockaden:
 
@@ -12,80 +12,80 @@
 
 # **Projekttagebuch Marc Droit - 03.07.2025**
 
-## Heutige Hauptaufgabe(n):
+## *Heutige Hauptaufgabe(n):*
 
 Hobbies und LandingPage bauen und umstylen und auf React-Router umstellen
 
-## Fortschritte & Ergebnisse
+## *Fortschritte & Ergebnisse*
 
 React-Router integriert, HeadlessUI installiert, Dropdown-Menüs in Hobbies eingerichtet
 
-## Herausforderungen & Blockaden:
+## *Herausforderungen & Blockaden:*
 
 Auswählbare Dropdown-Menüs mit HTML
 
-## Was ich heute gelernt habe:
+## *Was ich heute gelernt habe:*
 
 HeadlessUI kennegelernt und eingearbeitet
 
-## Plan für morgen:
+## *Plan für morgen:*
 
 Hobbies fertigstellen, LandingPage festigstellen und Design festlegen, Komponenten isolieren/Verzeichnisstruktur im Frontend anpassen
 
 # Projekttagebuch Marc Droit - 02.07.2025
 
-## Heutige Hauptaufgaben:
+## *Heutige Hauptaufgaben:*
 
 Umstellung auf React Router planen
 
-## Fortschritt & Ergebnisse:
+## *Fortschritt & Ergebnisse:*
 
 React Router Struktur und weitere Komponenten geplant
 
-## Herausforderungen & Blockaden:
+## *Herausforderungen & Blockaden:*
 
 Identifizieren von zu isolierenden Komponenten
 
-## Plan für morgen:
+## *Plan für morgen:*
 
 React Router Struktur implementieren
 
 # Projekttagebuch Marc Droit 01.07.2025
 
-## Heutige Hauptaufgabe(n):
+## *Heutige Hauptaufgabe(n):*
 
 Planung neuer Projektstruktur
 
-## Fortschritt & Ergebisse:
+## *Fortschritt & Ergebisse:*
 
 Struktur auf React Router umstellen
 
-## Herausfordeurngen & Blockaden:
+## *Herausfordeurngen & Blockaden:*
 
 /
 
-## Was ich heute gelernt habe:
+## *Was ich heute gelernt habe:*
 
 /
 
-## Plan für morgen:
+## *Plan für morgen:*
 
 /
 
 # Projekttagebuch Marc Droit - 30.06.2025
 
-## Heutige Hauptaufgabe(n):
+## *Heutige Hauptaufgabe(n):*
 
 Einarbeitung in bereits vorhandenen Code, Wochensprint besprechen, Hobbys-Page
 
-## Fortschritt & Ergebnisse:
+## *Fortschritt & Ergebnisse:*
 
 Vorhandenen Code fast vollständig aufgearbeitet, Hobbys-Komponente begonnen, Wochensprint geplant
 
-## Herausforderungen & Blockaden:
+## *Herausforderungen & Blockaden:*
 
 Lokalen git feature branch auf den Stand des main branches updaten, ohne code zu verlieren und zu pushen
 
-## Was ich heute gelernt habe:
+## *Was ich heute gelernt habe:*
 
 Branches über den VS Code Editor mergen
