@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: loopit-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: loopit/backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        # Normale Config-Werte
+        - name: PORT
+          value: "3000"
+        - name: NODE_ENV
+          value: "production"
+        - name: DB_HOST
+          value: "postgres"
+        - name: DB_PORT
+          value: "5432"
+        - name: POSTGRES_USER
+          value: "loop_user"
+        - name: POSTGRES_DB
+          value: "loop-it"
+        
+        # Secrets - sichere Werte
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: loopit-secrets
+              key: postgres-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: loopit-secrets
+              key: jwt-secret
+        
+        # DATABASE_URL mit Secret zusammengebaut
+        - name: DATABASE_URL
+          value: "postgresql://loop_user:$(POSTGRES_PASSWORD)@postgres:5432/loop-it"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: loopit-dev
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 3000
+    targetPort: 3000

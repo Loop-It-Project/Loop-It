@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# Kubernetes Secrets
+k8s/secrets.yaml
+k8s/secrets-*.yaml
+k8s/*-secrets.yaml
+
+# Generated secrets
+k8s/secrets-generated.yaml
+
+# Backup/temp files
+k8s/*.bak
+k8s/*.tmp
