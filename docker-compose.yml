@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: loop-it-postgres
+    environment:
+      POSTGRES_DB: loop-it
+      POSTGRES_USER: loop_user
+      POSTGRES_PASSWORD: loop_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loop_user -d loop-it"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - loop-it-network
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql://loop_user:loop_password@postgres:5432/loop-it
+      PORT: 3000
+      NODE_ENV: production
+      JWT_SECRET: supersecret
+      # Database connection variables
+      DB_HOST: postgres
+      DB_PORT: 5432
+      POSTGRES_USER: loop_user
+      POSTGRES_PASSWORD: loop_password
+      POSTGRES_DB: loop-it
+    ports:
+      - "3000:3000"  # Für direkten Backend-Zugriff
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - loop-it-network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # API läuft jetzt über Reverse Proxy
+        VITE_API_URL: http://localhost
+        VITE_APP_NAME: Loop-It
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - loop-it-network
+
+volumes:
+  postgres_data:
+
+networks:
+  loop-it-network:
+    driver: bridge
