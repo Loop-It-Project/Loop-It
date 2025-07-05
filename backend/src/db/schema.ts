@@ -36,6 +36,13 @@ export const usersTable = pgTable("users", {
   location: json(), // { country, city, coordinates: {lat, lng}, isPublic }
   searchRadius: integer().default(50).notNull(),
   locationVisibility: varchar({ length: 20 }).default('friends').notNull(), // 'public', 'friends', 'private'
+
+  // ✅ Neue Geo-Tracking Einstellungen
+  geoTrackingEnabled: boolean().default(false).notNull(),
+  geoTrackingAccuracy: varchar({ length: 20 }).default('city').notNull(), // 'exact', 'city', 'region'
+  autoUpdateLocation: boolean().default(false).notNull(),
+  showDistanceToOthers: boolean().default(true).notNull(),
+  maxSearchRadius: integer().default(100).notNull(), // Maximum erlaubter Radius
   
   // Account Status
   accountStatus: varchar({ length: 20 }).default('active').notNull(), // 'active', 'suspended', 'banned', 'deleted'

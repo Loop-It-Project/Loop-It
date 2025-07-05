@@ -22,6 +22,13 @@
       "when": 1751728967005,
       "tag": "0002_reflective_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1751735726275,
+      "tag": "0003_jittery_blur",
+      "breakpoints": true
     }
   ]
 }

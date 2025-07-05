@@ -33,7 +33,7 @@ function App() {
   };
 
   // Enhanced Logout Handler
-  const handleLogout = async () => {
+  const handleLogout = async (reason = 'manual') => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       
@@ -57,11 +57,10 @@ function App() {
       localStorage.removeItem('user');
       setUser(null);
       
-      const reason = localStorage.getItem('logoutReason') || 'Abgemeldet';
-      localStorage.removeItem('logoutReason');
-      
+      // User-freundliche Nachrichten je nach Grund
       if (reason === 'tokenExpired') {
-        alert('Deine Session ist abgelaufen. Bitte melde dich erneut an.');
+        console.log('🔒 Session expired - user will be redirected to login');
+        // Alert wird in der Settings-Komponente gehandled
       }
     }
   };
@@ -99,10 +98,9 @@ function App() {
       }
     };
 
-    // Auth-Interceptor konfigurieren
+    // Auth-Interceptor konfigurieren für alle Services
     AuthInterceptor.setLogoutHandler(() => {
-      localStorage.setItem('logoutReason', 'tokenExpired');
-      handleLogout();
+      handleLogout('tokenExpired');
     });
 
     validateAndRestoreSession();
@@ -204,7 +202,7 @@ function App() {
             path="/dashboard" 
             element={
               <ProtectedRoute user={user}>
-                <Dashboard user={user} onLogout={handleLogout} />
+                <Dashboard user={user} onLogout={() => handleLogout('manual')} />
               </ProtectedRoute>
             } 
           />
@@ -220,7 +218,7 @@ function App() {
             path="/settings" 
             element={
               <ProtectedRoute user={user}>
-                <Settings user={user} onLogout={handleLogout} />
+                <Settings user={user} onLogout={() => handleLogout('manual')} />
               </ProtectedRoute>
             } 
           />
