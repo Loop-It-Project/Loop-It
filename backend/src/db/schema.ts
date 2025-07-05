@@ -36,6 +36,13 @@ export const usersTable = pgTable("users", {
   location: json(), // { country, city, coordinates: {lat, lng}, isPublic }
   searchRadius: integer().default(50).notNull(),
   locationVisibility: varchar({ length: 20 }).default('friends').notNull(), // 'public', 'friends', 'private'
+
+  // ✅ Neue Geo-Tracking Einstellungen
+  geoTrackingEnabled: boolean().default(false).notNull(),
+  geoTrackingAccuracy: varchar({ length: 20 }).default('city').notNull(), // 'exact', 'city', 'region'
+  autoUpdateLocation: boolean().default(false).notNull(),
+  showDistanceToOthers: boolean().default(true).notNull(),
+  maxSearchRadius: integer().default(100).notNull(), // Maximum erlaubter Radius
   
   // Account Status
   accountStatus: varchar({ length: 20 }).default('active').notNull(), // 'active', 'suspended', 'banned', 'deleted'
@@ -883,6 +890,35 @@ export const refreshTokensTable = pgTable('refresh_tokens', {
   userIdIdx: index('refresh_tokens_user_id_idx').on(table.userId),
   tokenIdx: index('refresh_tokens_token_idx').on(table.token),
   expiresAtIdx: index('refresh_tokens_expires_at_idx').on(table.expiresAt),
+}));
+
+// Comment Reactions Table hinzufügen
+export const commentReactionsTable = pgTable("comment_reactions", {
+  id: uuid().primaryKey().defaultRandom(),
+  commentId: uuid().notNull(),
+  userId: uuid().notNull(),
+  reactionType: varchar({ length: 20 }).notNull(), // 'like', 'love', 'laugh', 'angry', 'sad'
+  createdAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  commentUserReactionUnique: unique().on(table.commentId, table.userId, table.reactionType),
+  commentIdx: index("comment_reactions_comment_idx").on(table.commentId),
+  userIdx: index("comment_reactions_user_idx").on(table.userId),
+}));
+
+// Post Shares Table hinzufügen
+export const postSharesTable = pgTable("post_shares", {
+  id: uuid().primaryKey().defaultRandom(),
+  postId: uuid().notNull(),
+  userId: uuid(), // Kann null sein für anonyme Shares
+  shareType: varchar({ length: 50 }).notNull(), // 'internal', 'facebook', 'twitter', 'linkedin', 'whatsapp', 'telegram', 'copy_link'
+  sharedTo: varchar({ length: 100 }), // Platform-spezifische Info
+  metadata: json(), // Zusätzliche Share-Daten
+  createdAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  postIdx: index("post_shares_post_idx").on(table.postId),
+  userIdx: index("post_shares_user_idx").on(table.userId),
+  typeIdx: index("post_shares_type_idx").on(table.shareType),
+  createdAtIdx: index("post_shares_created_at_idx").on(table.createdAt),
 }));
 
 // Export all tables for use in the application

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Image, Hash, Globe, Lock, Send, X } from 'lucide-react';
 import FeedService from '../../services/feedServices';
+import UniverseService from '../../services/universeService';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
 const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
@@ -35,8 +36,8 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
       try {
         // Sowohl eigene als auch beigetretene Universes laden
         const [ownedResponse, memberResponse] = await Promise.all([
-          FeedService.getOwnedUniverses(), // Neue Methode
-          FeedService.getUserUniverses(1, 50)
+          UniverseService.getOwnedUniverses(), // Neue Methode
+          UniverseService.getUserUniverses(1, 50)
         ]);
 
         const allUniverses = [];

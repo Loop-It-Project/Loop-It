@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
 import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
+import HashtagService from '../services/hashtagService';
 import CreateUniverse from '../components/CreateUniverse';
 import useEscapeKey from '../hooks/useEscapeKey';
 
@@ -62,14 +63,24 @@ const Dashboard = ({ user, onLogout }) => {
     loadUserUniverses();
   }, []);
 
+  // Universe Click Handler
   const handleUniverseClick = (universeSlug) => {
+    console.log('Dashboard handleUniverseClick:', universeSlug);
     navigate(`/universe/${universeSlug}`);
   };
 
-  const handleHashtagClick = async (universeSlug, hashtag) => {
-    navigate(`/universe/${universeSlug}?hashtag=${hashtag}`);
+  // Hashtag Click Handler hinzufügen
+  const handleHashtagClick = (targetUniverseSlug, hashtag) => {
+    console.log('Dashboard handleHashtagClick:', { targetUniverseSlug, hashtag });
+    
+    if (targetUniverseSlug && hashtag) {
+      navigate(`/universe/${targetUniverseSlug}?hashtag=${hashtag}`);
+    } else {
+      console.error('Invalid hashtag click data:', { targetUniverseSlug, hashtag });
+    }
   };
 
+  // Universe Created Handler
   const handleUniverseCreated = async (newUniverse) => {
     setUserUniverses(prev => [newUniverse, ...prev]);
     setShowCreateUniverse(false);

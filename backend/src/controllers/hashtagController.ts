@@ -16,9 +16,13 @@ export const getUniverseByHashtag = async (req: Request, res: Response): Promise
 
   try {
     const { hashtag } = req.params;
+
+    console.log('🔄 Looking for universe with hashtag:', hashtag);
     
     // Hashtag normalisieren (lowercase, ohne #)
     const normalizedHashtag = hashtag.toLowerCase().replace(/^#/, '');
+
+    console.log('🔍 Normalized hashtag:', normalizedHashtag);
     
     const universe = await db
       .select({

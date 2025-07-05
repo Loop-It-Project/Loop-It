@@ -312,4 +312,127 @@ export class UserService {
       throw error;
     }
   }
+
+  // Geo-Tracking Settings abrufen
+  static async getGeoTrackingSettings(userId: string) {
+    try {
+      const user = await db
+        .select({
+          geoTrackingEnabled: usersTable.geoTrackingEnabled,
+          geoTrackingAccuracy: usersTable.geoTrackingAccuracy,
+          autoUpdateLocation: usersTable.autoUpdateLocation,
+          showDistanceToOthers: usersTable.showDistanceToOthers,
+          searchRadius: usersTable.searchRadius,
+          maxSearchRadius: usersTable.maxSearchRadius,
+          locationVisibility: usersTable.locationVisibility,
+          location: usersTable.location,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+
+      if (user.length === 0) {
+        throw new Error('User not found');
+      }
+
+      return {
+        success: true,
+        data: user[0]
+      };
+    } catch (error) {
+      console.error('❌ Error getting geo tracking settings:', error);
+      return {
+        success: false,
+        error: 'Failed to get geo tracking settings'
+      };
+    }
+  }
+
+  // Geo-Tracking Settings aktualisieren
+  static async updateGeoTrackingSettings(userId: string, settingsData: any) {
+    try {
+      const {
+        geoTrackingEnabled,
+        geoTrackingAccuracy,
+        autoUpdateLocation,
+        showDistanceToOthers,
+        searchRadius,
+        locationVisibility,
+        location
+      } = settingsData;
+
+      const updateData: any = {};
+      
+      if (geoTrackingEnabled !== undefined) updateData.geoTrackingEnabled = geoTrackingEnabled;
+      if (geoTrackingAccuracy !== undefined) updateData.geoTrackingAccuracy = geoTrackingAccuracy;
+      if (autoUpdateLocation !== undefined) updateData.autoUpdateLocation = autoUpdateLocation;
+      if (showDistanceToOthers !== undefined) updateData.showDistanceToOthers = showDistanceToOthers;
+      if (searchRadius !== undefined) {
+        // Validiere Radius (1-500 km)
+        const radius = Math.max(1, Math.min(500, parseInt(searchRadius)));
+        updateData.searchRadius = radius;
+      }
+      if (locationVisibility !== undefined) updateData.locationVisibility = locationVisibility;
+      if (location !== undefined) updateData.location = location;
+
+      updateData.updatedAt = new Date();
+
+      await db
+        .update(usersTable)
+        .set(updateData)
+        .where(eq(usersTable.id, userId));
+
+      return {
+        success: true,
+        message: 'Geo tracking settings updated successfully'
+      };
+    } catch (error) {
+      console.error('❌ Error updating geo tracking settings:', error);
+      return {
+        success: false,
+        error: 'Failed to update geo tracking settings'
+      };
+    }
+  }
+
+  // Standort aktualisieren
+  static async updateUserLocation(userId: string, locationData: any) {
+    try {
+      const { latitude, longitude, accuracy, address } = locationData;
+
+      // Validiere Koordinaten
+      if (!latitude || !longitude || 
+          latitude < -90 || latitude > 90 || 
+          longitude < -180 || longitude > 180) {
+        throw new Error('Invalid coordinates');
+      }
+
+      const locationJson = {
+        coordinates: { lat: latitude, lng: longitude },
+        accuracy: accuracy || 'unknown',
+        address: address || null,
+        isAccurate: accuracy && accuracy < 100, // Weniger als 100m = genau
+        lastUpdated: new Date().toISOString()
+      };
+
+      await db
+        .update(usersTable)
+        .set({
+          location: locationJson,
+          updatedAt: new Date()
+        })
+        .where(eq(usersTable.id, userId));
+
+      return {
+        success: true,
+        message: 'Location updated successfully'
+      };
+    } catch (error) {
+      console.error('❌ Error updating user location:', error);
+      return {
+        success: false,
+        error: 'Failed to update location'
+      };
+    }
+  }
 }

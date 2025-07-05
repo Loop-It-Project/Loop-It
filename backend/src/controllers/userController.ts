@@ -213,6 +213,89 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
+// Geo-Tracking Settings abrufen
+export const getGeoTrackingSettings = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    
+    const result = await UserService.getGeoTrackingSettings(userId);
+    
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.data
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Get geo tracking settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get geo tracking settings'
+    });
+  }
+};
+
+// Geo-Tracking Settings aktualisieren
+export const updateGeoTrackingSettings = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const settingsData = req.body;
+    
+    const result = await UserService.updateGeoTrackingSettings(userId, settingsData);
+    
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Update geo tracking settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update geo tracking settings'
+    });
+  }
+};
+
+// Standort aktualisieren
+export const updateUserLocation = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const locationData = req.body;
+    
+    const result = await UserService.updateUserLocation(userId, locationData);
+    
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Update user location error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update location'
+    });
+  }
+};
+
 // VALIDATION RULES
 export const updateProfileValidation = [
   body('displayName').optional().isLength({ min: 1, max: 100 }).withMessage('Display name must be 1-100 characters'),
