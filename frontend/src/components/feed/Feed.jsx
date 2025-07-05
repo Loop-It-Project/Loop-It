@@ -54,6 +54,18 @@ const Feed = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showFilterDropdown]);
 
+  // Share Handler
+  const handleShare = (postId, platform, newShareCount) => {
+    console.log('Feed handleShare called:', { postId, platform, newShareCount });
+    
+    // Update Post in der lokalen Liste
+    setPosts(prev => prev.map(post => 
+      post.id === postId 
+        ? { ...post, shareCount: newShareCount || (post.shareCount || 0) + 1 }
+        : post
+    ));
+  };
+
   // Feed laden
   const loadFeed = useCallback(async (pageNum = 1, isRefresh = false) => {
     try {
@@ -361,6 +373,7 @@ const Feed = ({
               onLike={handleLike}
               onComment={handleComment}
               onDelete={handleDeletePost}
+              onShare={handleShare}
             />
           ))}
 

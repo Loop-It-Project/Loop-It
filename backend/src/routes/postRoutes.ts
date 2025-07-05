@@ -8,7 +8,10 @@ import {
   getPostLikeStatus,
   toggleCommentLike,
   addCommentReply,
-  getCommentReplies
+  getCommentReplies,
+  sharePost,
+  getShareStatistics,
+  getTrendingShares
 } from '../controllers/postController';
 import { authenticateToken } from '../middleware/auth';
 import { body } from 'express-validator';
@@ -69,5 +72,21 @@ router.post('/:postId/comments/:commentId/replies',
   addCommentReply
 );
 router.get('/comments/:commentId/replies', authenticateToken, getCommentReplies);
+
+// Share routes
+router.post('/:postId/share', 
+  [
+    body('shareType')
+      .isIn(['internal', 'facebook', 'twitter', 'linkedin', 'whatsapp', 'telegram', 'copy_link', 'email', 'native'])
+      .withMessage('Invalid share type'),
+    body('metadata')
+      .optional()
+      .isObject()
+      .withMessage('Metadata must be an object')
+  ],
+  sharePost
+);
+router.get('/:postId/share-statistics', getShareStatistics);
+router.get('/trending-shares', getTrendingShares);
 
 export default router;

@@ -278,3 +278,86 @@ export const getCommentReplies = async (req: AuthRequest, res: Response): Promis
     });
   }
 };
+
+// Post Share tracken
+export const sharePost = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { postId } = req.params;
+    const { shareType, metadata } = req.body;
+    const userId = req.user?.id || null; // Optional für anonyme Shares
+
+    console.log('🔄 Share post request:', { postId, shareType, userId });
+
+    // Validiere shareType
+    const validShareTypes = ['internal', 'facebook', 'twitter', 'linkedin', 'whatsapp', 'telegram', 'copy_link', 'email', 'native'];
+    if (!validShareTypes.includes(shareType)) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid share type'
+      });
+      return;
+    }
+
+    const result = await PostService.trackShare(postId, userId, shareType, metadata);
+    
+    console.log('✅ Post shared successfully:', result);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Post shared successfully'
+    });
+  } catch (error) {
+    console.error('Share post error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to share post';
+    res.status(500).json({ 
+      success: false, 
+      error: message 
+    });
+  }
+};
+
+// Share Statistics abrufen
+export const getShareStatistics = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { postId } = req.params;
+
+    const result = await PostService.getShareStatistics(postId);
+    
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Share statistics retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Get share statistics error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to get share statistics';
+    res.status(500).json({ 
+      success: false, 
+      error: message 
+    });
+  }
+};
+
+// Trending Shares abrufen
+export const getTrendingShares = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const timeframe = req.query.timeframe as string || '24h';
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    const result = await PostService.getTrendingShares(timeframe, limit);
+    
+    res.status(200).json({
+      success: true,
+      data: result.posts,
+      message: 'Trending shares retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Get trending shares error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to get trending shares';
+    res.status(500).json({ 
+      success: false, 
+      error: message 
+    });
+  }
+};

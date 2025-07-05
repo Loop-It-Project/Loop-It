@@ -621,6 +621,49 @@ class FeedService {
       return { success: false, error: 'Network error' };
     }
   }
+
+  // Post Share Methoden
+  static async sharePost(postId, shareType, metadata = {}) {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/posts/${postId}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ shareType, metadata })
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Share post error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async getShareStatistics(postId) {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/posts/${postId}/share-statistics`);
+      const data = await response.json();
+      
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Get share statistics error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async getTrendingShares(timeframe = '24h', limit = 20) {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/posts/trending-shares?timeframe=${timeframe}&limit=${limit}`);
+      const data = await response.json();
+      
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Get trending shares error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default FeedService;

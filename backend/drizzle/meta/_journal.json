@@ -15,6 +15,13 @@
       "when": 1751725783862,
       "tag": "0001_giant_wendell_vaughn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1751728967005,
+      "tag": "0002_reflective_bushwacker",
+      "breakpoints": true
     }
   ]
 }

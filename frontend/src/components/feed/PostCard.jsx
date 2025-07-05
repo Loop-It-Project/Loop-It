@@ -11,11 +11,13 @@ import {
 import HashtagService from '../../services/hashtagService';
 import FeedService from '../../services/feedServices';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import ShareButton from './ShareButton';
 
-const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete }) => {
+const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete, onShare }) => {
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
+  const [shareCount, setShareCount] = useState(post.shareCount || 0);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [hashtagLoading, setHashtagLoading] = useState(null);
   const [likingInProgress, setLikingInProgress] = useState(false);
@@ -116,22 +118,26 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     const newIsLiked = typeof post.isLikedByUser === 'boolean' ? post.isLikedByUser : false;
     const newLikeCount = typeof post.likeCount === 'number' ? post.likeCount : 0;
     const newCommentCount = typeof post.commentCount === 'number' ? post.commentCount : 0;
+    const newShareCount = typeof post.shareCount === 'number' ? post.shareCount : 0;
 
     console.log('📝 Props update:', {
       postId: post.id,
       newIsLiked,
       newLikeCount,
       newCommentCount,
+      newShareCount,
       originalProps: {
         isLikedByUser: post.isLikedByUser,
         likeCount: post.likeCount,
-        commentCount: post.commentCount
+        commentCount: post.commentCount,
+        shareCount: post.shareCount
       }
     });
 
     setIsLiked(newIsLiked);
     setLikeCount(newLikeCount);
     setCommentCount(newCommentCount);
+    setShareCount(newShareCount);
   }, [post.isLikedByUser, post.likeCount, post.commentCount, post.id]);
 
   const formatTimeAgo = (dateString) => {
@@ -179,26 +185,42 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     }
   };
 
-    // Delete Post Handler:
-    const handleDeletePost = async () => {
-      if (!window.confirm('Möchtest du diesen Post wirklich löschen?')) {
-        return;
+  // Delete Post Handler:
+  const handleDeletePost = async () => {
+    if (!window.confirm('Möchtest du diesen Post wirklich löschen?')) {
+      return;
+    }
+    try {
+      if (onDelete) {
+          await onDelete(post.id);
+      } else {
+          console.error('onDelete handler is not provided');
+          alert('Delete-Funktion ist nicht verfügbar');
       }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      alert('Fehler beim Löschen des Posts');
+    } finally {
+      setShowMoreMenu(false);
+    }
+  };
 
-      try {
-        if (onDelete) {
-            await onDelete(post.id);
-        } else {
-            console.error('onDelete handler is not provided');
-            alert('Delete-Funktion ist nicht verfügbar');
-        }
-      } catch (error) {
-        console.error('Error deleting post:', error);
-        alert('Fehler beim Löschen des Posts');
-      } finally {
-        setShowMoreMenu(false);
-      }
-    };
+  // Share Handler
+  const handleShare = (platform, newShareCount) => {
+    console.log('PostCard handleShare called:', { platform, newShareCount });
+    
+    // Update local share count
+    if (typeof newShareCount === 'number') {
+      setShareCount(newShareCount);
+    } else {
+      setShareCount(prev => prev + 1);
+    }
+    
+    // Notify parent component
+    if (onShare) {
+      onShare(post.id, platform, newShareCount || shareCount + 1);
+    }
+  };
 
     const authorName = post.author?.displayName || post.author?.username || post.authorDisplayName || post.authorUsername || 'Unbekannt';
     const authorUsername = post.author?.username || post.authorUsername || 'unknown';
@@ -365,19 +387,25 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           </button>
 
           {/* Share Button */}
-          <button className="flex items-center space-x-2 text-tertiary hover:text-green-500 hover:cursor-pointer transition-colors">
-            <Share2 size={20} />
-            <span className="text-sm font-medium">{post.shareCount || 0}</span>
-          </button>
+          <ShareButton 
+            post={{
+              ...post,
+              shareCount
+            }} 
+            onShareComplete={handleShare}
+            compact={true}
+          />
         </div>
 
         {/* Engagement Summary */}
         <div className="text-xs text-tertiary">
-          {(likeCount > 0 || commentCount > 0) && (
+          {(likeCount > 0 || commentCount > 0 || shareCount > 0) && (
             <span>
               {likeCount > 0 && `${likeCount} ${likeCount === 1 ? 'Like' : 'Likes'}`}
-              {likeCount > 0 && commentCount > 0 && ' • '}
+              {likeCount > 0 && (commentCount > 0 || shareCount > 0) && ' • '}
               {commentCount > 0 && `${commentCount} ${commentCount === 1 ? 'Kommentar' : 'Kommentare'}`}
+              {commentCount > 0 && shareCount > 0 && ' • '}
+              {shareCount > 0 && `${shareCount} ${shareCount === 1 ? 'Share' : 'Shares'}`} {/* ✅ Hinzufügen */}
             </span>
           )}
         </div>

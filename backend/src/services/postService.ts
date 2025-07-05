@@ -4,6 +4,7 @@ import {
   postReactionsTable,
   commentsTable, 
   commentReactionsTable,
+  postSharesTable,
   universesTable, 
   universeMembersTable, 
   usersTable, 
@@ -789,6 +790,144 @@ export class PostService {
     } catch (error) {
       console.error('Get comment replies error:', error);
       throw new Error('Failed to get comment replies');
+    }
+  }
+  
+  // Post Share tracken
+  static async trackShare(postId: string, userId: string | null, shareType: string, metadata?: any) {
+    try {
+      // Share-Entry erstellen
+      await db
+        .insert(postSharesTable)
+        .values({
+          id: uuidv4(),
+          postId,
+          userId,
+          shareType,
+          metadata: metadata || null,
+          createdAt: new Date()
+        });
+
+      // Share-Count im Post erhöhen
+      await db
+        .update(postsTable)
+        .set({
+          shareCount: sql`${postsTable.shareCount} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(postsTable.id, postId));
+
+      // Aktuellen Share-Count abrufen
+      const updatedPost = await db
+        .select({ shareCount: postsTable.shareCount })
+        .from(postsTable)
+        .where(eq(postsTable.id, postId))
+        .limit(1);
+
+      return {
+        success: true,
+        shareCount: updatedPost[0]?.shareCount || 0,
+        shareType
+      };
+
+    } catch (error) {
+      console.error('Track share error:', error);
+      throw new Error('Failed to track share');
+    }
+  }
+
+  // Share Statistics abrufen
+  static async getShareStatistics(postId: string) {
+    try {
+      const shares = await db
+        .select({
+          shareType: postSharesTable.shareType,
+          count: sql<number>`count(*)`.as('count')
+        })
+        .from(postSharesTable)
+        .where(eq(postSharesTable.postId, postId))
+        .groupBy(postSharesTable.shareType);
+
+      const totalShares = await db
+        .select({ 
+          total: sql<number>`count(*)`.as('total') 
+        })
+        .from(postSharesTable)
+        .where(eq(postSharesTable.postId, postId));
+
+      return {
+        success: true,
+        totalShares: totalShares[0]?.total || 0,
+        sharesByType: shares.reduce((acc, share) => {
+          acc[share.shareType] = share.count;
+          return acc;
+        }, {} as Record<string, number>)
+      };
+
+    } catch (error) {
+      console.error('Get share statistics error:', error);
+      throw new Error('Failed to get share statistics');
+    }
+  }
+
+  // Trending Shares abrufen
+  static async getTrendingShares(timeframe = '24h', limit = 20) {
+    try {
+      const timeCondition = timeframe === '24h' 
+        ? sql`${postSharesTable.createdAt} >= NOW() - INTERVAL '24 hours'`
+        : sql`${postSharesTable.createdAt} >= NOW() - INTERVAL '7 days'`;
+
+      const trendingPosts = await db
+        .select({
+          postId: postSharesTable.postId,
+          shareCount: sql<number>`count(*)`.as('shareCount'),
+          post: {
+            id: postsTable.id,
+            title: postsTable.title,
+            content: postsTable.content,
+            likeCount: postsTable.likeCount,
+            commentCount: postsTable.commentCount,
+            shareCount: postsTable.shareCount
+          },
+          author: {
+            id: usersTable.id,
+            username: usersTable.username,
+            displayName: usersTable.displayName
+          },
+          universe: {
+            id: universesTable.id,
+            name: universesTable.name,
+            slug: universesTable.slug
+          }
+        })
+        .from(postSharesTable)
+        .leftJoin(postsTable, eq(postSharesTable.postId, postsTable.id))
+        .leftJoin(usersTable, eq(postsTable.authorId, usersTable.id))
+        .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id))
+        .where(
+          and(
+            timeCondition,
+            eq(postsTable.isDeleted, false),
+            eq(postsTable.isPublic, true)
+          )
+        )
+        .groupBy(
+          postSharesTable.postId,
+          postsTable.id,
+          usersTable.id,
+          universesTable.id
+        )
+        .orderBy(sql`count(*) DESC`)
+        .limit(limit);
+
+      return {
+        success: true,
+        posts: trendingPosts
+      };
+
+    } catch (error) {
+      console.error('Get trending shares error:', error);
+      throw new Error('Failed to get trending shares');
     }
   }
 }

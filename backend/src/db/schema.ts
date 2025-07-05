@@ -898,6 +898,22 @@ export const commentReactionsTable = pgTable("comment_reactions", {
   userIdx: index("comment_reactions_user_idx").on(table.userId),
 }));
 
+// Post Shares Table hinzufügen
+export const postSharesTable = pgTable("post_shares", {
+  id: uuid().primaryKey().defaultRandom(),
+  postId: uuid().notNull(),
+  userId: uuid(), // Kann null sein für anonyme Shares
+  shareType: varchar({ length: 50 }).notNull(), // 'internal', 'facebook', 'twitter', 'linkedin', 'whatsapp', 'telegram', 'copy_link'
+  sharedTo: varchar({ length: 100 }), // Platform-spezifische Info
+  metadata: json(), // Zusätzliche Share-Daten
+  createdAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  postIdx: index("post_shares_post_idx").on(table.postId),
+  userIdx: index("post_shares_user_idx").on(table.userId),
+  typeIdx: index("post_shares_type_idx").on(table.shareType),
+  createdAtIdx: index("post_shares_created_at_idx").on(table.createdAt),
+}));
+
 // Export all tables for use in the application
 export type RefreshToken = typeof refreshTokensTable.$inferSelect;
 export type NewRefreshToken = typeof refreshTokensTable.$inferInsert;
