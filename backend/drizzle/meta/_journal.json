@@ -8,6 +8,13 @@
       "when": 1751628309058,
       "tag": "0000_secret_the_liberteens",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1751725783862,
+      "tag": "0001_giant_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Loader, Filter, ChevronDown } from 'lucide-react';
 import PostCard from './PostCard';
-import FeedService from '../../services/feedServices';
 import PostComposer from './PostComposer';
+import CommentSection from './CommentSection';
+import FeedService from '../../services/feedServices';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
 const Feed = ({ 
@@ -20,6 +21,8 @@ const Feed = ({
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState(null);
 
   // Filter States
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'trending'
@@ -167,14 +170,47 @@ const Feed = ({
   };
 
   // Post Actions
-  const handleLike = async (postId, liked) => {
-    // TODO: Implement like functionality
-    console.log(`${liked ? 'Liked' : 'Unliked'} post:`, postId);
+  // Comment Modal Handler
+  const handleComment = (postId) => {
+    setSelectedPostId(postId);
+    setShowComments(true);
   };
 
-  const handleComment = async (postId) => {
-    // TODO: Implement comment functionality
-    console.log('Comment on post:', postId);
+  const handleCloseComments = () => {
+    setShowComments(false);
+    setSelectedPostId(null);
+  };
+
+  // Comment Count erhöhen
+  const handleCommentAdded = (postId) => {
+    setPosts(prev => prev.map(post => 
+      post.id === postId 
+        ? { ...post, commentCount: (post.commentCount || 0) + 1 }
+        : post
+    ));
+  };
+
+  // Like Handler
+  const handleLike = (postId, isLiked, newLikeCount) => {
+    console.log('Feed handleLike called:', { postId, isLiked, newLikeCount }); 
+    
+    // NULL/UNDEFINED Check hinzufügen
+    if (isLiked === undefined || newLikeCount === undefined) {
+      console.warn('⚠️ Ungültige Like-Daten erhalten:', { isLiked, newLikeCount });
+      return; // Früh beenden wenn Daten ungültig sind
+    }
+
+    // Update Post in der lokalen Liste
+    setPosts(prev => {
+      const updated = prev.map(post => 
+        post.id === postId 
+          ? { ...post, isLikedByUser: isLiked, likeCount: newLikeCount }
+          : post
+      );
+
+      console.log('Posts updated in Feed:', updated.find(p => p.id === postId)); 
+      return updated;
+    });
   };
 
   if (loading) {
@@ -349,6 +385,14 @@ const Feed = ({
           )}
         </>
       )}
+
+      {/* Comment Section Modal */}
+      <CommentSection
+        postId={selectedPostId}
+        isOpen={showComments}
+        onClose={handleCloseComments}
+        onCommentAdded={handleCommentAdded}
+      />
     </div>
   );
 };

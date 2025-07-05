@@ -885,6 +885,19 @@ export const refreshTokensTable = pgTable('refresh_tokens', {
   expiresAtIdx: index('refresh_tokens_expires_at_idx').on(table.expiresAt),
 }));
 
+// Comment Reactions Table hinzufügen
+export const commentReactionsTable = pgTable("comment_reactions", {
+  id: uuid().primaryKey().defaultRandom(),
+  commentId: uuid().notNull(),
+  userId: uuid().notNull(),
+  reactionType: varchar({ length: 20 }).notNull(), // 'like', 'love', 'laugh', 'angry', 'sad'
+  createdAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  commentUserReactionUnique: unique().on(table.commentId, table.userId, table.reactionType),
+  commentIdx: index("comment_reactions_comment_idx").on(table.commentId),
+  userIdx: index("comment_reactions_user_idx").on(table.userId),
+}));
+
 // Export all tables for use in the application
 export type RefreshToken = typeof refreshTokensTable.$inferSelect;
 export type NewRefreshToken = typeof refreshTokensTable.$inferInsert;

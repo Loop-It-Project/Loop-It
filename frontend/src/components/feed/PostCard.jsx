@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Heart, 
   MessageCircle, 
@@ -9,39 +9,130 @@ import {
   Hash
 } from 'lucide-react';
 import HashtagService from '../../services/hashtagService';
+import FeedService from '../../services/feedServices';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
 const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete }) => {
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
+  const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [hashtagLoading, setHashtagLoading] = useState(null);
+  const [likingInProgress, setLikingInProgress] = useState(false);
 
   // Escape Key Handler:
   useEscapeKey(() => setShowMoreMenu(false), showMoreMenu);
 
   // Debug: Schaue was im Post-Objekt steht
-  console.log('Post data in PostCard:', post);
+  console.log('PostCard rendered:', {
+    postId: post.id,
+    localLikeCount: likeCount,
+    postLikeCount: post.likeCount,
+    localIsLiked: isLiked,
+    postIsLiked: post.isLikedByUser,
+    onLikeAvailable: !!onLike
+  });
 
   // Like Handler:
   // Hier wird der Like-Status geändert und die Anzahl aktualisiert
   // Bei Fehlern wird der Status revertiert
   const handleLike = async () => {
+    if (likingInProgress) return;
+
     try {
-      const newLikedState = !isLiked;
+      setLikingInProgress(true);
+
+      console.log('🔄 Starting like action:', { isLiked, likeCount });
+
+      // Sicherheitsprüfung für likeCount
+      const currentLikeCount = typeof likeCount === 'number' ? likeCount : (post.likeCount || 0);
+      const currentIsLiked = typeof isLiked === 'boolean' ? isLiked : (post.isLikedByUser || false);
+
+      // Optimistisches Update mit korrigierten Werten
+      const newLikedState = !currentIsLiked;
+      const newLikeCount = newLikedState ? currentLikeCount + 1 : currentLikeCount - 1;
+
+      console.log('🔧 Corrected values:', { currentLikeCount, currentIsLiked, newLikedState, newLikeCount });
+
       setIsLiked(newLikedState);
-      setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-      
-      if (onLike) {
-        await onLike(post.id, newLikedState);
+      setLikeCount(newLikeCount);
+
+      console.log('⚡ Optimistic update:', { newLikedState, newLikeCount });
+
+      // Server-Request
+      const response = await FeedService.toggleLike(post.id);
+
+      console.log('📥 Server response:', response);
+
+      if (response.success && response.data) {
+        // Server-Response Validierung
+        const serverIsLiked = typeof response.data.isLiked === 'boolean' ? response.data.isLiked : newLikedState;
+        const serverLikeCount = typeof response.data.likeCount === 'number' ? response.data.likeCount : newLikeCount;
+
+        console.log('✅ Validated server data:', { serverIsLiked, serverLikeCount });
+
+        // Update mit validierten Server-Daten
+        setIsLiked(serverIsLiked);
+        setLikeCount(serverLikeCount);
+
+        // Parent-Komponente nur mit gültigen Daten benachrichtigen
+        if (onLike && typeof onLike === 'function') {
+          console.log('📢 Notifying parent component with validated data:', {
+            postId: post.id,
+            isLiked: serverIsLiked,
+            likeCount: serverLikeCount
+          });
+          onLike(post.id, serverIsLiked, serverLikeCount);
+        }
+      } else {
+        // Revert bei fehlerhafter Server-Response
+        setIsLiked(currentIsLiked);
+        setLikeCount(currentLikeCount);
+        console.error('❌ Invalid server response:', response);
       }
     } catch (error) {
-      // Revert on error
-      setIsLiked(!isLiked);
-      setLikeCount(prev => isLiked ? prev + 1 : prev - 1);
-      console.error('Error liking post:', error);
+      // Revert bei Fehler - mit korrigierten Original-Werten
+      const originalLikeCount = typeof likeCount === 'number' ? likeCount : (post.likeCount || 0);
+      const originalIsLiked = typeof isLiked === 'boolean' ? isLiked : (post.isLikedByUser || false);
+
+      setIsLiked(originalIsLiked);
+      setLikeCount(originalLikeCount);
+      console.error('❌ Error liking post:', error);
+    } finally {
+      setLikingInProgress(false);
     }
   };
+
+  // Comment Handler
+  const handleComment = () => {
+    if (onComment) {
+      onComment(post.id);
+    }
+  };
+
+  // Props watcher für Updates
+  useEffect(() => {
+    // Validierung der eingehenden Props
+    const newIsLiked = typeof post.isLikedByUser === 'boolean' ? post.isLikedByUser : false;
+    const newLikeCount = typeof post.likeCount === 'number' ? post.likeCount : 0;
+    const newCommentCount = typeof post.commentCount === 'number' ? post.commentCount : 0;
+
+    console.log('📝 Props update:', {
+      postId: post.id,
+      newIsLiked,
+      newLikeCount,
+      newCommentCount,
+      originalProps: {
+        isLikedByUser: post.isLikedByUser,
+        likeCount: post.likeCount,
+        commentCount: post.commentCount
+      }
+    });
+
+    setIsLiked(newIsLiked);
+    setLikeCount(newLikeCount);
+    setCommentCount(newCommentCount);
+  }, [post.isLikedByUser, post.likeCount, post.commentCount, post.id]);
 
   const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
@@ -243,36 +334,52 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
       {/* Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
         <div className="flex items-center space-x-6">
-          {/* Like */}
+          {/* Like Button */}
           <button
             onClick={handleLike}
-            className={`flex items-center space-x-2 hover:cursor-pointer transition-colors ${
+            disabled={likingInProgress}
+            className={`flex items-center space-x-2 hover:cursor-pointer transition-all duration-200 ${
               isLiked 
                 ? 'text-red-500 hover:text-red-600' 
                 : 'text-tertiary hover:text-red-500'
-            }`}
+            } ${likingInProgress ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Heart 
               size={20} 
-              className={isLiked ? 'fill-current' : ''} 
+              className={`transition-all duration-200 ${
+                isLiked ? 'fill-current scale-110' : ''
+              } ${likingInProgress ? 'animate-pulse' : ''}`}
             />
-            <span className="text-sm font-medium">{likeCount}</span>
+            <span className="text-sm font-medium">
+              {likingInProgress ? '...' : likeCount}
+            </span>
           </button>
 
-          {/* Comment */}
+          {/* Comment Button */}
           <button
-            onClick={() => onComment && onComment(post.id)}
+            onClick={handleComment}
             className="flex items-center space-x-2 text-tertiary hover:text-blue-500 hover:cursor-pointer transition-colors"
           >
             <MessageCircle size={20} />
-            <span className="text-sm font-medium">{post.commentCount || 0}</span>
+            <span className="text-sm font-medium">{commentCount}</span>
           </button>
 
-          {/* Share */}
+          {/* Share Button */}
           <button className="flex items-center space-x-2 text-tertiary hover:text-green-500 hover:cursor-pointer transition-colors">
             <Share2 size={20} />
             <span className="text-sm font-medium">{post.shareCount || 0}</span>
           </button>
+        </div>
+
+        {/* Engagement Summary */}
+        <div className="text-xs text-tertiary">
+          {(likeCount > 0 || commentCount > 0) && (
+            <span>
+              {likeCount > 0 && `${likeCount} ${likeCount === 1 ? 'Like' : 'Likes'}`}
+              {likeCount > 0 && commentCount > 0 && ' • '}
+              {commentCount > 0 && `${commentCount} ${commentCount === 1 ? 'Kommentar' : 'Kommentare'}`}
+            </span>
+          )}
         </div>
       </div>
 
