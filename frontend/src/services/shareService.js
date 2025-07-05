@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import BaseService from './baseService';
+
+const API_URL = BaseService.getApiUrl();
 
 class ShareService {
   // Post Share tracken

@@ -9,7 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import FeedService from '../../services/feedServices';
+import commentService from '../../services/commentService';
 
 const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
   const [comments, setComments] = useState([]);
@@ -36,7 +36,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
       setLoading(true);
       setError('');
 
-      const response = await FeedService.getPostComments(postId, pageNum, 10);
+      const response = await commentService.getPostComments(postId, pageNum, 10);
       
       if (response.success) {
         if (append) {
@@ -75,7 +75,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
           : comment
       ));
 
-      const response = await FeedService.toggleCommentLike(commentId);
+      const response = await commentService.toggleCommentLike(commentId);
 
       if (response.success) {
         // Server-Response anwenden
@@ -136,7 +136,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
       // Replies laden und anzeigen
       if (!currentState.replies) {
         try {
-          const response = await FeedService.getCommentReplies(commentId, 1, 10);
+          const response = await commentService.getCommentReplies(commentId, 1, 10);
           if (response.success) {
             setReplyStates(prev => ({
               ...prev,
@@ -181,7 +181,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
     if (!replyContent) return;
 
     try {
-      const response = await FeedService.addCommentReply(postId, commentId, replyContent);
+      const response = await commentService.addCommentReply(postId, commentId, replyContent);
 
       if (response.success) {
         // Reply zur Liste hinzufügen
@@ -250,7 +250,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
         return newStates;
       });
 
-      const response = await FeedService.toggleCommentLike(replyId);
+      const response = await commentService.toggleCommentLike(replyId);
 
       if (response.success) {
         // Server-Response anwenden
@@ -342,7 +342,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
         length: newComment.trim().length 
       }); 
 
-      const response = await FeedService.addComment(postId, newComment.trim());
+      const response = await commentService.addComment(postId, newComment.trim());
 
       console.log('📥 Comment response:', response); 
 

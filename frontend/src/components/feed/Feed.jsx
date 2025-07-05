@@ -4,6 +4,8 @@ import PostCard from './PostCard';
 import PostComposer from './PostComposer';
 import CommentSection from './CommentSection';
 import FeedService from '../../services/feedServices';
+import PostService from '../../services/postService';
+import HashtagService from '../../services/hashtagService';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
 const Feed = ({ 
@@ -167,7 +169,7 @@ const Feed = ({
 
   const handleDeletePost = async (postId) => {
     try {
-      const response = await FeedService.deletePost(postId);
+      const response = await PostService.deletePost(postId);
       
       if (response.success) {
         // Post aus der Liste entfernen
@@ -223,6 +225,21 @@ const Feed = ({
       console.log('Posts updated in Feed:', updated.find(p => p.id === postId)); 
       return updated;
     });
+  };
+
+  // Hashtag Click Handler sicherstellen
+  const handleHashtagClick = (targetUniverseSlug, hashtag) => {
+    console.log('Feed handleHashtagClick called:', { targetUniverseSlug, hashtag });
+    
+    if (onHashtagClick && typeof onHashtagClick === 'function') {
+      onHashtagClick(targetUniverseSlug, hashtag);
+    } else {
+      console.warn('⚠️ onHashtagClick prop not provided to Feed');
+      // Fallback: Direct navigation if no handler provided
+      if (window.confirm(`Möchtest du zum Universe #${targetUniverseSlug} wechseln?`)) {
+        window.location.href = `/universe/${targetUniverseSlug}?hashtag=${hashtag}`;
+      }
+    }
   };
 
   if (loading) {
@@ -369,7 +386,7 @@ const Feed = ({
               key={post.id}
               post={post}
               onUniverseClick={onUniverseClick}
-              onHashtagClick={onHashtagClick}
+              onHashtagClick={handleHashtagClick}
               onLike={handleLike}
               onComment={handleComment}
               onDelete={handleDeletePost}

@@ -66,9 +66,17 @@ const UniversePage = ({ user }) => {
   }, showSettings || showTransferOwnership);
 
   // Hashtag Click Handler
-  const handleHashtagClick = async (clickedUniverseSlug, hashtag) => {
-    if (onHashtagClick) {
-      onHashtagClick(clickedUniverseSlug, hashtag);
+  const handleHashtagClick = (targetUniverseSlug, hashtag) => {
+    console.log('UniversePage handleHashtagClick:', { targetUniverseSlug, hashtag });
+    
+    if (targetUniverseSlug === universeSlug) {
+      // Bereits im richtigen Universe - zeige nur Hashtag-gefilterte Posts
+      console.log('Already in target universe, filtering by hashtag');
+      // Optional: Seite mit Hashtag-Filter neu laden
+      window.location.href = `/universe/${universeSlug}?hashtag=${hashtag}`;
+    } else {
+      // Navigiere zu anderem Universe mit Hashtag-Filter
+      navigate(`/universe/${targetUniverseSlug}?hashtag=${hashtag}`);
     }
   };
 
@@ -132,7 +140,7 @@ const UniversePage = ({ user }) => {
       const response = await FeedService.deleteUniverse(universeSlug);
       if (response.success) {
         alert('Universe wurde erfolgreich gelöscht.');
-        onNavigate('/dashboard');
+        navigate('/dashboard');
       } else {
         throw new Error(response.error || 'Failed to delete universe');
       }
@@ -236,7 +244,7 @@ const UniversePage = ({ user }) => {
             <p className="text-sm">{error}</p>
           </div>
           <button
-            onClick={() => onNavigate('/dashboard')}
+            onClick={() => navigate('/dashboard')}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 hover:cursor-pointer transition-colors"
           >
             Zurück zum Dashboard

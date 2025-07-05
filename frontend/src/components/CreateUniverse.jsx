@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Globe, Lock, Users, CheckCircle, Settings } from 'lucide-react';
-import FeedService from '../services/feedServices';
+import UniverseService from '../services/universeService';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 const CreateUniverse = ({ onClose, onUniverseCreated }) => {
@@ -82,7 +82,7 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
 
     setNameCheckLoading(true);
     try {
-      const response = await FeedService.checkUniverseName(name);
+      const response = await UniverseService.checkUniverseName(name);
       if (response.success) {
         setNameAvailable(response.data.available);
       }
@@ -143,7 +143,7 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
         rules: formData.rules.map(rule => rule.text)
       };
       
-      const response = await FeedService.createUniverse(submitData);
+      const response = await UniverseService.createUniverse(submitData);
       
       if (response.success) {
         onUniverseCreated(response.data);
