@@ -55,7 +55,7 @@ export class FeedService {
             eq(universeMembersTable.userId, userId)
           )
         )
-        // Left Join für Like-Status
+        // Like-Status Join - immer ausführen da userId immer vorhanden
         .leftJoin(
           postReactionsTable,
           and(
@@ -74,8 +74,7 @@ export class FeedService {
         .offset(offset)
         .limit(limit);
 
-        // ✅ Debug Log hinzufügen
-        console.log('Personal Feed Service - erste 2 Posts:', posts.slice(0, 2));
+      console.log('✅ Personal Feed Service - Posts geladen:', posts.length);
 
       return {
         success: true,
@@ -88,7 +87,7 @@ export class FeedService {
       };
 
     } catch (error) {
-      console.error('Get personal feed error:', error);
+      console.error('❌ Get personal feed error:', error);
       throw new Error('Failed to get personal feed');
     }
   }
@@ -98,7 +97,8 @@ export class FeedService {
     try {
       const offset = (page - 1) * limit;
 
-      const posts = await db
+      // ✅ Query Builder mit korrektem conditional Join
+      let query = db
         .select({
           id: postsTable.id,
           title: postsTable.title,
@@ -123,7 +123,7 @@ export class FeedService {
             name: universesTable.name,
             slug: universesTable.slug
           },
-          // Like-Status nur wenn User eingeloggt ist
+          // Like-Status - immer einen Wert zurückgeben
           isLikedByUser: userId 
             ? sql<boolean>`CASE WHEN ${postReactionsTable.id} IS NOT NULL THEN true ELSE false END`
             : sql<boolean>`false`
@@ -131,29 +131,34 @@ export class FeedService {
         .from(postsTable)
         .leftJoin(usersTable, eq(postsTable.authorId, usersTable.id))
         .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
-        .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id))
-        // Left Join für Like-Status nur wenn userId vorhanden
-        .leftJoin(
+        .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id));
+
+      // Conditional Join nur wenn User eingeloggt ist
+      if (userId) {
+        query = query.leftJoin(
           postReactionsTable,
-          userId ? and(
+          and(
             eq(postReactionsTable.postId, postsTable.id),
             eq(postReactionsTable.userId, userId),
             eq(postReactionsTable.reactionType, 'like')
-          ) : undefined
-        )
+          )
+        );
+      }
+
+      // Where-Bedingungen und Order hinzufügen
+      const posts = await query
         .where(
           and(
             eq(postsTable.isDeleted, false),
             eq(universesTable.slug, universeSlug),
-            eq(postsTable.isPublic, true) // Nur öffentliche Posts
+            eq(postsTable.isPublic, true)
           )
         )
         .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : asc(postsTable.createdAt))
         .offset(offset)
         .limit(limit);
 
-        // ✅ Debug Log hinzufügen
-        console.log('Universe Feed Service - erste 2 Posts:', posts.slice(0, 2));
+      console.log('✅ Universe Feed Service - Posts geladen:', posts.length);
 
       return {
         success: true,
@@ -166,7 +171,7 @@ export class FeedService {
       };
 
     } catch (error) {
-      console.error('Get universe feed error:', error);
+      console.error('❌ Get universe feed error:', error);
       throw new Error('Failed to get universe feed');
     }
   }
