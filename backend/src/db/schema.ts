@@ -539,9 +539,9 @@ export const userActivitiesTable = pgTable("user_activities", {
 export const moderationReportsTable = pgTable("moderation_reports", {
   id: uuid().primaryKey().defaultRandom(),
   reporterId: uuid().notNull(),
+  reportedUserId: uuid().references(() => usersTable.id),
   reportedContentType: varchar({ length: 50 }).notNull(), // 'post', 'comment', 'user', 'universe'
   reportedContentId: uuid().notNull(),
-  reportedUserId: uuid(),
   reason: varchar({ length: 100 }).notNull(), // 'spam', 'harassment', 'inappropriate', 'copyright'
   description: text(),
   
@@ -556,6 +556,7 @@ export const moderationReportsTable = pgTable("moderation_reports", {
   updatedAt: timestamp().defaultNow().notNull(),
 }, (table) => ({
   reporterIdx: index("reports_reporter_idx").on(table.reporterId),
+  reportedUserIdx: index("moderation_reports_reported_user_idx").on(table.reportedUserId),
   contentIdx: index("reports_content_idx").on(table.reportedContentType, table.reportedContentId),
   statusIdx: index("reports_status_idx").on(table.status),
   createdAtIdx: index("reports_created_at_idx").on(table.createdAt),

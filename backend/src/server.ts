@@ -10,6 +10,7 @@ import universeRoutes from './routes/universeRoutes';
 import hashtagRoutes from './routes/hashtagRoutes';
 import searchRoutes from './routes/searchRoutes';
 import postRoutes from './routes/postRoutes';
+import adminRoutes from './routes/adminRoutes';
 import { TokenService } from './services/tokenService';
 
 // Environment variables laden
@@ -109,8 +110,11 @@ try {
   console.log('  - Post routes at /api/posts');
   app.use('/api/posts', postRoutes);
   console.log('  ✅ Post routes loaded successfully');
-  
-  // Diese beiden könnten das Problem verursachen:
+
+  console.log('  - Admin routes at /api/admin');
+  app.use('/api/admin', adminRoutes);
+  console.log('  ✅ Admin routes loaded successfully');
+
   console.log('  - Hashtag routes at /api/hashtags');
   app.use('/api/hashtags', hashtagRoutes);
   console.log('  ✅ Hashtag routes loaded successfully');
