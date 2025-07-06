@@ -29,6 +29,13 @@
       "when": 1751735726275,
       "tag": "0003_jittery_blur",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1751825567499,
+      "tag": "0004_glossy_scrambler",
+      "breakpoints": true
     }
   ]
 }

@@ -186,7 +186,7 @@ export const userBlocksTable = pgTable("user_blocks", {
   blockedIdx: index("user_blocks_blocked_idx").on(table.blockedId),
 }));
 
-
+// Roles and Permissions System
 export const rolesTable = pgTable("roles", {
   id: uuid().primaryKey().defaultRandom(),
   name: varchar({ length: 50 }).notNull().unique(),
@@ -197,6 +197,25 @@ export const rolesTable = pgTable("roles", {
   createdAt: timestamp().defaultNow().notNull(),
   updatedAt: timestamp().defaultNow().notNull(),
 });
+
+// User-Role Zuweisungen
+export const userRolesTable = pgTable("user_roles", {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  roleId: uuid().notNull().references(() => rolesTable.id, { onDelete: 'cascade' }),
+  assignedBy: uuid().references(() => usersTable.id), // Wer hat die Rolle zugewiesen
+  assignedAt: timestamp().defaultNow().notNull(),
+  expiresAt: timestamp(), // Optional: Rolle kann ablaufen
+  isActive: boolean().default(true).notNull(),
+  metadata: json(), // Zusätzliche Informationen
+  createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  userRoleUnique: unique().on(table.userId, table.roleId),
+  userIdx: index("user_roles_user_idx").on(table.userId),
+  roleIdx: index("user_roles_role_idx").on(table.roleId),
+  assignedAtIdx: index("user_roles_assigned_at_idx").on(table.assignedAt),
+}));
 
 
 // Enhanced Media System

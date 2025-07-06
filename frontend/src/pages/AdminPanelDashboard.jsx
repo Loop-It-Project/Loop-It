@@ -438,13 +438,14 @@ const UsersTab = ({ users, search, setSearch, role, setRole, onAssignModerator }
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-hover dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Nutzer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Letzte Anmeldung</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Premium</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Aktionen</th>
-                </tr>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Nutzer</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Rolle</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Letzte Anmeldung</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Premium</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-secondary dark:text-gray-300 uppercase tracking-wider">Aktionen</th>
+                  </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {users.map((user) => (
@@ -462,6 +463,30 @@ const UsersTab = ({ users, search, setSearch, role, setRole, onAssignModerator }
                           </div>
                           <div className="text-sm text-secondary dark:text-muted">@{user.username}</div>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles && user.roles.length > 0 ? (
+                          user.roles.map((role, index) => (
+                            <span
+                              key={index}
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                role === 'super_admin' ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' :
+                                role === 'admin' ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' :
+                                role === 'moderator' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' :
+                                role === 'user' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
+                                'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                              }`}
+                            >
+                              {role}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+                            Keine Rolle
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

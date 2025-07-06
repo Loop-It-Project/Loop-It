@@ -12,6 +12,7 @@ import searchRoutes from './routes/searchRoutes';
 import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
 import { TokenService } from './services/tokenService';
+import { seedAdminData } from './db/seedAdminData';
 
 // Environment variables laden
 dotenv.config();
@@ -192,23 +193,36 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 console.log('✅ Error handler registered');
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`🔑 JWT_SECRET loaded: ${!!process.env.JWT_SECRET ? 'YES' : 'NO'}`);
   console.log('🔧 Server setup complete');
+
+  // Admin-Daten seeden (mit Error-Handling)
+  try {
+    await seedAdminData();
+    console.log('✅ Admin data seeding completed');
+  } catch (error) {
+    // ✅ Verwende die bereits definierten Helper-Funktionen
+    console.error('⚠️ Admin data seeding failed (this is normal if tables don\'t exist yet):', getErrorMessage(error));
+    const errorStack = getErrorStack(error);
+    if (errorStack) {
+      console.error('⚠️ Admin seeding error stack:', errorStack);
+    }
+  }
 
   // ✅ Cleanup Job starten
   setupCleanupJob();
   console.log('🧹 Token cleanup job started');
   
   // Zeige finale Route-Struktur
-  console.log('📋 Available endpoints:');
-  console.log('  - POST /api/auth/login');
-  console.log('  - POST /api/auth/register');
-  console.log('  - GET  /api/search/');
-  console.log('  - GET  /api/search/trending');
-  console.log('  - GET  /api/hashtags/search');
-  console.log('  - GET  /api/hashtags/:hashtag/universe');
-  console.log('  - GET  /health');
+  // console.log('📋 Available endpoints:');
+  // console.log('  - POST /api/auth/login');
+  // console.log('  - POST /api/auth/register');
+  // console.log('  - GET  /api/search/');
+  // console.log('  - GET  /api/search/trending');
+  // console.log('  - GET  /api/hashtags/search');
+  // console.log('  - GET  /api/hashtags/:hashtag/universe');
+  // console.log('  - GET  /health');
 });

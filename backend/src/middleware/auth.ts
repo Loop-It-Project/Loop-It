@@ -19,7 +19,7 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
       return;
     }
 
-    // ✅ Token mit TokenService validieren
+    // Token mit TokenService validieren
     const decoded = TokenService.verifyAccessToken(token);
     
     req.user = {

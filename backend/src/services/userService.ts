@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { db } from '../db';
-import { usersTable, profilesTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { usersTable, profilesTable, rolesTable, userRolesTable  } from '../db/schema';
+import { eq, and, or, sql } from 'drizzle-orm';
 
 export class UserService {
   
@@ -433,6 +433,154 @@ export class UserService {
         success: false,
         error: 'Failed to update location'
       };
+    }
+  }
+
+  // User-Rollen abrufen
+  static async getUserRoles(userId: string) {
+    try {
+      const userRoles = await db
+        .select({
+          roleId: userRolesTable.roleId,
+          roleName: rolesTable.name,
+          roleDescription: rolesTable.description,
+          permissions: rolesTable.permissions,
+          isActive: userRolesTable.isActive,
+          assignedAt: userRolesTable.assignedAt,
+          expiresAt: userRolesTable.expiresAt
+        })
+        .from(userRolesTable)
+        .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+        .where(
+          and(
+            eq(userRolesTable.userId, userId),
+            eq(userRolesTable.isActive, true),
+            eq(rolesTable.isActive, true),
+            or(
+              sql`${userRolesTable.expiresAt} IS NULL`,
+              sql`${userRolesTable.expiresAt} > NOW()`
+            )
+          )
+        );
+
+      return userRoles;
+    } catch (error) {
+      console.error('Error getting user roles:', error);
+      return [];
+    }
+  }
+
+  // Default User-Rolle zuweisen
+  static async assignDefaultUserRole(userId: string) {
+    try {
+      // Prüfe ob User bereits eine Rolle hat
+      const existingRoles = await db
+        .select()
+        .from(userRolesTable)
+        .where(
+          and(
+            eq(userRolesTable.userId, userId),
+            eq(userRolesTable.isActive, true)
+          )
+        );
+
+      if (existingRoles.length > 0) {
+        console.log('ℹ️ User already has roles assigned');
+        return true;
+      }
+
+      // Hole die Standard "user" Rolle
+      let userRole = await db
+        .select()
+        .from(rolesTable)
+        .where(
+          and(
+            eq(rolesTable.name, 'user'),
+            eq(rolesTable.isActive, true)
+          )
+        )
+        .limit(1);
+
+      // Erstelle die Rolle falls sie nicht existiert
+      if (userRole.length === 0) {
+        const createdRole = await db
+          .insert(rolesTable)
+          .values({
+            name: 'user',
+            description: 'Standard Benutzer',
+            permissions: JSON.stringify([
+              'read_posts', 
+              'create_posts', 
+              'join_universes', 
+              'create_universes',
+              'comment_posts',
+              'react_posts',
+              'send_messages',
+              'update_profile'
+            ]),
+            isActive: true,
+            isDefault: true
+          })
+          .returning();
+        
+        userRole = createdRole;
+      }
+
+      // Weise die Rolle zu
+      await db
+        .insert(userRolesTable)
+        .values({
+          userId,
+          roleId: userRole[0].id,
+          isActive: true,
+          assignedBy: null, // System assignment
+          assignedAt: new Date()
+        });
+
+      console.log('✅ Default user role assigned successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error assigning default user role:', error);
+      return false;
+    }
+  }
+
+  // Überprüfe ob User bestimmte Permission hat
+  static async hasPermission(userId: string, permission: string): Promise<boolean> {
+    try {
+      const userRoles = await this.getUserRoles(userId);
+      
+      for (const role of userRoles) {
+        let permissions: string[] = [];
+        
+        if (role.permissions) {
+          if (Array.isArray(role.permissions)) {
+            // Permissions ist bereits ein Array
+            permissions = role.permissions;
+          } else if (typeof role.permissions === 'string') {
+            // Permissions ist ein JSON String
+            try {
+              permissions = JSON.parse(role.permissions);
+            } catch (parseError) {
+              console.error('Error parsing permissions JSON:', parseError);
+              permissions = [];
+            }
+          } else if (typeof role.permissions === 'object') {
+            // Permissions ist ein JSON Object (von Drizzle)
+            permissions = Array.isArray(role.permissions) ? role.permissions : [];
+          }
+        }
+        
+        if (permissions.includes(permission)) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking permission:', error);
+      return false;
     }
   }
 }

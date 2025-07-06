@@ -18,24 +18,24 @@ const Header = ({ user, setUser, onLogout }) => {
   useEffect(() => {
     const checkAdminAccess = async () => {
       if (!user) {
-        console.log('🔍 Header: No user, skipping admin check');
+        // console.log('🔍 Header: No user, skipping admin check');
         return;
       }
       
-      console.log('🔍 Header: Checking admin access for user:', {
-        id: user.id,
-        username: user.username,
-        email: user.email
-      });
+      // console.log('🔍 Header: Checking admin access for user:', {
+      //   id: user.id,
+      //   username: user.username,
+      //   email: user.email
+      // });
       
       try {
         const result = await AdminService.checkAdminPermissions();
-        console.log('🔍 Header: Admin check result:', result);
+        // console.log('🔍 Header: Admin check result:', result);
         
         setIsAdmin(result.success && result.isAdmin);
         
         if (result.success && result.isAdmin) {
-          console.log('✅ Header: Admin access granted - showing Shield button');
+          // console.log('✅ Header: Admin access granted - showing Shield button');
         } else {
           console.log('❌ Header: Admin access denied - hiding Shield button');
         }
