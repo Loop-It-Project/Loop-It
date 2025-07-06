@@ -89,7 +89,7 @@ export class AuthService {
         lastName: newUser[0].lastName
       };
 
-      console.log('✅ Registration successful for user:', userData.username);
+      // console.log('✅ Registration successful for user:', userData.username);
 
       return {
         success: true,
@@ -113,7 +113,7 @@ export class AuthService {
     try {
       const { email, password } = data;
       
-      console.log('🔍 Login attempt for email:', `"${email}"`);
+      // console.log('🔍 Login attempt for email:', `"${email}"`);
 
       // Find user with multiple strategies
       const foundUser = await this.findUserByEmail(email);
@@ -128,7 +128,7 @@ export class AuthService {
 
       // Password validation
       const isValidPassword = await bcrypt.compare(password, foundUser.passwordHash);
-      console.log('🔐 Password validation result:', isValidPassword);
+      // console.log('🔐 Password validation result:', isValidPassword);
       
       if (!isValidPassword) {
         console.log('❌ Invalid password for email:', email);
@@ -162,7 +162,7 @@ export class AuthService {
         lastName: foundUser.lastName
       };
 
-      console.log('✅ Login successful for user:', userData.username);
+      // console.log('✅ Login successful for user:', userData.username);
 
       return {
         success: true,
@@ -215,7 +215,7 @@ export class AuthService {
   static async refreshUserTokens(refreshToken: string) {
     try {
       const newTokenPair = await TokenService.refreshTokenPair(refreshToken);
-      console.log('✅ Token refreshed successfully');
+      // console.log('✅ Token refreshed successfully');
 
       return {
         success: true,
@@ -252,7 +252,7 @@ export class AuthService {
     try {
       if (refreshToken) {
         const revoked = await TokenService.revokeRefreshToken(refreshToken);
-        console.log('🔓 Refresh token revoked:', revoked);
+        // console.log('🔓 Refresh token revoked:', revoked);
       }
 
       return {
@@ -273,7 +273,7 @@ export class AuthService {
   static async logoutUserFromAllDevices(userId: string, username: string): Promise<AuthResult> {
     try {
       const revokedCount = await TokenService.revokeAllUserTokens(userId);
-      console.log(`🔓 Revoked ${revokedCount} tokens for user ${username}`);
+      // console.log(`🔓 Revoked ${revokedCount} tokens for user ${username}`);
 
       return {
         success: true,

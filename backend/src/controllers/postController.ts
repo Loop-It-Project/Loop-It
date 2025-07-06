@@ -72,17 +72,17 @@ export const toggleLikePost = async (req: AuthRequest, res: Response): Promise<v
     const { postId } = req.params;
     const userId = req.user!.id;
 
-    console.log('🔄 Toggle like request:', { postId, userId });
+    // console.log('🔄 Toggle like request:', { postId, userId });
 
     const result = await PostService.toggleLike(postId, userId);
     
-    console.log('✅ Toggle like result:', result); 
-    console.log('✅ Response structure:', {
-      hasData: !!result,
-      dataKeys: result ? Object.keys(result) : null,
-      isLiked: result?.isLiked,
-      likeCount: result?.likeCount
-    }); 
+    // console.log('✅ Toggle like result:', result); 
+    // console.log('✅ Response structure:', {
+    //   hasData: !!result,
+    //   dataKeys: result ? Object.keys(result) : null,
+    //   isLiked: result?.isLiked,
+    //   likeCount: result?.likeCount
+    // }); 
 
     res.status(200).json({
       success: true,
@@ -101,11 +101,11 @@ export const toggleLikePost = async (req: AuthRequest, res: Response): Promise<v
 
 // Comment hinzufügen
 export const addComment = async (req: AuthRequest, res: Response): Promise<void> => {
-  console.log('🔄 Add comment request:', {
-    params: req.params,
-    body: req.body,
-    user: req.user?.id
-  }); 
+  // console.log('🔄 Add comment request:', {
+  //   params: req.params,
+  //   body: req.body,
+  //   user: req.user?.id
+  // }); 
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -123,11 +123,11 @@ export const addComment = async (req: AuthRequest, res: Response): Promise<void>
     const { content, parentId } = req.body;
     const userId = req.user!.id;
 
-    console.log('✅ Validation passed:', { postId, content, parentId, userId });
+    // console.log('✅ Validation passed:', { postId, content, parentId, userId });
 
     const result = await PostService.addComment(postId, userId, content, parentId);
     
-    console.log('✅ Comment created:', result);
+    // console.log('✅ Comment created:', result);
     
     res.status(201).json({
       success: true,
@@ -196,11 +196,11 @@ export const toggleCommentLike = async (req: AuthRequest, res: Response): Promis
     const { commentId } = req.params;
     const userId = req.user!.id;
   
-    console.log('🔄 Toggle comment like request:', { commentId, userId });
+    // console.log('🔄 Toggle comment like request:', { commentId, userId });
   
     const result = await PostService.toggleCommentLike(commentId, userId);
     
-    console.log('✅ Toggle comment like result:', result);
+    // console.log('✅ Toggle comment like result:', result);
   
     res.status(200).json({
       success: true,
@@ -234,11 +234,11 @@ export const addCommentReply = async (req: AuthRequest, res: Response): Promise<
     const { content } = req.body;
     const userId = req.user!.id;
 
-    console.log('🔄 Add comment reply request:', { postId, commentId, content, userId });
+    // console.log('🔄 Add comment reply request:', { postId, commentId, content, userId });
 
     const result = await PostService.addCommentReply(postId, commentId, userId, content);
     
-    console.log('✅ Comment reply created:', result);
+    // console.log('✅ Comment reply created:', result);
     
     res.status(201).json({
       success: true,
@@ -286,7 +286,7 @@ export const sharePost = async (req: AuthRequest, res: Response): Promise<void> 
     const { shareType, metadata } = req.body;
     const userId = req.user?.id || null; // Optional für anonyme Shares
 
-    console.log('🔄 Share post request:', { postId, shareType, userId });
+    // console.log('🔄 Share post request:', { postId, shareType, userId });
 
     // Validiere shareType
     const validShareTypes = ['internal', 'facebook', 'twitter', 'linkedin', 'whatsapp', 'telegram', 'copy_link', 'email', 'native'];
@@ -300,7 +300,7 @@ export const sharePost = async (req: AuthRequest, res: Response): Promise<void> 
 
     const result = await PostService.trackShare(postId, userId, shareType, metadata);
     
-    console.log('✅ Post shared successfully:', result);
+    // console.log('✅ Post shared successfully:', result);
 
     res.status(200).json({
       success: true,

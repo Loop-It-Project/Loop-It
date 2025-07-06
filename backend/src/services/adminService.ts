@@ -218,7 +218,7 @@ export class AdminService {
         })) as EnrichedReport[];
       }
 
-      console.log('✅ AdminService: Moderation reports retrieved:', enrichedReports.length);
+      // console.log('✅ AdminService: Moderation reports retrieved:', enrichedReports.length);
 
       return {
         success: true,
@@ -369,12 +369,12 @@ export class AdminService {
         };
       }
 
-      console.log('🔍 AdminService: Found user:', {
-        id: user[0].id,
-        email: user[0].email,
-        username: user[0].username,
-        accountStatus: user[0].accountStatus
-      });
+    //   console.log('🔍 AdminService: Found user:', {
+    //     id: user[0].id,
+    //     email: user[0].email,
+    //     username: user[0].username,
+    //     accountStatus: user[0].accountStatus
+    //   });
 
       // Temporäre Admin-Liste (später durch DB-Rollen ersetzen)
       const adminEmails = [
@@ -405,22 +405,22 @@ export class AdminService {
     //                  adminUsernames.includes(user[0].username) ||
     //                  user[0].accountStatus === 'admin';
 
-    console.log('🔍 AdminService: Detailed admin check:', {
-        userEmail: user[0].email,
-        userEmailLower: userEmail,
-        userName: user[0].username,
-        userNameLower: userName,
-        userStatus: user[0].accountStatus,
-        isEmailAdmin,
-        isUsernameAdmin, 
-        isStatusAdmin,
-        adminEmails,
-        adminUsernames
-      });
+    // console.log('🔍 AdminService: Detailed admin check:', {
+    //     userEmail: user[0].email,
+    //     userEmailLower: userEmail,
+    //     userName: user[0].username,
+    //     userNameLower: userName,
+    //     userStatus: user[0].accountStatus,
+    //     isEmailAdmin,
+    //     isUsernameAdmin, 
+    //     isStatusAdmin,
+    //     adminEmails,
+    //     adminUsernames
+    //   });
 
       const isAdmin = isEmailAdmin || isUsernameAdmin || isStatusAdmin;
 
-      console.log('🔍 AdminService: Final admin result:', isAdmin);
+    //   console.log('🔍 AdminService: Final admin result:', isAdmin);
 
       return {
         success: true,

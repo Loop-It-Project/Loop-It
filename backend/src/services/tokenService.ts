@@ -185,7 +185,7 @@ export class TokenService {
           )
         );
 
-      console.log(`🔐 Revoked all tokens for user ${userId}`);
+      // console.log(`🔐 Revoked all tokens for user ${userId}`);
       return result.rowCount || 0;
     } catch (error) {
       console.error('Error revoking user tokens:', error);
@@ -223,7 +223,7 @@ export class TokenService {
         );
 
       const deletedCount = result.rowCount || 0;
-      console.log(`🧹 Cleaned up ${deletedCount} expired refresh tokens`);
+      // console.log(`🧹 Cleaned up ${deletedCount} expired refresh tokens`);
       return deletedCount;
     } catch (error) {
       console.error('Error cleaning up expired tokens:', error);

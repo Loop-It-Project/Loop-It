@@ -23,14 +23,14 @@ export const getPersonalFeed = async (req: AuthRequest, res: Response): Promise<
     const result = await FeedService.getPersonalFeed(userId, page, limit, sortBy); 
 
     // Debug Log für den Personal Feed
-    console.log('✅ Personal Feed Result:', {
-      postsCount: result.posts.length,
-      firstPost: result.posts[0] ? {
-        id: result.posts[0].id,
-        likeCount: result.posts[0].likeCount,
-        isLikedByUser: result.posts[0].isLikedByUser
-      } : null
-    }); 
+    // console.log('✅ Personal Feed Result:', {
+    //   postsCount: result.posts.length,
+    //   firstPost: result.posts[0] ? {
+    //     id: result.posts[0].id,
+    //     likeCount: result.posts[0].likeCount,
+    //     isLikedByUser: result.posts[0].isLikedByUser
+    //   } : null
+    // }); 
     
     res.status(200).json({
       success: true,

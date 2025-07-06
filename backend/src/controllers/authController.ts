@@ -16,7 +16,7 @@ const getErrorMessage = (error: unknown): string => {
 
 // REGISTER
 export const register = async (req: Request, res: Response): Promise<void> => {
-  console.log('🔍 Register route called');
+  // console.log('🔍 Register route called');
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -59,7 +59,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 // LOGIN
 export const login = async (req: Request, res: Response): Promise<void> => {
-  console.log('🔍 Login route called with body:', Object.keys(req.body));
+  // console.log('🔍 Login route called with body:', Object.keys(req.body));
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

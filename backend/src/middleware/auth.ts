@@ -28,7 +28,7 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
       username: decoded.username
     };
 
-    console.log('✅ Token validated for user:', decoded.username);
+    // console.log('✅ Token validated for user:', decoded.username);
     next();
 
   } catch (error) {
@@ -68,7 +68,7 @@ export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFu
           email: decoded.email,
           username: decoded.username
         };
-        console.log('✅ Optional auth successful for user:', decoded.username);
+        // console.log('✅ Optional auth successful for user:', decoded.username);
       } catch (error) {
         console.log('⚠️ Optional auth failed, continuing without user');
         // Fehler ignorieren und ohne User fortfahren

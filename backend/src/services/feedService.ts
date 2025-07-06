@@ -74,7 +74,7 @@ export class FeedService {
         .offset(offset)
         .limit(limit);
 
-      console.log('✅ Personal Feed Service - Posts geladen:', posts.length);
+      // console.log('✅ Personal Feed Service - Posts geladen:', posts.length);
 
       return {
         success: true,
@@ -158,7 +158,7 @@ export class FeedService {
         .offset(offset)
         .limit(limit);
 
-      console.log('✅ Universe Feed Service - Posts geladen:', posts.length);
+      // console.log('✅ Universe Feed Service - Posts geladen:', posts.length);
 
       return {
         success: true,
