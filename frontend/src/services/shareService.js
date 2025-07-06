@@ -6,7 +6,7 @@ class ShareService {
   // Post Share tracken
   static async sharePost(postId, shareType, metadata = {}) {
     try {
-      console.log('🔄 Sharing post:', { postId, shareType, metadata });
+      // console.log('🔄 Sharing post:', { postId, shareType, metadata });
 
       const response = await fetch(`${API_URL}/api/posts/${postId}/share`, {
         method: 'POST',
@@ -21,7 +21,7 @@ class ShareService {
       });
 
       const data = await response.json();
-      console.log('📥 Share response:', data);
+      // console.log('📥 Share response:', data);
 
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {

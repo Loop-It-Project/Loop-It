@@ -6,14 +6,14 @@ class HashtagService {
   // Universe für Hashtag finden
   static async findUniverseByHashtag(hashtag) {
     try {
-      console.log('🔄 Looking for universe with hashtag:', hashtag);
+      // console.log('🔄 Looking for universe with hashtag:', hashtag);
       
       // # entfernen falls vorhanden
       const cleanHashtag = hashtag.replace('#', '').toLowerCase();
-      console.log('🔍 Clean hashtag:', cleanHashtag);
+      // console.log('🔍 Clean hashtag:', cleanHashtag);
       
       const url = `${API_URL}/api/hashtags/${cleanHashtag}/universe`;
-      console.log('🌐 Making request to:', url);
+      // console.log('🌐 Making request to:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -22,11 +22,11 @@ class HashtagService {
         },
       });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response ok:', response.ok);
+      // console.log('📡 Response status:', response.status);
+      // console.log('📡 Response ok:', response.ok);
 
       const data = await response.json();
-      console.log('📥 Hashtag API response:', data);
+      // console.log('📥 Hashtag API response:', data);
       
       if (response.ok && data.success) {
         return {

@@ -65,13 +65,13 @@ const Dashboard = ({ user, onLogout }) => {
 
   // Universe Click Handler
   const handleUniverseClick = (universeSlug) => {
-    console.log('Dashboard handleUniverseClick:', universeSlug);
+    // console.log('Dashboard handleUniverseClick:', universeSlug);
     navigate(`/universe/${universeSlug}`);
   };
 
   // Hashtag Click Handler hinzufügen
   const handleHashtagClick = (targetUniverseSlug, hashtag) => {
-    console.log('Dashboard handleHashtagClick:', { targetUniverseSlug, hashtag });
+    // console.log('Dashboard handleHashtagClick:', { targetUniverseSlug, hashtag });
     
     if (targetUniverseSlug && hashtag) {
       navigate(`/universe/${targetUniverseSlug}?hashtag=${hashtag}`);

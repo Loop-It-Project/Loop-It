@@ -206,7 +206,7 @@ const Header = ({ user, setUser, onLogout }) => {
               {isAdmin && (
                 <button
                   onClick={() => {
-                    console.log('🔧 Admin button clicked - navigating to /admin');
+                    // console.log('🔧 Admin button clicked - navigating to /admin');
                     navigate('/admin');
                   }}
                   className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 hover:scale-110 hover:cursor-pointer transition-all duration-200 rounded-lg"
@@ -216,12 +216,12 @@ const Header = ({ user, setUser, onLogout }) => {
                 </button>
               )}
 
-              {/* Debug Info (nur in Development) */}
-              {import.meta.env.DEV && (
+              {/* {/* Debug Info (nur in Development) */}
+              {/* {import.meta.env.DEV && (
                 <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                   Admin: {isAdmin ? 'YES' : 'NO'}
                 </div>
-              )}
+              )} */}
               
               {/* Settings Button */}
               <button 

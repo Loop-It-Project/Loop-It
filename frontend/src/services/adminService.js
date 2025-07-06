@@ -142,18 +142,18 @@ class AdminService {
 
   // Check Admin Permissions
   static async checkAdminPermissions() {
-    console.log('🔍 AdminService: Checking admin permissions...');
+    // console.log('🔍 AdminService: Checking admin permissions...');
     
     try {
       const response = await this.fetchWithAuth(`${API_URL}/api/admin/dashboard/metrics`, {
         method: 'GET'
       });
 
-      console.log('📡 Admin check response status:', response.status);
+    //   console.log('📡 Admin check response status:', response.status);
 
       // Wenn der Request erfolgreich ist, hat der User Admin-Rechte
       if (response.ok) {
-        console.log('✅ Admin permissions granted by backend');
+        // console.log('✅ Admin permissions granted by backend');
         return { success: true, isAdmin: true };
       } else if (response.status === 403) {
         console.log('❌ Admin access denied by backend');
@@ -168,20 +168,20 @@ class AdminService {
       // ERWEITERTE Development-Fallback Logic
       if (import.meta.env.DEV || window.location.hostname === 'localhost') {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        console.log('🔧 Development Mode - Current user:', user);
+        // console.log('🔧 Development Mode - Current user:', user);
         
         const devAdmins = ['admin', 'developer', 'testadmin', 'Zerrelius'];
         const devAdminEmails = ['admin@loop-it.com', 'developer@loop-it.com', 'test@admin.com', 'Zerrelius@gmail.com'];
         
         const isDevAdmin = devAdmins.includes(user.username) || devAdminEmails.includes(user.email);
         
-        console.log('🔧 Development Admin Check:', {
-          username: user.username,
-          email: user.email,
-          isInAdminList: devAdmins.includes(user.username),
-          isInEmailList: devAdminEmails.includes(user.email),
-          isDevAdmin
-        });
+        // console.log('🔧 Development Admin Check:', {
+        //   username: user.username,
+        //   email: user.email,
+        //   isInAdminList: devAdmins.includes(user.username),
+        //   isInEmailList: devAdminEmails.includes(user.email),
+        //   isDevAdmin
+        // });
         
         if (isDevAdmin) {
           console.log('🔧 Development: Granting admin access for testing');

@@ -58,7 +58,7 @@ const Feed = ({
 
   // Share Handler
   const handleShare = (postId, platform, newShareCount) => {
-    console.log('Feed handleShare called:', { postId, platform, newShareCount });
+    // console.log('Feed handleShare called:', { postId, platform, newShareCount });
     
     // Update Post in der lokalen Liste
     setPosts(prev => prev.map(post => 
@@ -163,7 +163,7 @@ const Feed = ({
 
   // Fallback: Post manuell hinzufügen
   const handlePostCreated = (newPost) => {
-    // console.log('⚠️ Fallback: Post wird manuell hinzugefügt');
+    console.log('⚠️ Fallback: Post wird manuell hinzugefügt');
     setPosts(prev => [newPost, ...prev]);
   };
 
@@ -206,7 +206,7 @@ const Feed = ({
 
   // Like Handler
   const handleLike = (postId, isLiked, newLikeCount) => {
-    console.log('Feed handleLike called:', { postId, isLiked, newLikeCount }); 
+    // console.log('Feed handleLike called:', { postId, isLiked, newLikeCount }); 
     
     // NULL/UNDEFINED Check hinzufügen
     if (isLiked === undefined || newLikeCount === undefined) {
@@ -222,14 +222,14 @@ const Feed = ({
           : post
       );
 
-      console.log('Posts updated in Feed:', updated.find(p => p.id === postId)); 
+      // console.log('Posts updated in Feed:', updated.find(p => p.id === postId)); 
       return updated;
     });
   };
 
   // Hashtag Click Handler sicherstellen
   const handleHashtagClick = (targetUniverseSlug, hashtag) => {
-    console.log('Feed handleHashtagClick called:', { targetUniverseSlug, hashtag });
+    // console.log('Feed handleHashtagClick called:', { targetUniverseSlug, hashtag });
     
     if (onHashtagClick && typeof onHashtagClick === 'function') {
       onHashtagClick(targetUniverseSlug, hashtag);

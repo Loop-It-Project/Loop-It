@@ -6,14 +6,14 @@ class CommentService {
   // Comment hinzufügen
   static async addComment(postId, content, parentId = null) {
     try {
-      console.log('🔄 Adding comment:', { postId, content, parentId }); 
+      // console.log('🔄 Adding comment:', { postId, content, parentId }); 
 
       const requestBody = { 
         content, 
         ...(parentId && { parentId })
       };
 
-      console.log('📤 Request body:', requestBody);
+      // console.log('📤 Request body:', requestBody);
 
       const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/${postId}/comments`, {
         method: 'POST',
@@ -23,10 +23,10 @@ class CommentService {
         body: JSON.stringify(requestBody)
       });
 
-      console.log('📥 Response status:', response.status); 
+      // console.log('📥 Response status:', response.status); 
 
       const data = await response.json();
-      console.log('📥 Response data:', data); 
+      // console.log('📥 Response data:', data); 
 
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {
@@ -51,14 +51,14 @@ class CommentService {
   // Comment liken/unliken
   static async toggleCommentLike(commentId) {
     try {
-      console.log('🔄 Toggle comment like:', commentId);
+      // console.log('🔄 Toggle comment like:', commentId);
 
       const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/comments/${commentId}/like`, {
         method: 'POST'
       });
 
       const data = await response.json();
-      console.log('📥 Comment like response:', data);
+      // console.log('📥 Comment like response:', data);
 
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {
@@ -70,7 +70,7 @@ class CommentService {
   // Reply zu Comment hinzufügen
   static async addCommentReply(postId, commentId, content) {
     try {
-      console.log('🔄 Adding comment reply:', { postId, commentId, content });
+      // console.log('🔄 Adding comment reply:', { postId, commentId, content });
 
       const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/${postId}/comments/${commentId}/replies`, {
         method: 'POST',
@@ -81,7 +81,7 @@ class CommentService {
       });
 
       const data = await response.json();
-      console.log('📥 Comment reply response:', data);
+      // console.log('📥 Comment reply response:', data);
 
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {

@@ -44,7 +44,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     try {
       setLikingInProgress(true);
 
-      console.log('🔄 Starting like action:', { isLiked, likeCount });
+      // console.log('🔄 Starting like action:', { isLiked, likeCount });
 
       // Sicherheitsprüfung für likeCount
       const currentLikeCount = typeof likeCount === 'number' ? likeCount : (post.likeCount || 0);
@@ -54,24 +54,24 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
       const newLikedState = !currentIsLiked;
       const newLikeCount = newLikedState ? currentLikeCount + 1 : currentLikeCount - 1;
 
-      console.log('🔧 Corrected values:', { currentLikeCount, currentIsLiked, newLikedState, newLikeCount });
+      // console.log('🔧 Corrected values:', { currentLikeCount, currentIsLiked, newLikedState, newLikeCount });
 
       setIsLiked(newLikedState);
       setLikeCount(newLikeCount);
 
-      console.log('⚡ Optimistic update:', { newLikedState, newLikeCount });
+      // console.log('⚡ Optimistic update:', { newLikedState, newLikeCount });
 
       // Server-Request
       const response = await PostService.toggleLike(post.id);
 
-      console.log('📥 Server response:', response);
+      // console.log('📥 Server response:', response);
 
       if (response.success && response.data) {
         // Server-Response Validierung
         const serverIsLiked = typeof response.data.isLiked === 'boolean' ? response.data.isLiked : newLikedState;
         const serverLikeCount = typeof response.data.likeCount === 'number' ? response.data.likeCount : newLikeCount;
 
-        console.log('✅ Validated server data:', { serverIsLiked, serverLikeCount });
+        // console.log('✅ Validated server data:', { serverIsLiked, serverLikeCount });
 
         // Update mit validierten Server-Daten
         setIsLiked(serverIsLiked);
@@ -79,11 +79,11 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
 
         // Parent-Komponente nur mit gültigen Daten benachrichtigen
         if (onLike && typeof onLike === 'function') {
-          console.log('📢 Notifying parent component with validated data:', {
-            postId: post.id,
-            isLiked: serverIsLiked,
-            likeCount: serverLikeCount
-          });
+        //   console.log('📢 Notifying parent component with validated data:', {
+        //     postId: post.id,
+        //     isLiked: serverIsLiked,
+        //     likeCount: serverLikeCount
+        //   });
           onLike(post.id, serverIsLiked, serverLikeCount);
         }
       } else {
@@ -153,11 +153,11 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
 
   // Universe-Hashtag Click Handler
   const handleUniverseHashtagClick = () => {
-    console.log('🔄 Universe hashtag click:', { universeName, universeSlug });
+    // console.log('🔄 Universe hashtag click:', { universeName, universeSlug });
 
     // Direkte Navigation zum Universe
     if (onUniverseClick && universeSlug) {
-      console.log('✅ Direct navigation to universe:', universeSlug);
+      // console.log('✅ Direct navigation to universe:', universeSlug);
       onUniverseClick(universeSlug);
     } else {
       console.warn('⚠️ No universe slug or click handler available', {
@@ -171,8 +171,8 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
 
   // Hashtag Click Handler mit besserer Fehlerbehandlung
   const handleHashtagClick = async (hashtag) => {
-    console.log('🔄 PostCard handleHashtagClick called with:', hashtag);
-    console.log('🔄 onHashtagClick handler available:', !!onHashtagClick);
+    // console.log('🔄 PostCard handleHashtagClick called with:', hashtag);
+    // console.log('🔄 onHashtagClick handler available:', !!onHashtagClick);
     
     if (!onHashtagClick) {
       console.warn('⚠️ onHashtagClick handler not provided to PostCard');
@@ -185,15 +185,15 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     }
 
     try {
-      console.log('🔄 Looking up hashtag:', hashtag);
+      // console.log('🔄 Looking up hashtag:', hashtag);
       setHashtagLoading(hashtag);
 
       const result = await HashtagService.findUniverseByHashtag(hashtag);
-      console.log('📥 HashtagService result:', result);
+      // console.log('📥 HashtagService result:', result);
 
       if (result.success && result.universe) {
-        console.log('✅ Universe found for hashtag:', result.universe);
-        console.log('🔄 Calling onHashtagClick with:', { slug: result.universe.slug, hashtag });
+        // console.log('✅ Universe found for hashtag:', result.universe);
+        // console.log('🔄 Calling onHashtagClick with:', { slug: result.universe.slug, hashtag });
 
         // Navigiere zu Universe mit Hashtag-Parameter
         onHashtagClick(result.universe.slug, hashtag);
@@ -207,7 +207,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
         );
 
         if (shouldCreate) {
-          console.log('User wants to create universe for:', hashtag);
+          // console.log('User wants to create universe for:', hashtag);
           alert(`Universe-Erstellung für #${hashtag} wird bald verfügbar sein!`);
         }
       }
@@ -241,7 +241,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
 
   // Share Handler
   const handleShare = (platform, newShareCount) => {
-    console.log('PostCard handleShare called:', { platform, newShareCount });
+    // console.log('PostCard handleShare called:', { platform, newShareCount });
     
     // Update local share count
     if (typeof newShareCount === 'number') {
@@ -371,13 +371,13 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
       {post.hashtags && post.hashtags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {post.hashtags.map((hashtag, index) => {
-            console.log('🏷️ Rendering hashtag button:', hashtag); // Debug Log
+            // console.log('🏷️ Rendering hashtag button:', hashtag); // Debug Log
 
             return (
               <button
                 key={index}
                 onClick={() => {
-                  console.log('🔄 Hashtag button clicked:', hashtag); // Debug Log
+                  // console.log('🔄 Hashtag button clicked:', hashtag); // Debug Log
                   handleHashtagClick(hashtag);
                 }}
                 disabled={hashtagLoading === hashtag}
