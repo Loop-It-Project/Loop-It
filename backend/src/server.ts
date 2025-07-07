@@ -174,7 +174,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API Health check (für Nginx Proxy)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    env: {
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasDbUrl: !!process.env.DATABASE_URL,
+      port: process.env.PORT || 3000
+    }
+  });
+});
+
 console.log('✅ Health route registered');
+console.log('✅ API Health route registered');
 
 // 404 Handler
 app.use((req, res) => {
