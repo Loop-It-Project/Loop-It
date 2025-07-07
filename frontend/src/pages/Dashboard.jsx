@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
 import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
@@ -11,7 +11,9 @@ import useEscapeKey from '../hooks/useEscapeKey';
 // Zeigt den Haupt-Dashboard-Bereich mit Feed, Universes und Navigation
 const Dashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('feed');
+  const [searchParams] = useSearchParams(); // URL parameter lesen
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'feed');
+  const [trendingTimeframe, setTrendingTimeframe] = useState(searchParams.get('timeframe') || '7d');
   const [userUniverses, setUserUniverses] = useState([]);
   const [loadingUniverses, setLoadingUniverses] = useState(true);
   const [showCreateUniverse, setShowCreateUniverse] = useState(false);
@@ -97,6 +99,16 @@ const Dashboard = ({ user, onLogout }) => {
     }, 500);
 
     navigate(`/universe/${newUniverse.slug}`);
+  };
+
+  // Tab change mit URL update
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    if (tabId === 'trending') {
+      navigate(`/dashboard?tab=trending&timeframe=${trendingTimeframe}`, { replace: true });
+    } else {
+      navigate('/dashboard', { replace: true });
+    }
   };
 
   const tabs = [
@@ -227,7 +239,7 @@ const Dashboard = ({ user, onLogout }) => {
             {activeTab === 'trending' && (
               <Feed
                 type="trending"
-                timeframe="24h"
+                timeframe={trendingTimeframe}
                 onUniverseClick={handleUniverseClick}
                 onHashtagClick={handleHashtagClick}
               />

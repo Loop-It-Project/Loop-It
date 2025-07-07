@@ -11,7 +11,7 @@ import useEscapeKey from '../../hooks/useEscapeKey';
 const Feed = ({ 
   type = 'personal', // 'personal', 'universe', 'trending'
   universeSlug = null,
-  timeframe = '24h',
+  timeframe = '7d',
   onUniverseClick,
   onHashtagClick
 }) => {
@@ -36,6 +36,23 @@ const Feed = ({
     { value: 'oldest', label: 'Älteste zuerst', icon: '📅' },
     { value: 'trending', label: 'Trending', icon: '🔥' },
   ];
+
+  // ERWEITERTE TIMEFRAME OPTIONS
+  const trendingFilterOptions = [
+    { value: '1h', label: 'Letzte Stunde', icon: '⚡' },
+    { value: '6h', label: 'Letzte 6 Stunden', icon: '🔥' },
+    { value: '24h', label: 'Heute', icon: '📅' },
+    { value: '7d', label: 'Diese Woche', icon: '📊' },
+    { value: '30d', label: 'Dieser Monat', icon: '📈' },
+  ];
+
+  // Conditional filter options based on feed type
+  const getFilterOptions = () => {
+    if (type === 'trending') {
+      return trendingFilterOptions;
+    }
+    return filterOptions; // Normal filter options for other feed types
+  };
 
   // ESC-Key Handler für Filter Dropdown
   useEscapeKey(() => {
@@ -74,11 +91,9 @@ const Feed = ({
       if (isRefresh) {
         setRefreshing(true);
         setError(null);
-      } else if (pageNum === 1) {
-        setLoading(true);
-        setError(null);
       } else {
-        setLoadingMore(true);
+        setLoading(pageNum === 1);
+        setLoadingMore(pageNum > 1);
       }
 
       let response;
@@ -87,13 +102,16 @@ const Feed = ({
         case 'personal':
           response = await FeedService.getPersonalFeed(pageNum, 20, sortBy);
           break;
+          
         case 'universe':
-          if (!universeSlug) throw new Error('Universe slug required for universe feed');
-          response = await FeedService.getUniverseFeed(universeSlug, pageNum, 20, sortBy); 
+          if (!universeSlug) throw new Error('Universe slug required');
+          response = await FeedService.getUniverseFeed(universeSlug, pageNum, 20, sortBy);
           break;
+          
         case 'trending':
-          response = await FeedService.getTrendingFeed(timeframe, 20);
+          response = await FeedService.getTrendingFeed(timeframe, pageNum, 20);
           break;
+          
         default:
           throw new Error('Invalid feed type');
       }
@@ -109,6 +127,15 @@ const Feed = ({
         
         setHasMore(response.data.pagination?.hasMore || false);
         setPage(pageNum);
+
+        console.log(`✅ Feed loaded (${type}):`, {
+          page: pageNum,
+          postsCount: newPosts.length,
+          totalPosts: pageNum === 1 ? newPosts.length : posts.length + newPosts.length,
+          hasMore: response.data.pagination?.hasMore,
+          timeframe: type === 'trending' ? timeframe : 'N/A'
+        });
+
       } else {
         throw new Error(response.error || 'Failed to load feed');
       }
@@ -122,12 +149,25 @@ const Feed = ({
     }
   }, [type, universeSlug, timeframe, sortBy]);
 
+  // TIMEFRAME CHANGE HANDLER (nur für Trending)
+  const handleTimeframeChange = (newTimeframe) => {
+    if (type === 'trending') {
+      // Aktualisiere die URL oder den State mit neuem Timeframe
+      // und lade Feed neu
+      navigate(`/dashboard?tab=trending&timeframe=${newTimeframe}`, { replace: true });
+      loadFeed(1, true);
+    }
+  };
+
   // Filter ändern
-  const handleFilterChange = (newSortBy) => {
-    setSortBy(newSortBy);
-    setShowFilterDropdown(false);
-    // Feed neu laden mit neuem Filter
-    loadFeed(1, true);
+  const handleFilterChange = (newValue) => {
+    if (type === 'trending') {
+      handleTimeframeChange(newValue);
+    } else {
+      setSortBy(newValue);
+      setShowFilterDropdown(false);
+      loadFeed(1, true);
+    }
   };
 
   // Initial load
@@ -297,46 +337,52 @@ const Feed = ({
         <h2 className="text-xl font-bold text-primary">
           {type === 'personal' && 'Dein Feed'}
           {type === 'universe' && `${universeSlug} Universe`}
-          {type === 'trending' && 'Trending Posts'}
+          {type === 'trending' && (
+            <div className="flex items-center gap-2">
+              <span>Trending Posts</span>
+              <span className="text-sm font-normal text-secondary">
+                ({getFilterOptions().find(opt => opt.value === timeframe)?.label || 'Diese Woche'})
+              </span>
+            </div>
+          )}
         </h2>
 
         <div className="flex items-center space-x-3">
-          {/* Filter Dropdown - nur wenn nicht bereits trending */}
-          {type !== 'trending' && (
-            <div className="relative filter-dropdown">
-              <button
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center space-x-2 px-3 py-2 bg-card border border-secondary rounded-lg hover:bg-secondary hover:cursor-pointer transition-colors"
-              >
-                <Filter size={16} />
-                <span className="text-sm font-medium">
-                  {filterOptions.find(opt => opt.value === sortBy)?.label}
-                </span>
-                <ChevronDown size={14} />
-              </button>
+          {/* Filter Dropdown */}
+          <div className="relative filter-dropdown">
+            <button
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+              className="flex items-center space-x-2 px-3 py-2 bg-card border border-secondary rounded-lg hover:bg-secondary hover:cursor-pointer transition-colors"
+            >
+              <Filter size={16} />
+              <span className="text-sm font-medium">
+                {type === 'trending' 
+                  ? trendingFilterOptions.find(opt => opt.value === timeframe)?.label || 'Diese Woche'
+                  : filterOptions.find(opt => opt.value === sortBy)?.label
+                }
+              </span>
+              <ChevronDown size={14} />
+            </button>
 
-              {/* Filter Dropdown */}
-              {showFilterDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-card border border-primary rounded-lg shadow-lg py-2 min-w-[160px] z-50">
-                  {filterOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => handleFilterChange(option.value)}
-                      className={`w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-secondary hover:cursor-pointer transition-colors ${
-                        sortBy === option.value ? 'bg-purple-50 text-purple-700' : 'text-secondary'
-                      }`}
-                    >
-                      <span>{option.icon}</span>
-                      <span className="text-sm">{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+              {/* Dropdown Menu */}
+            {showFilterDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-card rounded-lg shadow-lg border border-secondary z-10">
+                {getFilterOptions().map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleFilterChange(option.value)}
+                    className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer transition-colors"
+                  >
+                    <span className="text-lg">{option.icon}</span>
+                    <span className="text-sm font-medium">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         
         {/* Refresh Button */}
-        <button
+          <button
             onClick={handleRefresh}
             disabled={refreshing}
             className="flex items-center space-x-2 text-tertiary hover:text-purple-600 transition-colors hover:cursor-pointer disabled:opacity-50"
