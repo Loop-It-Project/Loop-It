@@ -182,7 +182,7 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
                 <option value="">Universe wählen...</option>
                 {userUniverses.map((universe) => (
                   <option key={universe.id} value={universe.id}>
-                    {universe.name} ({universe.memberCount} Mitglieder)
+                    {universe.slug} ({universe.memberCount} Mitglieder)
                   </option>
                 ))}
               </select>

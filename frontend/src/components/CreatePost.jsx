@@ -69,18 +69,18 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Universe Selection */}
           <div>
-            <label className="block text-sm font-medium text-secondary mb-1">
+            <label className="block text-sm font-medium text-primary dark:text-white mb-1">
               Universe auswählen *
             </label>
             <select
               value={formData.universeId}
               onChange={(e) => setFormData(prev => ({ ...prev, universeId: e.target.value }))}
-              className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 text-secondary dark:text-white bg-card dark:bg-gray-700 border border-secondary dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               <option value="">Universe wählen...</option>
               {userUniverses.map((universe) => (
                 <option key={universe.id} value={universe.id}>
-                  {universe.name}
+                  {universe.slug}
                 </option>
               ))}
             </select>
