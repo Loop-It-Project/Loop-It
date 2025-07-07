@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield } from 'lucide-react';
+import { Shield, AlertTriangle } from 'lucide-react';
 import AdminService from '../services/adminService';
 
 // Import der Komponenten
@@ -10,6 +10,7 @@ import UsersTab from '../components/admin/UsersTab';
 import ModerationTab from '../components/admin/ModerationTab';
 import ApprovalsTab from '../components/admin/ApprovalsTab';
 import UniversesTab from '../components/admin/UniversesTab';
+import ReportsTab from '../components/admin/ReportsTab';
 
 const AdminPanel = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -67,8 +68,8 @@ const AdminPanel = ({ user, onLogout }) => {
 
   // Load Reports
   useEffect(() => {
-    if (activeTab === 'moderation') {
-      loadModerationReports();
+    if (activeTab === 'reports') {
+      loadReports();
     }
   }, [activeTab, reportStatus]);
 
@@ -122,6 +123,7 @@ const AdminPanel = ({ user, onLogout }) => {
     }
   };
 
+  // Load Approvals
   const loadPendingApprovals = async () => {
     try {
       setError('');
@@ -133,6 +135,54 @@ const AdminPanel = ({ user, onLogout }) => {
       }
     } catch (error) {
       setError('Fehler beim Laden der Genehmigungen');
+    }
+  };
+
+  // Reports laden
+  const loadReports = async () => {
+    try {
+      setError('');
+      const result = await AdminService.getReports(1, 20, reportStatus);
+      if (result.success) {
+        setReports(result.data.reports || []);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Fehler beim Laden der Reports');
+    }
+  };
+
+  // Legacy: Moderation Data (falls separater Tab)
+  const loadModerationData = async () => {
+    try {
+      setError('');
+      const result = await AdminService.getModerationReports(1, 20, 'pending');
+      if (result.success) {
+        setReports(result.data.reports || []);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Fehler beim Laden der Moderation-Daten');
+    }
+  };
+
+  // Report Processing Handler
+  const handleProcessReport = async (reportId, actionData) => {
+    try {
+      setError('');
+      const result = await AdminService.processReport(reportId, actionData);
+      if (result.success) {
+        setMessage('Report erfolgreich bearbeitet!');
+        // Report aus Liste entfernen
+        setReports(prev => prev.filter(r => r.id !== reportId));
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Fehler beim Bearbeiten des Reports');
     }
   };
 
@@ -193,6 +243,18 @@ const AdminPanel = ({ user, onLogout }) => {
           reports={reports}
           status={reportStatus}
           setStatus={setReportStatus}
+          onProcessReport={handleProcessReport}
+        />
+      )}
+
+
+      {activeTab === 'reports' && (
+        <ReportsTab 
+          reports={reports}
+          status={reportStatus}
+          setStatus={setReportStatus}
+          onProcessReport={handleProcessReport}
+          onRefresh={loadReports}
         />
       )}
 

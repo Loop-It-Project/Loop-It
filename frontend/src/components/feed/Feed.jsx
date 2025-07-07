@@ -13,6 +13,7 @@ const Feed = ({
   type = 'personal', // 'personal', 'universe', 'trending'
   universeSlug = null,
   timeframe = '7d',
+  currentUser,
   onUniverseClick,
   onHashtagClick,
   onTimeframeChange
@@ -423,6 +424,7 @@ const Feed = ({
             <PostCard
               key={post.id}
               post={post}
+              currentUser={currentUser}
               onUniverseClick={onUniverseClick}
               onHashtagClick={handleHashtagClick}
               onLike={handleLike}

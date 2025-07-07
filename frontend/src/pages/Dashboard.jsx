@@ -284,6 +284,7 @@ const Dashboard = ({ user, onLogout }) => {
               <Feed
                 key="personal-feed"
                 type="personal"
+                currentUser={user}
                 onUniverseClick={handleUniverseClick}
                 onHashtagClick={handleHashtagClick}
               />
@@ -294,6 +295,7 @@ const Dashboard = ({ user, onLogout }) => {
                 key={`trending-feed-${trendingTimeframe}`}
                 type="trending"
                 timeframe={trendingTimeframe}
+                currentUser={user}
                 onUniverseClick={handleUniverseClick}
                 onHashtagClick={handleHashtagClick}
                 onTimeframeChange={handleTrendingTimeframeChange}

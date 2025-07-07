@@ -1,4 +1,4 @@
-import { ArrowLeft, Shield, BarChart3, Users, Flag, CheckCircle, Globe } from 'lucide-react';
+import { ArrowLeft, Shield, BarChart3, Users, Flag, CheckCircle, Globe, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AdminLayout = ({ user, onLogout, activeTab, setActiveTab, children, error, message }) => {
@@ -8,6 +8,7 @@ const AdminLayout = ({ user, onLogout, activeTab, setActiveTab, children, error,
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3, description: 'Übersicht & Metriken' },
     { id: 'users', name: 'Users', icon: Users, description: 'Nutzerverwaltung' },
     { id: 'moderation', name: 'Moderation', icon: Flag, description: 'Reports & Moderationen' },
+    { id: 'reports', name: 'Reports', icon: AlertTriangle, description: 'User Reports & Meldungen' },
     { id: 'approvals', name: 'Approvals', icon: CheckCircle, description: 'Genehmigungen' },
     { id: 'universes', name: 'Universes', icon: Globe, description: 'Universe Management' }
   ];

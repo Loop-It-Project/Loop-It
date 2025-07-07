@@ -319,6 +319,120 @@ class AdminService {
       return { success: false, error: 'Fehler beim Wiederherstellen des Universe' };
     }
   }
+
+  // REPORTS MANAGEMENT
+  // Get Reports
+  static async getReports(page = 1, limit = 20, status = 'pending') {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        status
+      });
+
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports?${params}`, {
+        method: 'GET'
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Get reports error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async processReport(reportId, actionData) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports/${reportId}/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(actionData)
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Process report error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Get Moderation Reports (Alias für Backward Compatibility)
+  static async getModerationReports(page = 1, limit = 20, status = 'pending') {
+    // Alias für getReports - für Backward Compatibility
+    return this.getReports(page, limit, status);
+  }
+
+  static async getPendingApprovals() {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/approvals`, {
+        method: 'GET'
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Get pending approvals error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async assignUniverseModerator(universeId, userId) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/universes/${universeId}/moderators`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Assign universe moderator error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async updateUserRole(userId, roleData) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(roleData)
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Update user role error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async suspendUser(userId, reason, duration) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/users/${userId}/suspend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason, duration })
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Suspend user error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default AdminService;

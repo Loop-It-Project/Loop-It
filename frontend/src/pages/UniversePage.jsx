@@ -448,6 +448,7 @@ const UniversePage = ({ user }) => {
         <Feed
           type="universe"
           universeSlug={universeSlug}
+          currentUser={user}
           fromHashtag={fromHashtag} // Optional: Hashtag Filter
           onUniverseClick={(slug) => navigate(`/universe/${slug}`)} // Router Navigation
           onHashtagClick={handleHashtagClick} // Pass Hashtag Click Handler
