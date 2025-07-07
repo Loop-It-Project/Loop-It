@@ -171,55 +171,18 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Test Docker Compose Setup
-        env:
-          # CI Environment Variables
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'loop_user' }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'loop-it' }}
-          NODE_ENV: production
-          FRONTEND_URL: http://localhost
-          VITE_API_URL: http://localhost:3000
         run: |
-          # Create test environment with all required variables
+          # Create test environment (exactly like working version)
           echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .env
           echo "VERSION=${{ github.sha }}" >> .env
           echo "COMPOSE_PROJECT_NAME=loop-it-ci-${{ github.run_id }}" >> .env
           
-          # Add database credentials
-          echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" >> .env
-          echo "POSTGRES_USER=${POSTGRES_USER}" >> .env
-          echo "POSTGRES_DB=${POSTGRES_DB}" >> .env
+          # Add the required secrets (the only difference from Friday)
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}" >> .env
           
-          # CRITICAL: Add DATABASE_URL for Drizzle
-          echo "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}" >> .env
-          
-          # Add JWT secrets (CRITICAL - must be set!)
-          echo "JWT_SECRET=${JWT_SECRET}" >> .env
-          echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> .env
-          echo "JWT_EXPIRES_IN=7d" >> .env
-          
-          # Add application config
-          echo "NODE_ENV=${NODE_ENV}" >> .env
-          echo "FRONTEND_URL=${FRONTEND_URL}" >> .env
-          echo "VITE_API_URL=${VITE_API_URL}" >> .env
-          echo "VITE_APP_NAME=Loop-It" >> .env
-          
-          # Debug: Show environment (hide secrets)
-          echo "=== Environment Configuration ==="
-          grep -v "PASSWORD\|SECRET" .env
-          echo "POSTGRES_PASSWORD=***HIDDEN***"
-          echo "JWT_SECRET=***HIDDEN*** (${#JWT_SECRET} chars)"
-          echo "JWT_REFRESH_SECRET=***HIDDEN*** (${#JWT_REFRESH_SECRET} chars)"
-          echo "DATABASE_URL=***HIDDEN*** (connection string set)"
-          
-          # Use the latest built Docker images (not local builds)
-          echo "=== Using CI-built Docker images ==="
-          echo "Backend: ${{ vars.DOCKERHUB_USERNAME }}/loop-it-backend:${{ github.sha }}"
-          echo "Frontend: ${{ vars.DOCKERHUB_USERNAME }}/loop-it-frontend:${{ github.sha }}"
-          
-          # Override docker-compose to use the CI-built images
+          # Override docker-compose to use CI-built images (new improvement)
           cat > docker-compose.override.yml << 'EOF'
           services:
             backend:
@@ -230,106 +193,35 @@ jobs:
               build: null
           EOF
           
-          # Start services with health checks
-          echo "Starting services with health checks..."
-          docker compose up -d
+          # Rest is EXACTLY like Friday's working version
+          echo "Starting services..."
+          docker compose up -d --wait
           
-          # Wait for database to be ready
-          echo "=== Waiting for database ==="
-          timeout 60 bash -c 'until docker compose exec -T postgres pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}; do sleep 2; echo "Waiting for DB..."; done'
-          
-          # Verify Environment Variables in Backend Container
-          echo "=== Verifying Environment Variables in Backend ==="
-          docker compose exec -T backend sh -c "
-            echo 'Checking required environment variables...'
-            echo 'NODE_ENV: ${NODE_ENV}'
-            echo 'POSTGRES_USER: ${POSTGRES_USER}'
-            echo 'POSTGRES_DB: ${POSTGRES_DB}'
-            if [ -z \"\${DATABASE_URL}\" ]; then
-              echo 'ERROR: DATABASE_URL not set in backend container!'
-              exit 1
-            else
-              echo 'DATABASE_URL: ***HIDDEN*** (✓ set)'
-            fi
-            
-            # Test database connection
-            echo 'Testing database connection...'
-            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c 'SELECT 1;'
-          "
-          
-          # Run improved database migrations
-          echo "=== Running Database Migrations ==="
-          docker compose exec -T backend sh -c "
-            echo 'Current tables before migration:'
-            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt' || echo 'No tables found'
-            
-            echo 'Running Drizzle migrations...'
-            
-            # Generate migrations
-            echo 'Generating migrations...'
-            npm run db:generate
-            
-            # Push schema to database
-            echo 'Pushing schema to database...'
-            npm run db:push --force
-            
-            echo 'Tables after migration:'
-            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt'
-            
-            # Count tables to verify migration success
-            TABLE_COUNT=\$(PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';\")
-            echo \"Total tables created: \$TABLE_COUNT\"
-            
-            # Verify critical tables exist
-            echo 'Checking for critical tables:'
-            for table in users roles profiles posts; do
-              if PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c \"\d \$table\" > /dev/null 2>&1; then
-                echo \"✅ Table '\$table' exists\"
-              else
-                echo \"❌ Table '\$table' missing!\"
-              fi
-            done
-            
-            # If users table doesn't exist, force a fresh schema push
-            if ! PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\d users' > /dev/null 2>&1; then
-              echo 'Users table missing, forcing fresh schema push...'
-              npm run db:push --force
-              
-              # Verify again
-              PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt'
-            fi
-          "
-          
-          # Wait for all services to be healthy
-          echo "=== Waiting for services to be healthy ==="
-          timeout 300 bash -c 'until docker compose ps | grep -E "(healthy|up)"; do sleep 5; echo "Waiting..."; done'
-          
-          # Show service status
-          echo "=== Service Status ==="
+          # Debug: Show initial container status
+          echo "=== Initial Container Status ==="
           docker compose ps
           
-          # Test database health first
-          echo "=== Testing Database Health ==="
-          docker compose exec -T postgres pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1
-          echo "✅ Database is healthy!"
+          # Extended wait for backend warmup (entrypoint.sh needs time for migrations)
+          echo "Waiting for backend warmup (migrations + startup)..."
+          sleep 90
           
-          # Test backend health endpoint
-          echo "=== Testing Backend Health ==="
-          for i in {1..12}; do
-            if curl -f --connect-timeout 10 --max-time 30 http://localhost:3000/health; then
-              echo "✅ Backend is healthy!"
-              break
-            fi
-            echo "Backend health check attempt $i/12..."
-            if [ $i -eq 12 ]; then
-              echo "❌ Backend health check failed after 12 attempts"
-              docker compose logs backend | tail -50
-              exit 1
-            fi
-            sleep 10
-          done
+          # Debug: Show container status after warmup
+          echo "=== Container Status After Warmup ==="
+          docker compose ps
           
-          # Test frontend accessibility
+          # Show backend logs to see if entrypoint.sh worked
+          echo "=== Backend Startup Logs ==="
+          docker compose logs backend | tail -30
+          
+          # Test services in order (exactly like working version)
+          echo "=== Testing Database ==="
+          docker compose exec -T postgres pg_isready -U loop_user -d loop-it || exit 1
+          echo "✅ Database is ready!"
+          
+          echo "=== Testing Backend Direct ==="
+          curl -f http://localhost:3000/health || exit 1
+          echo "✅ Backend is ready!"
+          
           echo "=== Testing Frontend ==="
           for i in {1..8}; do
             if curl -f --connect-timeout 10 --max-time 30 http://localhost/; then
@@ -339,45 +231,41 @@ jobs:
             echo "Frontend test attempt $i/8..."
             if [ $i -eq 8 ]; then
               echo "❌ Frontend failed after 8 attempts"
-              docker compose logs frontend | tail -30
               exit 1
             fi
             sleep 15
           done
           
-          # Test API routing through frontend proxy (if configured)
-          echo "=== Testing API Routing ==="
+          echo "=== Testing Reverse Proxy API ==="
           for i in {1..5}; do
-            if curl -f --connect-timeout 10 --max-time 30 http://localhost/api/health 2>/dev/null; then
-              echo "✅ API routing through frontend proxy is working!"
+            if curl -f --connect-timeout 10 --max-time 30 http://localhost/api/health; then
+              echo "✅ Reverse Proxy API is working!"
               break
             fi
-            echo "API routing test attempt $i/5..."
+            echo "API proxy test attempt $i/5..."
             if [ $i -eq 5 ]; then
-              echo "ℹ️ API routing through frontend proxy not available (this may be normal)"
+              echo "❌ API Proxy failed after 5 attempts"
+              exit 1
             fi
             sleep 10
           done
           
-          # Test authentication endpoint
           echo "=== Testing Authentication Endpoint ==="
-          AUTH_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://localhost:3000/api/auth/login \
+          AUTH_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://localhost/api/auth/login \
             -H "Content-Type: application/json" \
             -d '{"email":"test@test.com","password":"test123"}' \
             -o /tmp/auth_response.txt)
           
-          if [ "$AUTH_RESPONSE" -eq 200 ] || [ "$AUTH_RESPONSE" -eq 400 ] || [ "$AUTH_RESPONSE" -eq 401 ] || [ "$AUTH_RESPONSE" -eq 404 ]; then
+          if [ "$AUTH_RESPONSE" -eq 200 ] || [ "$AUTH_RESPONSE" -eq 400 ] || [ "$AUTH_RESPONSE" -eq 401 ]; then
             echo "✅ Auth endpoint is reachable! (HTTP $AUTH_RESPONSE)"
             cat /tmp/auth_response.txt
           else
             echo "❌ Auth endpoint failed with HTTP $AUTH_RESPONSE"
             cat /tmp/auth_response.txt
-            # Don't exit here - let's see what the actual error is
-            echo "=== Backend logs for debugging ==="
-            docker compose logs backend | tail -20
+            exit 1
           fi
           
-          echo "🎉 Integration tests completed!"
+          echo "🎉 All integration tests passed!"
       
       - name: Debug on Failure
         if: failure()
@@ -387,17 +275,11 @@ jobs:
           echo "=== Final Container Status ==="
           docker compose ps
           
-          echo "=== Environment Variables in Backend ==="
-          docker compose exec -T backend env | grep -E "(DATABASE_URL|POSTGRES_|JWT_|NODE_ENV)" || echo "Could not retrieve env vars"
-          
-          echo "=== Database Tables ==="
-          docker compose exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c '\dt' || echo "Could not list tables"
+          echo "=== Backend Logs (entrypoint.sh output) ==="
+          docker compose logs backend
           
           echo "=== Frontend Logs ==="
           docker compose logs frontend
-          
-          echo "=== Backend Logs ==="
-          docker compose logs backend | tail -100
           
           echo "=== Postgres Logs ==="
           docker compose logs postgres | tail -50
@@ -411,37 +293,6 @@ jobs:
           curl -v http://localhost/ || echo "Frontend connection failed"
           curl -v http://localhost/api/health || echo "API connection failed"
           curl -v http://localhost:3000/health || echo "Backend direct connection failed"
-      
-      - name: Force Schema Reset (if needed)
-        if: failure()
-        run: |
-          echo "=== Force Schema Reset ==="
-          docker compose exec -T backend sh -c "
-            echo 'Dropping all tables and recreating schema...'
-            
-            # Drop all tables
-            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '
-              DROP SCHEMA public CASCADE;
-              CREATE SCHEMA public;
-              GRANT ALL ON SCHEMA public TO public;
-            '
-            
-            # Force push entire schema
-            npm run db:push --force
-            
-            # Verify tables were created
-            echo 'Final table verification:'
-            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt'
-            
-            # Count tables
-            TABLE_COUNT=\$(PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';\")
-            echo \"Total tables created: \$TABLE_COUNT\"
-            
-            if [ \"\$TABLE_COUNT\" -lt 10 ]; then
-              echo 'ERROR: Not enough tables created!'
-              exit 1
-            fi
-          "
       
       - name: Cleanup
         if: always()
