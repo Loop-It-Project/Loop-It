@@ -58,10 +58,10 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">Neuen Post erstellen</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-card rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b border-primary flex items-center justify-between">
+          <h2 className="text-lg font-bold text-primary">Neuen Post erstellen</h2>
+          <button onClick={onClose} className="text-muted hover:text-secondary hover:cursor-pointer transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -69,13 +69,13 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Universe Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Universe auswählen *
             </label>
             <select
               value={formData.universeId}
               onChange={(e) => setFormData(prev => ({ ...prev, universeId: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               <option value="">Universe wählen...</option>
               {userUniverses.map((universe) => (
@@ -89,28 +89,28 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Titel (optional)
             </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="Was möchtest du teilen?"
             />
           </div>
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Inhalt *
             </label>
             <textarea
               value={formData.content}
               onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="Teile deine Gedanken, Erfahrungen oder Fragen..."
             />
             {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
@@ -118,16 +118,16 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
 
           {/* Hashtags */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Hashtags (optional)
             </label>
             <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={16} />
               <input
                 type="text"
                 value={formData.hashtags}
                 onChange={(e) => setFormData(prev => ({ ...prev, hashtags: e.target.value }))}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full pl-10 pr-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 placeholder="gaming, react, fotografie (durch Komma getrennt)"
               />
             </div>
@@ -141,18 +141,18 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
           )}
 
           {/* Submit Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-primary">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="px-4 py-2 text-secondary bg-hover rounded-lg hover:bg-tertiary hover:cursor-pointer transition-colors"
             >
               Abbrechen
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Erstelle...' : 'Post erstellen'}
             </button>

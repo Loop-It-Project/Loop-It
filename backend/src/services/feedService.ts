@@ -1,18 +1,83 @@
 import { getPersonalFeed, getUniverseFeed, getTrendingPosts, FeedPost } from '../queries/feedQueries';
 import { db } from '../db/index';
-import { universeMembersTable, universesTable } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { 
+  postsTable,
+  postReactionsTable,
+  usersTable,
+  profilesTable,
+  universesTable, 
+  universeMembersTable, 
+} from '../db/schema';
+import { eq, and, sql, desc, asc, inArray } from 'drizzle-orm';
 
 export class FeedService {
   
   // Personal Feed mit Pagination
-  static async getPersonalFeed(userId: string, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
-    
+  static async getPersonalFeed(userId: string, page: number = 1, limit: number = 20, sortBy: string = 'newest') {
     try {
-      const posts = await getPersonalFeed(userId, limit, offset);
-      
+      const offset = (page - 1) * limit;
+
+      const posts = await db
+        .select({
+          id: postsTable.id,
+          title: postsTable.title,
+          content: postsTable.content,
+          contentType: postsTable.contentType,
+          mediaIds: postsTable.mediaIds,
+          hashtags: postsTable.hashtags,
+          isPublic: postsTable.isPublic,
+          likeCount: postsTable.likeCount,
+          commentCount: postsTable.commentCount,
+          shareCount: postsTable.shareCount,
+          createdAt: postsTable.createdAt,
+          updatedAt: postsTable.updatedAt,
+          author: {
+            id: usersTable.id,
+            username: usersTable.username,
+            displayName: usersTable.displayName,
+            profileImage: profilesTable.avatarId
+          },
+          universe: {
+            id: universesTable.id,
+            name: universesTable.name,
+            slug: universesTable.slug
+          },
+          // Like-Status für aktuellen User
+          isLikedByUser: sql<boolean>`CASE WHEN ${postReactionsTable.id} IS NOT NULL THEN true ELSE false END`
+        })
+        .from(postsTable)
+        .leftJoin(usersTable, eq(postsTable.authorId, usersTable.id))
+        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
+        .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id))
+        .leftJoin(universeMembersTable, 
+          and(
+            eq(universeMembersTable.universeId, universesTable.id),
+            eq(universeMembersTable.userId, userId)
+          )
+        )
+        // Like-Status Join - immer ausführen da userId immer vorhanden
+        .leftJoin(
+          postReactionsTable,
+          and(
+            eq(postReactionsTable.postId, postsTable.id),
+            eq(postReactionsTable.userId, userId),
+            eq(postReactionsTable.reactionType, 'like')
+          )
+        )
+        .where(
+          and(
+            eq(postsTable.isDeleted, false),
+            eq(universeMembersTable.userId, userId)
+          )
+        )
+        .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : asc(postsTable.createdAt))
+        .offset(offset)
+        .limit(limit);
+
+      // console.log('✅ Personal Feed Service - Posts geladen:', posts.length);
+
       return {
+        success: true,
         posts,
         pagination: {
           page,
@@ -20,49 +85,94 @@ export class FeedService {
           hasMore: posts.length === limit
         }
       };
+
     } catch (error) {
-      console.error('Error fetching personal feed:', error);
-      throw new Error('Failed to fetch personal feed');
+      console.error('❌ Get personal feed error:', error);
+      throw new Error('Failed to get personal feed');
     }
   }
 
   // Universe Feed
-  static async getUniverseFeed(universeSlug: string, userId?: string, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
-    
+  static async getUniverseFeed(universeSlug: string, userId: string | null, page: number = 1, limit: number = 20, sortBy: string = 'newest') {
     try {
-      const posts = await getUniverseFeed(universeSlug, userId, limit, offset);
-      
-      // Check if user is member of this universe
-      let isMember = false;
+      const offset = (page - 1) * limit;
+
+      // ✅ Query Builder mit korrektem conditional Join
+      let query = db
+        .select({
+          id: postsTable.id,
+          title: postsTable.title,
+          content: postsTable.content,
+          contentType: postsTable.contentType,
+          mediaIds: postsTable.mediaIds,
+          hashtags: postsTable.hashtags,
+          isPublic: postsTable.isPublic,
+          likeCount: postsTable.likeCount,
+          commentCount: postsTable.commentCount,
+          shareCount: postsTable.shareCount,
+          createdAt: postsTable.createdAt,
+          updatedAt: postsTable.updatedAt,
+          author: {
+            id: usersTable.id,
+            username: usersTable.username,
+            displayName: usersTable.displayName,
+            profileImage: profilesTable.avatarId
+          },
+          universe: {
+            id: universesTable.id,
+            name: universesTable.name,
+            slug: universesTable.slug
+          },
+          // Like-Status - immer einen Wert zurückgeben
+          isLikedByUser: userId 
+            ? sql<boolean>`CASE WHEN ${postReactionsTable.id} IS NOT NULL THEN true ELSE false END`
+            : sql<boolean>`false`
+        })
+        .from(postsTable)
+        .leftJoin(usersTable, eq(postsTable.authorId, usersTable.id))
+        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
+        .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id));
+
+      // Conditional Join nur wenn User eingeloggt ist
       if (userId) {
-        const membership = await db
-          .select()
-          .from(universeMembersTable)
-          .innerJoin(universesTable, eq(universeMembersTable.universeId, universesTable.id))
-          .where(
-            and(
-              eq(universeMembersTable.userId, userId),
-              eq(universesTable.slug, universeSlug)
-            )
+        query = query.leftJoin(
+          postReactionsTable,
+          and(
+            eq(postReactionsTable.postId, postsTable.id),
+            eq(postReactionsTable.userId, userId),
+            eq(postReactionsTable.reactionType, 'like')
           )
-          .limit(1);
-        
-        isMember = membership.length > 0;
+        );
       }
-      
+
+      // Where-Bedingungen und Order hinzufügen
+      const posts = await query
+        .where(
+          and(
+            eq(postsTable.isDeleted, false),
+            eq(universesTable.slug, universeSlug),
+            eq(postsTable.isPublic, true)
+          )
+        )
+        .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : asc(postsTable.createdAt))
+        .offset(offset)
+        .limit(limit);
+
+      // console.log('✅ Universe Feed Service - Posts geladen:', posts.length);
+
       return {
+        success: true,
         posts,
-        isMember,
         pagination: {
           page,
           limit,
           hasMore: posts.length === limit
         }
       };
+
     } catch (error) {
-      console.error('Error fetching universe feed:', error);
-      throw new Error('Failed to fetch universe feed');
+      console.error('❌ Get universe feed error:', error);
+      throw new Error('Failed to get universe feed');
     }
   }
 

@@ -50,7 +50,7 @@ export const leaveUniverse = async (req: AuthRequest, res: Response): Promise<vo
     console.error('Leave universe error:', error);
     const message = error instanceof Error ? error.message : 'Failed to leave universe';
     
-    // ✅ Detaillierte Error-Responses
+    // Detaillierte Error-Responses
     if (message.includes('creator cannot leave')) {
       res.status(400).json({ 
         success: false,
@@ -98,11 +98,11 @@ export const getUniverseDetails = async (req: AuthRequest, res: Response): Promi
     const { universeSlug } = req.params;
     const userId = req.user?.id; // Optional - falls User eingeloggt
 
-    console.log('🔍 Getting universe details for:', universeSlug, 'User:', userId); // Debug
+    // console.log('🔍 Getting universe details for:', universeSlug, 'User:', userId); // Debug
 
     const universeDetails = await UniverseService.getUniverseDetails(universeSlug, userId);
     
-    console.log('✅ Universe details retrieved:', universeDetails); // Debug
+    // console.log('✅ Universe details retrieved:', universeDetails); // Debug
     
     res.status(200).json({
       success: true,

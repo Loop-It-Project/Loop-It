@@ -9,6 +9,24 @@ const LandingPage = () => {
       <header className="container mx-auto px-6 py-8">
         <nav className="flex justify-between items-center">
           <div className="space-x-4">
+            
+            {/* Login Link */}
+            <Link 
+              to="/login"
+              className="text-white hover:text-gray-200 hover:cursor-pointer transition hover:scale-105"
+            >
+              Anmelden
+            </Link>
+
+            {/* Register Link */}
+            <Link 
+              to="/register"
+              className="bg-card text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-hover hover:cursor-pointer transition hover:scale-105"
+            >
+              Registrieren
+            </Link>
+
+            {/* Hobbies Link */}
             <Link
               to="/hobbies"
             >

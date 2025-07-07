@@ -557,7 +557,7 @@ export class UniverseService {
     // User's eigene Universes (erstellt) abrufen
     static async getOwnedUniverses(userId: string, page = 1, limit = 20) {
       const offset = (page - 1) * limit;
-    
+      
       try {
         const universes = await db
           .select({
@@ -572,11 +572,17 @@ export class UniverseService {
             createdAt: universesTable.createdAt,
           })
           .from(universesTable)
-          .where(eq(universesTable.creatorId, userId))
+          .where(
+            and(
+              eq(universesTable.creatorId, userId),
+              eq(universesTable.isActive, true),
+              eq(universesTable.isDeleted, false)
+            )
+          )
           .orderBy(desc(universesTable.createdAt))
           .limit(limit)
           .offset(offset);
-      
+        
         return {
           universes,
           pagination: {
