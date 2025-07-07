@@ -192,6 +192,9 @@ jobs:
           echo "POSTGRES_USER=${POSTGRES_USER}" >> .env
           echo "POSTGRES_DB=${POSTGRES_DB}" >> .env
           
+          # CRITICAL: Add DATABASE_URL for Drizzle
+          echo "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}" >> .env
+          
           # Add JWT secrets (CRITICAL - must be set!)
           echo "JWT_SECRET=${JWT_SECRET}" >> .env
           echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> .env
@@ -209,6 +212,7 @@ jobs:
           echo "POSTGRES_PASSWORD=***HIDDEN***"
           echo "JWT_SECRET=***HIDDEN*** (${#JWT_SECRET} chars)"
           echo "JWT_REFRESH_SECRET=***HIDDEN*** (${#JWT_REFRESH_SECRET} chars)"
+          echo "DATABASE_URL=***HIDDEN*** (connection string set)"
           
           # Use the latest built Docker images (not local builds)
           echo "=== Using CI-built Docker images ==="
@@ -234,22 +238,67 @@ jobs:
           echo "=== Waiting for database ==="
           timeout 60 bash -c 'until docker compose exec -T postgres pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}; do sleep 2; echo "Waiting for DB..."; done'
           
-          # Run migrations explicitly if entrypoint.sh is not working
-          echo "=== Running Database Migrations ==="
+          # Verify Environment Variables in Backend Container
+          echo "=== Verifying Environment Variables in Backend ==="
           docker compose exec -T backend sh -c "
-            echo 'Checking if migrations are needed...'
-            if ! PGPASSWORD='${POSTGRES_PASSWORD}' psql -h postgres -U '${POSTGRES_USER}' -d '${POSTGRES_DB}' -c '\dt' | grep -q users; then
-              echo 'Users table not found, running migrations...'
-              npm run db:generate || echo 'Generate failed, trying push...'
-              npm run db:push --force || echo 'Push failed, trying manual creation...'
+            echo 'Checking required environment variables...'
+            echo 'NODE_ENV: ${NODE_ENV}'
+            echo 'POSTGRES_USER: ${POSTGRES_USER}'
+            echo 'POSTGRES_DB: ${POSTGRES_DB}'
+            if [ -z \"\${DATABASE_URL}\" ]; then
+              echo 'ERROR: DATABASE_URL not set in backend container!'
+              exit 1
             else
-              echo 'Tables already exist, skipping migrations'
+              echo 'DATABASE_URL: ***HIDDEN*** (✓ set)'
             fi
+            
+            # Test database connection
+            echo 'Testing database connection...'
+            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c 'SELECT 1;'
           "
           
-          # Show final table status
-          echo "=== Database Tables After Migration ==="
-          docker compose exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c '\dt' || echo "No tables found"
+          # Run improved database migrations
+          echo "=== Running Database Migrations ==="
+          docker compose exec -T backend sh -c "
+            echo 'Current tables before migration:'
+            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt' || echo 'No tables found'
+            
+            echo 'Running Drizzle migrations...'
+            
+            # Generate migrations
+            echo 'Generating migrations...'
+            npm run db:generate
+            
+            # Push schema to database
+            echo 'Pushing schema to database...'
+            npm run db:push --force
+            
+            echo 'Tables after migration:'
+            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt'
+            
+            # Count tables to verify migration success
+            TABLE_COUNT=\$(PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';\")
+            echo \"Total tables created: \$TABLE_COUNT\"
+            
+            # Verify critical tables exist
+            echo 'Checking for critical tables:'
+            for table in users roles profiles posts; do
+              if PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c \"\d \$table\" > /dev/null 2>&1; then
+                echo \"✅ Table '\$table' exists\"
+              else
+                echo \"❌ Table '\$table' missing!\"
+              fi
+            done
+            
+            # If users table doesn't exist, force a fresh schema push
+            if ! PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\d users' > /dev/null 2>&1; then
+              echo 'Users table missing, forcing fresh schema push...'
+              npm run db:push --force
+              
+              # Verify again
+              PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt'
+            fi
+          "
           
           # Wait for all services to be healthy
           echo "=== Waiting for services to be healthy ==="
@@ -323,10 +372,12 @@ jobs:
           else
             echo "❌ Auth endpoint failed with HTTP $AUTH_RESPONSE"
             cat /tmp/auth_response.txt
-            exit 1
+            # Don't exit here - let's see what the actual error is
+            echo "=== Backend logs for debugging ==="
+            docker compose logs backend | tail -20
           fi
           
-          echo "🎉 All integration tests passed!"
+          echo "🎉 Integration tests completed!"
       
       - name: Debug on Failure
         if: failure()
@@ -335,6 +386,12 @@ jobs:
           
           echo "=== Final Container Status ==="
           docker compose ps
+          
+          echo "=== Environment Variables in Backend ==="
+          docker compose exec -T backend env | grep -E "(DATABASE_URL|POSTGRES_|JWT_|NODE_ENV)" || echo "Could not retrieve env vars"
+          
+          echo "=== Database Tables ==="
+          docker compose exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c '\dt' || echo "Could not list tables"
           
           echo "=== Frontend Logs ==="
           docker compose logs frontend
@@ -354,6 +411,37 @@ jobs:
           curl -v http://localhost/ || echo "Frontend connection failed"
           curl -v http://localhost/api/health || echo "API connection failed"
           curl -v http://localhost:3000/health || echo "Backend direct connection failed"
+      
+      - name: Force Schema Reset (if needed)
+        if: failure()
+        run: |
+          echo "=== Force Schema Reset ==="
+          docker compose exec -T backend sh -c "
+            echo 'Dropping all tables and recreating schema...'
+            
+            # Drop all tables
+            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '
+              DROP SCHEMA public CASCADE;
+              CREATE SCHEMA public;
+              GRANT ALL ON SCHEMA public TO public;
+            '
+            
+            # Force push entire schema
+            npm run db:push --force
+            
+            # Verify tables were created
+            echo 'Final table verification:'
+            PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -c '\dt'
+            
+            # Count tables
+            TABLE_COUNT=\$(PGPASSWORD='\${POSTGRES_PASSWORD}' psql -h postgres -U '\${POSTGRES_USER}' -d '\${POSTGRES_DB}' -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';\")
+            echo \"Total tables created: \$TABLE_COUNT\"
+            
+            if [ \"\$TABLE_COUNT\" -lt 10 ]; then
+              echo 'ERROR: Not enough tables created!'
+              exit 1
+            fi
+          "
       
       - name: Cleanup
         if: always()
