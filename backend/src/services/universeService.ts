@@ -211,6 +211,9 @@ export class UniverseService {
           id: universesTable.id,
           name: universesTable.name,
           slug: universesTable.slug,
+          isActive: universesTable.isActive,
+          isClosed: universesTable.isClosed,
+          isDeleted: universesTable.isDeleted,
           description: universesTable.description,
           category: universesTable.category,
           coverImageId: universesTable.coverImageId,
@@ -224,7 +227,14 @@ export class UniverseService {
         })
         .from(universeMembersTable)
         .innerJoin(universesTable, eq(universeMembersTable.universeId, universesTable.id))
-        .where(eq(universeMembersTable.userId, userId))
+        .where(
+          and(
+            eq(universeMembersTable.userId, userId),
+            // Zeige alle Universes (auch geschlossene) in der Liste
+            // aber markiere ihren Status für Frontend-Filtering
+            eq(universesTable.isDeleted, false) // Nur nicht-gelöschte anzeigen
+          )
+        )
         .orderBy(desc(universeMembersTable.joinedAt))
         .limit(limit)
         .offset(offset);

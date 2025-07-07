@@ -19,6 +19,7 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
   const [loadingUniverses, setLoadingUniverses] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [allUserUniverses, setAllUserUniverses] = useState([]);
 
   // Close modal on Escape key press
   // This effect listens for the Escape key and closes the composer when pressed
@@ -53,7 +54,17 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
           allUniverses.push(...memberUniverses);
         }
 
-        setUserUniverses(allUniverses);
+        // Speichere alle Universes (für Statistik)
+        setAllUserUniverses(allUniverses);
+
+        // Filtere nur aktive, offene und nicht gelöschte Universes für die Anzeige
+        const availableUniverses = allUniverses.filter(universe => {
+          return universe.isActive !== false && 
+                 universe.isClosed !== true && 
+                 universe.isDeleted !== true;
+        });
+
+        setUserUniverses(availableUniverses);
       } catch (error) {
         console.error('Error loading universes:', error);
       } finally {

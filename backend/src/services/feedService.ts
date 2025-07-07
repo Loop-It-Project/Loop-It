@@ -67,7 +67,10 @@ export class FeedService {
         .where(
           and(
             eq(postsTable.isDeleted, false),
-            eq(universeMembersTable.userId, userId)
+            eq(universeMembersTable.userId, userId),
+            eq(universesTable.isDeleted, false),  // Keine Posts aus gelöschten Universes
+            eq(universesTable.isClosed, false),   // Keine Posts aus geschlossenen Universes
+            eq(universesTable.isActive, true)     // Nur Posts aus aktiven Universes
           )
         )
         .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : asc(postsTable.createdAt))
@@ -97,7 +100,7 @@ export class FeedService {
     try {
       const offset = (page - 1) * limit;
 
-      // ✅ Query Builder mit korrektem conditional Join
+      // Query Builder
       let query = db
         .select({
           id: postsTable.id,
@@ -151,7 +154,10 @@ export class FeedService {
           and(
             eq(postsTable.isDeleted, false),
             eq(universesTable.slug, universeSlug),
-            eq(postsTable.isPublic, true)
+            eq(postsTable.isPublic, true),
+            eq(universesTable.isDeleted, false),  // Universe nicht gelöscht
+            eq(universesTable.isClosed, false),   // Universe nicht geschlossen
+            eq(universesTable.isActive, true)     // Universe ist aktiv
           )
         )
         .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : asc(postsTable.createdAt))
