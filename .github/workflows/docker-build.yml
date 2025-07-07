@@ -363,4 +363,4 @@ jobs:
   #           
   #           # Start with docker compose
   #           cd /path/to/your/deployment
-  #           sudo docker compose up -d
+  #           sudo docker compose up -d 
