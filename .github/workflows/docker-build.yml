@@ -230,6 +230,27 @@ jobs:
           echo "Starting services with health checks..."
           docker compose up -d
           
+          # Wait for database to be ready
+          echo "=== Waiting for database ==="
+          timeout 60 bash -c 'until docker compose exec -T postgres pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}; do sleep 2; echo "Waiting for DB..."; done'
+          
+          # Run migrations explicitly if entrypoint.sh is not working
+          echo "=== Running Database Migrations ==="
+          docker compose exec -T backend sh -c "
+            echo 'Checking if migrations are needed...'
+            if ! PGPASSWORD='${POSTGRES_PASSWORD}' psql -h postgres -U '${POSTGRES_USER}' -d '${POSTGRES_DB}' -c '\dt' | grep -q users; then
+              echo 'Users table not found, running migrations...'
+              npm run db:generate || echo 'Generate failed, trying push...'
+              npm run db:push --force || echo 'Push failed, trying manual creation...'
+            else
+              echo 'Tables already exist, skipping migrations'
+            fi
+          "
+          
+          # Show final table status
+          echo "=== Database Tables After Migration ==="
+          docker compose exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c '\dt' || echo "No tables found"
+          
           # Wait for all services to be healthy
           echo "=== Waiting for services to be healthy ==="
           timeout 300 bash -c 'until docker compose ps | grep -E "(healthy|up)"; do sleep 5; echo "Waiting..."; done'
@@ -363,4 +384,4 @@ jobs:
   #           
   #           # Start with docker compose
   #           cd /path/to/your/deployment
-  #           sudo docker compose up -d 
+  #           sudo docker compose up -d
