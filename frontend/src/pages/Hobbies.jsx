@@ -70,24 +70,6 @@ const Hobbies = ({ onNavigate }) => {
       }
     };
 
-    const hobbies = [
-      { id: 1, name: 'Lesen' },
-      { id: 2, name: 'Nähen' },
-      { id: 3, name: 'Zeichnen' },
-      { id: 4, name: 'Spazieren' },
-      { id: 5, name: 'Schreiben' },
-    ]
-
-    const [query, setQuery] = useState('')
-    const [selected, setSelected] = useState(hobbies[1])
-
-    const filteredHobbies =
-      query === ''
-        ? hobbies
-        : hobbies.filter((hobby) => {
-          return hobby.name.toLowerCase().includes(query.toLowerCase())
-        })
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
