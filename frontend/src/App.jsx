@@ -7,38 +7,41 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import UniversePage from './pages/UniversePage';
+import AdminPanel from './pages/AdminPanelDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import Hobbies from './pages/Hobbies';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
+// API_URL für die gesamte App definieren
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // API_URL für die gesamte App definieren
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
   // Enhanced Login Handler mit Token-Monitoring
-  const handleLogin = (userData, tokens) => {
+  const handleLogin = async (userData) => {
     setUser(userData);
-    
-    // Tokens speichern
-    localStorage.setItem('token', tokens.token);
-    localStorage.setItem('refreshToken', tokens.refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
     
-    console.log('✅ User eingeloggt:', userData.username || userData.email);
+    // Optional: Check for admin permissions after login
+    try {
+      // This will be used later for admin access verification
+      console.log('✅ User logged in:', userData.username);
+    } catch (error) {
+      console.error('Post-login admin check failed:', error);
+    }
   };
 
   // Enhanced Logout Handler
-  const handleLogout = async () => {
+  const handleLogout = async (reason = 'manual') => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       
-      if (refreshToken) {
-        // Backend über Logout informieren
+      if (refreshToken && reason === 'manual') {
+        // Bei manuellem Logout Backend informieren
         await fetch(`${API_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {
@@ -57,11 +60,9 @@ function App() {
       localStorage.removeItem('user');
       setUser(null);
       
-      const reason = localStorage.getItem('logoutReason') || 'Abgemeldet';
-      localStorage.removeItem('logoutReason');
-      
+      // User-freundliche Nachrichten je nach Grund
       if (reason === 'tokenExpired') {
-        alert('Deine Session ist abgelaufen. Bitte melde dich erneut an.');
+        console.log('🔒 Session expired - user will be redirected to login');
       }
     }
   };
@@ -73,7 +74,7 @@ function App() {
         const token = localStorage.getItem('token');
         const refreshToken = localStorage.getItem('refreshToken');
         const savedUser = localStorage.getItem('user');
-        
+
         if (token && refreshToken && savedUser) {
           // Prüfe Token-Gültigkeit
           if (AuthInterceptor.isTokenExpired(token)) {
@@ -84,7 +85,7 @@ function App() {
               console.log('✅ Session wiederhergestellt');
             } catch (refreshError) {
               console.warn('Session konnte nicht wiederhergestellt werden');
-              handleLogout();
+              handleLogout('tokenExpired');
             }
           } else {
             setUser(JSON.parse(savedUser));
@@ -93,7 +94,7 @@ function App() {
         }
       } catch (error) {
         console.error('Session validation error:', error);
-        handleLogout();
+        handleLogout('sessionError');
       } finally {
         setIsLoading(false);
       }
@@ -101,8 +102,7 @@ function App() {
 
     // Auth-Interceptor konfigurieren
     AuthInterceptor.setLogoutHandler(() => {
-      localStorage.setItem('logoutReason', 'tokenExpired');
-      handleLogout();
+      handleLogout('tokenExpired');
     });
 
     validateAndRestoreSession();
@@ -160,7 +160,7 @@ function App() {
 
   return (
     <Router>
-      {/* ✅ Header nur für eingeloggte User anzeigen */}
+      {/* Header nur für eingeloggte User anzeigen */}
       {user && <Header user={user} setUser={setUser} onLogout={handleLogout} />}
       
       <div className="App">
@@ -204,7 +204,7 @@ function App() {
             path="/dashboard" 
             element={
               <ProtectedRoute user={user}>
-                <Dashboard user={user} onLogout={handleLogout} />
+                <Dashboard user={user} onLogout={() => handleLogout('manual')} />
               </ProtectedRoute>
             } 
           />
@@ -220,10 +220,17 @@ function App() {
             path="/settings" 
             element={
               <ProtectedRoute user={user}>
-                <Settings user={user} onLogout={handleLogout} />
+                <Settings user={user} onLogout={() => handleLogout('manual')} />
               </ProtectedRoute>
             } 
           />
+
+          {/* Admin Route */}
+          <Route 
+          path="/admin" 
+          element={user ? 
+          <AdminPanel user={user} onLogout={() => handleLogout('manual')} /> : 
+          <Navigate to="/login" />} />
 
           {/* Fallback Route */}
           <Route 

@@ -98,11 +98,11 @@ export const getUniverseDetails = async (req: AuthRequest, res: Response): Promi
     const { universeSlug } = req.params;
     const userId = req.user?.id; // Optional - falls User eingeloggt
 
-    console.log('🔍 Getting universe details for:', universeSlug, 'User:', userId); // Debug
+    // console.log('🔍 Getting universe details for:', universeSlug, 'User:', userId); // Debug
 
     const universeDetails = await UniverseService.getUniverseDetails(universeSlug, userId);
     
-    console.log('✅ Universe details retrieved:', universeDetails); // Debug
+    // console.log('✅ Universe details retrieved:', universeDetails); // Debug
     
     res.status(200).json({
       success: true,

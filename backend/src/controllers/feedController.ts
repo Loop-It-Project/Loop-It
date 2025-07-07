@@ -17,14 +17,27 @@ export const getPersonalFeed = async (req: AuthRequest, res: Response): Promise<
   try {
     const userId = req.user!.id;
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const sortBy = req.query.sortBy as string || 'newest';
 
     const result = await FeedService.getPersonalFeed(userId, page, limit, sortBy); 
+
+    // Debug Log für den Personal Feed
+    // console.log('✅ Personal Feed Result:', {
+    //   postsCount: result.posts.length,
+    //   firstPost: result.posts[0] ? {
+    //     id: result.posts[0].id,
+    //     likeCount: result.posts[0].likeCount,
+    //     isLikedByUser: result.posts[0].isLikedByUser
+    //   } : null
+    // }); 
     
     res.status(200).json({
       success: true,
-      data: result,
+      data: {
+        posts: result.posts,
+        pagination: result.pagination
+      },
       message: 'Personal feed retrieved successfully'
     });
   } catch (error) {
@@ -47,16 +60,19 @@ export const getUniverseFeed = async (req: Request, res: Response): Promise<void
 
   try {
     const { universeSlug } = req.params;
-    const userId = (req as AuthRequest).user?.id;
+    const userId = (req as AuthRequest).user?.id || null; // ✅ null als Fallback
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const sortBy = req.query.sortBy as string || 'newest'; 
 
     const result = await FeedService.getUniverseFeed(universeSlug, userId, page, limit, sortBy);
     
     res.status(200).json({
       success: true,
-      data: result,
+      data: {
+        posts: result.posts,
+        pagination: result.pagination
+      },
       message: 'Universe feed retrieved successfully'
     });
   } catch (error) {

@@ -36,6 +36,13 @@ export const usersTable = pgTable("users", {
   location: json(), // { country, city, coordinates: {lat, lng}, isPublic }
   searchRadius: integer().default(50).notNull(),
   locationVisibility: varchar({ length: 20 }).default('friends').notNull(), // 'public', 'friends', 'private'
+
+  // ✅ Neue Geo-Tracking Einstellungen
+  geoTrackingEnabled: boolean().default(false).notNull(),
+  geoTrackingAccuracy: varchar({ length: 20 }).default('city').notNull(), // 'exact', 'city', 'region'
+  autoUpdateLocation: boolean().default(false).notNull(),
+  showDistanceToOthers: boolean().default(true).notNull(),
+  maxSearchRadius: integer().default(100).notNull(), // Maximum erlaubter Radius
   
   // Account Status
   accountStatus: varchar({ length: 20 }).default('active').notNull(), // 'active', 'suspended', 'banned', 'deleted'
@@ -179,7 +186,7 @@ export const userBlocksTable = pgTable("user_blocks", {
   blockedIdx: index("user_blocks_blocked_idx").on(table.blockedId),
 }));
 
-
+// Roles and Permissions System
 export const rolesTable = pgTable("roles", {
   id: uuid().primaryKey().defaultRandom(),
   name: varchar({ length: 50 }).notNull().unique(),
@@ -190,6 +197,25 @@ export const rolesTable = pgTable("roles", {
   createdAt: timestamp().defaultNow().notNull(),
   updatedAt: timestamp().defaultNow().notNull(),
 });
+
+// User-Role Zuweisungen
+export const userRolesTable = pgTable("user_roles", {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  roleId: uuid().notNull().references(() => rolesTable.id, { onDelete: 'cascade' }),
+  assignedBy: uuid().references(() => usersTable.id), // Wer hat die Rolle zugewiesen
+  assignedAt: timestamp().defaultNow().notNull(),
+  expiresAt: timestamp(), // Optional: Rolle kann ablaufen
+  isActive: boolean().default(true).notNull(),
+  metadata: json(), // Zusätzliche Informationen
+  createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  userRoleUnique: unique().on(table.userId, table.roleId),
+  userIdx: index("user_roles_user_idx").on(table.userId),
+  roleIdx: index("user_roles_role_idx").on(table.roleId),
+  assignedAtIdx: index("user_roles_assigned_at_idx").on(table.assignedAt),
+}));
 
 
 // Enhanced Media System
@@ -532,9 +558,9 @@ export const userActivitiesTable = pgTable("user_activities", {
 export const moderationReportsTable = pgTable("moderation_reports", {
   id: uuid().primaryKey().defaultRandom(),
   reporterId: uuid().notNull(),
+  reportedUserId: uuid().references(() => usersTable.id),
   reportedContentType: varchar({ length: 50 }).notNull(), // 'post', 'comment', 'user', 'universe'
   reportedContentId: uuid().notNull(),
-  reportedUserId: uuid(),
   reason: varchar({ length: 100 }).notNull(), // 'spam', 'harassment', 'inappropriate', 'copyright'
   description: text(),
   
@@ -549,6 +575,7 @@ export const moderationReportsTable = pgTable("moderation_reports", {
   updatedAt: timestamp().defaultNow().notNull(),
 }, (table) => ({
   reporterIdx: index("reports_reporter_idx").on(table.reporterId),
+  reportedUserIdx: index("moderation_reports_reported_user_idx").on(table.reportedUserId),
   contentIdx: index("reports_content_idx").on(table.reportedContentType, table.reportedContentId),
   statusIdx: index("reports_status_idx").on(table.status),
   createdAtIdx: index("reports_created_at_idx").on(table.createdAt),
@@ -883,6 +910,35 @@ export const refreshTokensTable = pgTable('refresh_tokens', {
   userIdIdx: index('refresh_tokens_user_id_idx').on(table.userId),
   tokenIdx: index('refresh_tokens_token_idx').on(table.token),
   expiresAtIdx: index('refresh_tokens_expires_at_idx').on(table.expiresAt),
+}));
+
+// Comment Reactions Table hinzufügen
+export const commentReactionsTable = pgTable("comment_reactions", {
+  id: uuid().primaryKey().defaultRandom(),
+  commentId: uuid().notNull(),
+  userId: uuid().notNull(),
+  reactionType: varchar({ length: 20 }).notNull(), // 'like', 'love', 'laugh', 'angry', 'sad'
+  createdAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  commentUserReactionUnique: unique().on(table.commentId, table.userId, table.reactionType),
+  commentIdx: index("comment_reactions_comment_idx").on(table.commentId),
+  userIdx: index("comment_reactions_user_idx").on(table.userId),
+}));
+
+// Post Shares Table hinzufügen
+export const postSharesTable = pgTable("post_shares", {
+  id: uuid().primaryKey().defaultRandom(),
+  postId: uuid().notNull(),
+  userId: uuid(), // Kann null sein für anonyme Shares
+  shareType: varchar({ length: 50 }).notNull(), // 'internal', 'facebook', 'twitter', 'linkedin', 'whatsapp', 'telegram', 'copy_link'
+  sharedTo: varchar({ length: 100 }), // Platform-spezifische Info
+  metadata: json(), // Zusätzliche Share-Daten
+  createdAt: timestamp().defaultNow().notNull(),
+}, (table) => ({
+  postIdx: index("post_shares_post_idx").on(table.postId),
+  userIdx: index("post_shares_user_idx").on(table.userId),
+  typeIdx: index("post_shares_type_idx").on(table.shareType),
+  createdAtIdx: index("post_shares_created_at_idx").on(table.createdAt),
 }));
 
 // Export all tables for use in the application

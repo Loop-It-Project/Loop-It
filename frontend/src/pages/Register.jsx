@@ -56,6 +56,7 @@ const Register = ({ onLogin }) => {
     return newErrors;
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -84,7 +85,9 @@ const Register = ({ onLogin }) => {
       if (response.ok) {
         // Save token to localStorage
         localStorage.setItem('token', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
+      
         onLogin(data.user);
         navigate('/dashboard');
       } else {

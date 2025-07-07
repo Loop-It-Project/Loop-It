@@ -1,16 +1,52 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
-import CreateUniverse from './CreateUniverse'; // ✅ Import hinzufügen
-import FeedService from '../services/feedServices'; // ✅ FeedService hinzufügen
+import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search, Shield } from 'lucide-react';
+import CreateUniverse from './CreateUniverse'; 
+import FeedService from '../services/feedServices';
+import AdminService from '../services/adminService';
 import useEscapeKey from '../hooks/useEscapeKey';
 
-const Header = ({ user, setUser, onLogout }) => { // ✅ onLogout prop hinzufügen
+const Header = ({ user, setUser, onLogout }) => { 
   const navigate = useNavigate();
   const [showCreateUniverse, setShowCreateUniverse] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Enhanced Admin Check mit Debug-Logs
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      if (!user) {
+        // console.log('🔍 Header: No user, skipping admin check');
+        return;
+      }
+      
+      // console.log('🔍 Header: Checking admin access for user:', {
+      //   id: user.id,
+      //   username: user.username,
+      //   email: user.email
+      // });
+      
+      try {
+        const result = await AdminService.checkAdminPermissions();
+        // console.log('🔍 Header: Admin check result:', result);
+        
+        setIsAdmin(result.success && result.isAdmin);
+        
+        if (result.success && result.isAdmin) {
+          // console.log('✅ Header: Admin access granted - showing Shield button');
+        } else {
+          console.log('❌ Header: Admin access denied - hiding Shield button');
+        }
+      } catch (error) {
+        console.error('❌ Header: Admin permission check failed:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminAccess();
+  }, [user]);
 
   // ESC-Key Handler
   useEscapeKey(() => {
@@ -23,19 +59,23 @@ const Header = ({ user, setUser, onLogout }) => { // ✅ onLogout prop hinzufüg
     }
   }, showSearchResults || showCreateUniverse);
 
+  // Handle Universe Click Function
   const handleUniverseClick = (universeSlug) => {
     navigate(`/universe/${universeSlug}`);
   };
 
+  // Handle Hashtag Click Function
   const handleHashtagClick = async (universeSlug, hashtag) => {
     navigate(`/universe/${universeSlug}?hashtag=${hashtag}`);
   };
 
+  // Handle Universe Created
   const handleUniverseCreated = async (newUniverse) => {
     setShowCreateUniverse(false);
     navigate(`/universe/${newUniverse.slug}`);
   };
 
+  // Handle Search
   const handleSearch = async (query) => {
     if (!query.trim()) {
       setShowSearchResults(false);
@@ -161,6 +201,27 @@ const Header = ({ user, setUser, onLogout }) => { // ✅ onLogout prop hinzufüg
                 <Plus size={20} />
                 <span>Universe</span>
               </button>
+
+              {/* Admin Panel Button - NUR für Admins sichtbar */}
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    // console.log('🔧 Admin button clicked - navigating to /admin');
+                    navigate('/admin');
+                  }}
+                  className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 hover:scale-110 hover:cursor-pointer transition-all duration-200 rounded-lg"
+                  title="Admin Panel"
+                >
+                  <Shield size={20} />
+                </button>
+              )}
+
+              {/* {/* Debug Info (nur in Development) */}
+              {/* {import.meta.env.DEV && (
+                <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  Admin: {isAdmin ? 'YES' : 'NO'}
+                </div>
+              )} */}
               
               {/* Settings Button */}
               <button 
