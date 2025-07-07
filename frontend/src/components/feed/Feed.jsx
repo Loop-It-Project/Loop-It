@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { RefreshCw, Loader, Filter, ChevronDown } from 'lucide-react';
 import PostCard from './PostCard';
 import PostComposer from './PostComposer';
@@ -13,8 +14,11 @@ const Feed = ({
   universeSlug = null,
   timeframe = '7d',
   onUniverseClick,
-  onHashtagClick
+  onHashtagClick,
+  onTimeframeChange
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,7 +31,7 @@ const Feed = ({
   const [selectedPostId, setSelectedPostId] = useState(null);
 
   // Filter States
-  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'trending'
+  const [sortBy, setSortBy] = useState('newest');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   // Filter Optionen
@@ -51,7 +55,7 @@ const Feed = ({
     if (type === 'trending') {
       return trendingFilterOptions;
     }
-    return filterOptions; // Normal filter options for other feed types
+    return filterOptions;
   };
 
   // ESC-Key Handler für Filter Dropdown
@@ -75,9 +79,6 @@ const Feed = ({
 
   // Share Handler
   const handleShare = (postId, platform, newShareCount) => {
-    // console.log('Feed handleShare called:', { postId, platform, newShareCount });
-    
-    // Update Post in der lokalen Liste
     setPosts(prev => prev.map(post => 
       post.id === postId 
         ? { ...post, shareCount: newShareCount || (post.shareCount || 0) + 1 }
@@ -109,6 +110,7 @@ const Feed = ({
           break;
           
         case 'trending':
+          console.log('🔥 Loading trending feed with timeframe:', timeframe);
           response = await FeedService.getTrendingFeed(timeframe, pageNum, 20);
           break;
           
@@ -131,8 +133,6 @@ const Feed = ({
         console.log(`✅ Feed loaded (${type}):`, {
           page: pageNum,
           postsCount: newPosts.length,
-          totalPosts: pageNum === 1 ? newPosts.length : posts.length + newPosts.length,
-          hasMore: response.data.pagination?.hasMore,
           timeframe: type === 'trending' ? timeframe : 'N/A'
         });
 
@@ -151,29 +151,30 @@ const Feed = ({
 
   // TIMEFRAME CHANGE HANDLER (nur für Trending)
   const handleTimeframeChange = (newTimeframe) => {
-    if (type === 'trending') {
-      // Aktualisiere die URL oder den State mit neuem Timeframe
-      // und lade Feed neu
-      navigate(`/dashboard?tab=trending&timeframe=${newTimeframe}`, { replace: true });
-      loadFeed(1, true);
+    if (type === 'trending' && onTimeframeChange) {
+      console.log('🔄 Feed: Changing timeframe from', timeframe, 'to', newTimeframe);
+      onTimeframeChange(newTimeframe);
     }
   };
 
   // Filter ändern
   const handleFilterChange = (newValue) => {
+    console.log('🔄 Filter change:', { type, newValue, currentValue: type === 'trending' ? timeframe : sortBy });
+    
     if (type === 'trending') {
       handleTimeframeChange(newValue);
     } else {
       setSortBy(newValue);
-      setShowFilterDropdown(false);
-      loadFeed(1, true);
     }
+    
+    setShowFilterDropdown(false);
   };
 
-  // Initial load
+  // INITIAL LOAD UND RE-LOAD BEI DEPENDENCY CHANGES
   useEffect(() => {
-    loadFeed(1);
-  }, [loadFeed]);
+    // console.log('🔄 Feed: Dependencies changed, reloading...', { type, timeframe, sortBy });
+    loadFeed(1, true);
+  }, [type, timeframe, sortBy, universeSlug]); // Reagiert auf alle wichtigen Änderungen
 
   // Refresh
   const handleRefresh = () => {
@@ -189,19 +190,16 @@ const Feed = ({
 
   // Feed-Reload Funktion nach Post-Erstellung
   const handleFeedReload = useCallback(async () => {
-    // console.log('🔄 Feed wird nach Post-Erstellung neu geladen...');
     setIsCreatingPost(true);
     try {
-      await loadFeed(1, true); // Seite 1, Refresh-Modus
-      // console.log('✅ Feed-Reload erfolgreich');
+      await loadFeed(1, true);
     } catch (error) {
-      // console.error('❌ Feed-Reload Fehler:', error);
+      console.error('❌ Feed-Reload Fehler:', error);
     } finally {
       setIsCreatingPost(false);
     }
   }, [loadFeed]);
 
-  // Fallback: Post manuell hinzufügen
   const handlePostCreated = (newPost) => {
     console.log('⚠️ Fallback: Post wird manuell hinzugefügt');
     setPosts(prev => [newPost, ...prev]);
@@ -212,14 +210,13 @@ const Feed = ({
       const response = await PostService.deletePost(postId);
       
       if (response.success) {
-        // Post aus der Liste entfernen
         setPosts(prev => prev.filter(post => post.id !== postId));
       } else {
         throw new Error(response.error || 'Failed to delete post');
       }
     } catch (error) {
       console.error('Error deleting post:', error);
-      throw error; // Re-throw für PostCard error handling
+      throw error;
     }
   };
 
@@ -246,36 +243,27 @@ const Feed = ({
 
   // Like Handler
   const handleLike = (postId, isLiked, newLikeCount) => {
-    // console.log('Feed handleLike called:', { postId, isLiked, newLikeCount }); 
-    
-    // NULL/UNDEFINED Check hinzufügen
     if (isLiked === undefined || newLikeCount === undefined) {
       console.warn('⚠️ Ungültige Like-Daten erhalten:', { isLiked, newLikeCount });
-      return; // Früh beenden wenn Daten ungültig sind
+      return;
     }
 
-    // Update Post in der lokalen Liste
     setPosts(prev => {
       const updated = prev.map(post => 
         post.id === postId 
           ? { ...post, isLikedByUser: isLiked, likeCount: newLikeCount }
           : post
       );
-
-      // console.log('Posts updated in Feed:', updated.find(p => p.id === postId)); 
       return updated;
     });
   };
 
   // Hashtag Click Handler sicherstellen
   const handleHashtagClick = (targetUniverseSlug, hashtag) => {
-    // console.log('Feed handleHashtagClick called:', { targetUniverseSlug, hashtag });
-    
     if (onHashtagClick && typeof onHashtagClick === 'function') {
       onHashtagClick(targetUniverseSlug, hashtag);
     } else {
       console.warn('⚠️ onHashtagClick prop not provided to Feed');
-      // Fallback: Direct navigation if no handler provided
       if (window.confirm(`Möchtest du zum Universe #${targetUniverseSlug} wechseln?`)) {
         window.location.href = `/universe/${targetUniverseSlug}?hashtag=${hashtag}`;
       }
@@ -364,14 +352,18 @@ const Feed = ({
               <ChevronDown size={14} />
             </button>
 
-              {/* Dropdown Menu */}
+            {/* Dropdown Menu */}
             {showFilterDropdown && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-card rounded-lg shadow-lg border border-secondary z-10">
                 {getFilterOptions().map((option) => (
                   <button
                     key={option.value}
                     onClick={() => handleFilterChange(option.value)}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer transition-colors"
+                    className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer transition-colors ${
+                      (type === 'trending' ? timeframe : sortBy) === option.value 
+                        ? 'bg-purple-50 text-purple-700' 
+                        : ''
+                    }`}
                   >
                     <span className="text-lg">{option.icon}</span>
                     <span className="text-sm font-medium">{option.label}</span>

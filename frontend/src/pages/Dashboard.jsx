@@ -19,6 +19,16 @@ const Dashboard = ({ user, onLogout }) => {
   const [showCreateUniverse, setShowCreateUniverse] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
 
+  // DEBUGGING: Tab und URL Changes verfolgen
+  useEffect(() => {
+    console.log('🔄 Dashboard: URL changed:', {
+      tab: searchParams.get('tab'),
+      timeframe: searchParams.get('timeframe'),
+      activeTab,
+      trendingTimeframe
+    });
+  }, [searchParams, activeTab, trendingTimeframe]);
+
   // ESC-Key Handler für Modals
   useEscapeKey(() => {
     if (showCreateUniverse) {
@@ -37,26 +47,23 @@ const Dashboard = ({ user, onLogout }) => {
           FeedService.getUserUniverses(1, 50).catch(() => ({ success: false }))
         ]);
       
-        const allUniverses = [];
+        const ownedUniverses = ownedResponse.success ? ownedResponse.data.universes || [] : [];
+        const memberUniverses = memberResponse.success ? memberResponse.data.universes || [] : [];
+
+        // Duplikate entfernen (falls User Owner und Member ist)
+        const allUniversesMap = new Map();
         
-        if (ownedResponse.success) {
-          allUniverses.push(...ownedResponse.data.universes);
-        }
-        
-        if (memberResponse.success) {
-          const ownedIds = new Set(allUniverses.map(u => u.id));
-          const memberUniverses = memberResponse.data.universes.filter(u => !ownedIds.has(u.id));
-          allUniverses.push(...memberUniverses);
-        }
+        [...ownedUniverses, ...memberUniverses].forEach(universe => {
+          if (!allUniversesMap.has(universe.id)) {
+            allUniversesMap.set(universe.id, universe);
+          }
+        });
       
+        const allUniverses = Array.from(allUniversesMap.values());
         setUserUniverses(allUniverses);
-        
+
       } catch (error) {
         console.error('Error loading user universes:', error);
-        if (error.message.includes('Session abgelaufen')) {
-          return;
-        }
-        setUserUniverses([]);
       } finally {
         setLoadingUniverses(false);
       }
@@ -83,32 +90,53 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   // Universe Created Handler
-  const handleUniverseCreated = async (newUniverse) => {
+  const handleUniverseCreated = (newUniverse) => {
     setUserUniverses(prev => [newUniverse, ...prev]);
     setShowCreateUniverse(false);
-
-    setTimeout(async () => {
-      try {
-        const response = await FeedService.getUserUniverses(1, 10);
-        if (response.success) {
-          setUserUniverses(response.data.universes || []);
-        }
-      } catch (error) {
-        console.error('Error reloading user universes:', error);
-      }
-    }, 500);
-
-    navigate(`/universe/${newUniverse.slug}`);
+    setActiveTab('feed');
+    navigate('/dashboard');
   };
 
   // Tab change mit URL update
   const handleTabChange = (tabId) => {
+    console.log('🔄 Dashboard: Tab change from', activeTab, 'to', tabId);
+    
+    // State sofort aktualisieren
     setActiveTab(tabId);
+    
+    // URL entsprechend aktualisieren
     if (tabId === 'trending') {
       navigate(`/dashboard?tab=trending&timeframe=${trendingTimeframe}`, { replace: true });
+    } else if (tabId === 'discover') {
+      navigate('/dashboard?tab=discover', { replace: true });
     } else {
+      // 'feed' oder andere Tabs - entferne alle Query-Parameter
       navigate('/dashboard', { replace: true });
     }
+  };
+
+  // URL-SYNC FÜR TIMEFRAME
+  useEffect(() => {
+    const urlTab = searchParams.get('tab');
+    const urlTimeframe = searchParams.get('timeframe');
+    
+    if (urlTab !== activeTab) {
+      console.log('🔄 Dashboard: Syncing tab from URL:', urlTab || 'feed');
+      setActiveTab(urlTab || 'feed');
+    }
+    
+    if (urlTimeframe && urlTimeframe !== trendingTimeframe) {
+      console.log('🔄 Dashboard: Syncing timeframe from URL:', urlTimeframe);
+      setTrendingTimeframe(urlTimeframe);
+    }
+  }, [searchParams]);
+
+  // TIMEFRAME CHANGE HANDLER
+  const handleTrendingTimeframeChange = (newTimeframe) => {
+    console.log('🔄 Dashboard: Changing timeframe from', trendingTimeframe, 'to', newTimeframe);
+    
+    setTrendingTimeframe(newTimeframe);
+    navigate(`/dashboard?tab=trending&timeframe=${newTimeframe}`, { replace: true });
   };
 
   const tabs = [
@@ -124,6 +152,30 @@ const Dashboard = ({ user, onLogout }) => {
         <div className="flex gap-8">
           {/* Sidebar */}
           <div className="w-64 flex-shrink-0">
+
+            {/* User Profile Card */}
+            <div className="bg-card rounded-lg shadow-sm border p-4 mb-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <User className="text-white" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-primary">{user?.displayName || user?.username}</h3>
+                  <p className="text-sm text-tertiary">@{user?.username}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowCreateUniverse(true)}
+                  className="flex-1 bg-purple-600 text-white px-3 py-2 rounded-lg hover:cursor-pointer hover:bg-purple-700 transition text-sm font-medium"
+                >
+                  <Plus size={16} className="inline mr-1" />
+                  Universe erstellen
+                </button>
+              </div>
+            </div>
+
             {/* Navigation Tabs */}
             <div className="bg-card rounded-lg shadow-sm border p-4 mb-6">
               <h3 className="font-semibold text-primary mb-4">Navigation</h3>
@@ -133,7 +185,7 @@ const Dashboard = ({ user, onLogout }) => {
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => handleTabChange(tab.id)}
                       className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:cursor-pointer transition-colors ${
                         activeTab === tab.id
                           ? 'bg-purple-100 text-purple-700'
@@ -153,7 +205,7 @@ const Dashboard = ({ user, onLogout }) => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-primary">Meine Universes</h3>
                 <button 
-                  onClick={() => setActiveTab('discover')}
+                  onClick={() => handleTabChange('discover')}
                   className="text-purple-600 hover:text-purple-700 hover:cursor-pointer"
                 >
                   <Plus size={20} />
@@ -168,7 +220,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="text-center py-4 text-tertiary">
                   <p className="text-sm mb-2">Noch keine Universes</p>
                   <button
-                    onClick={() => setActiveTab('discover')}
+                    onClick={() => handleTabChange('discover')}
                     className="text-purple-600 hover:text-purple-700 text-sm font-medium hover:cursor-pointer transition"
                   >
                     Universes entdecken
@@ -187,7 +239,7 @@ const Dashboard = ({ user, onLogout }) => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-primary truncate">
-                          {universe.slug} {/* ✅ GEÄNDERT: Slug statt Name */}
+                          {universe.slug}
                         </p>
                         <p className="text-xs text-tertiary">
                           {universe.memberCount} Mitglieder
@@ -219,7 +271,7 @@ const Dashboard = ({ user, onLogout }) => {
                   Entdecke Universes zu deinen Hobbys und verbinde dich mit Gleichgesinnten!
                 </p>
                 <button
-                  onClick={() => setActiveTab('discover')}
+                  onClick={() => handleTabChange('discover')}
                   className="bg-card text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-hover hover:cursor-pointer transition"
                 >
                   Universes entdecken
@@ -230,6 +282,7 @@ const Dashboard = ({ user, onLogout }) => {
             {/* Feed Content */}
             {activeTab === 'feed' && (
               <Feed
+                key="personal-feed"
                 type="personal"
                 onUniverseClick={handleUniverseClick}
                 onHashtagClick={handleHashtagClick}
@@ -238,15 +291,20 @@ const Dashboard = ({ user, onLogout }) => {
 
             {activeTab === 'trending' && (
               <Feed
+                key={`trending-feed-${trendingTimeframe}`}
                 type="trending"
                 timeframe={trendingTimeframe}
                 onUniverseClick={handleUniverseClick}
                 onHashtagClick={handleHashtagClick}
+                onTimeframeChange={handleTrendingTimeframeChange}
               />
             )}
 
             {activeTab === 'discover' && (
-              <DiscoverUniverses onUniverseClick={handleUniverseClick} />
+              <DiscoverUniverses 
+                key="discover-universes"
+                onUniverseClick={handleUniverseClick} 
+              />
             )}
           </div>
         </div>
@@ -267,19 +325,19 @@ const Dashboard = ({ user, onLogout }) => {
 const DiscoverUniverses = ({ onUniverseClick }) => {
   const [universes, setUniverses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const loadUniverses = async () => {
       try {
-        const response = await FeedService.discoverUniverses(null, 1, 12);
+        setLoading(true);
+        const response = await FeedService.getDiscoverUniverses();
+        
         if (response.success) {
           setUniverses(response.data.universes || []);
-        } else {
-          throw new Error(response.error);
         }
-      } catch (err) {
-        setError(err.message);
+      } catch (error) {
+        console.error('Error loading discover universes:', error);
       } finally {
         setLoading(false);
       }
@@ -287,6 +345,11 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
 
     loadUniverses();
   }, []);
+
+  const filteredUniverses = universes.filter(universe =>
+    universe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    universe.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleJoinUniverse = async (universeSlug) => {
     try {
@@ -308,7 +371,10 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-tertiary">Universes werden geladen...</div>
+        <div className="flex items-center space-x-2 text-tertiary">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+          <span>Universes werden geladen...</span>
+        </div>
       </div>
     );
   }
@@ -325,57 +391,55 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
   }
 
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-primary mb-2">Universes entdecken</h2>
-        <p className="text-secondary">Finde Communities zu deinen Hobbys und Interessen</p>
+        <h2 className="text-xl font-bold text-primary mb-4">Universes entdecken</h2>
+        
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={20} />
+          <input
+            type="text"
+            placeholder="Universes durchsuchen..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-card border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {universes.map((universe) => (
-          <div key={universe.id} className="bg-card rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <Hash className="text-white" size={20} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-primary">{universe.name}</h3>
-                  <p className="text-sm text-tertiary">{universe.memberCount} Mitglieder</p>
+      <div className="grid gap-4">
+        {filteredUniverses.map((universe) => (
+          <div key={universe.id} className="bg-card rounded-lg border p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-primary mb-1">#{universe.slug}</h3>
+                <p className="text-sm text-secondary mb-2">{universe.description}</p>
+                <div className="flex items-center space-x-4 text-sm text-tertiary">
+                  <span>{universe.memberCount} Mitglieder</span>
+                  <span>{universe.postCount} Posts</span>
                 </div>
               </div>
-            </div>
-
-            {universe.description && (
-              <p className="text-secondary text-sm mb-4 line-clamp-3">
-                {universe.description}
-              </p>
-            )}
-
-            <div className="flex items-center justify-between">
               <button
                 onClick={() => onUniverseClick(universe.slug)}
-                className="text-purple-600 hover:text-purple-700 font-medium text-sm hover:cursor-pointer transition"
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm font-medium"
               >
-                Ansehen
+                Besuchen
               </button>
-              
-              {universe.isMember ? (
-                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                  Mitglied
-                </span>
-              ) : (
-                <button
-                  onClick={() => handleJoinUniverse(universe.slug)}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 hover:cursor-pointer transition text-sm font-medium"
-                >
-                  Beitreten
-                </button>
-              )}
             </div>
           </div>
         ))}
       </div>
+
+      {filteredUniverses.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-tertiary">
+            <p className="text-lg font-medium mb-2">Keine Universes gefunden</p>
+            <p className="text-sm">
+              {searchTerm ? 'Versuche einen anderen Suchbegriff.' : 'Momentan sind keine Universes verfügbar.'}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
