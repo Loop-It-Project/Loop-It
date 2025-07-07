@@ -21,6 +21,9 @@ echo "Dateisystem Check:"
 echo "Drizzle Ordner:"
 ls -la drizzle/ 2>/dev/null || echo "Kein drizzle Ordner"
 
+echo "Migration Dateien:"
+ls -la drizzle/*.sql 2>/dev/null || echo "Keine SQL-Migrationsdateien gefunden"
+
 echo "Schema Datei:"
 ls -la src/db/schema.ts 2>/dev/null || echo "Keine Schema-Datei gefunden"
 
@@ -28,41 +31,30 @@ echo "Vorhandene Tabellen VORHER:"
 PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "Keine Tabellen"
 
 echo "=== FÜHRE MIGRATIONEN AUS ==="
-echo "1. Generate migrations..."
-npm run db:generate
+echo "Verwende versionierte Drizzle-Migrationen..."
 
-echo "2. Prüfe generierte SQL-Dateien..."
-ls -la drizzle/*.sql 2>/dev/null || echo "Keine SQL-Dateien gefunden"
+# Führe versionierte Migrationen aus
+npm run db:migrate
 
-echo "3. Führe SQL-Dateien direkt aus..."
-SQL_EXECUTED=false
-for sql_file in drizzle/*.sql; do
-    if [ -f "$sql_file" ]; then
-        echo "Führe aus: $sql_file"
-        PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$sql_file"
-        if [ $? -eq 0 ]; then
-            echo "✓ $sql_file erfolgreich ausgeführt"
-            SQL_EXECUTED=true
-        else
-            echo "✗ Fehler bei $sql_file"
-        fi
-    fi
-done
-
-if [ "$SQL_EXECUTED" = false ]; then
-    echo "Keine SQL-Dateien gefunden oder ausgeführt!"
-    echo "4. Fallback: Verwende drizzle-kit push..."
-    npm run db:push -- --force
+if [ $? -eq 0 ]; then
+    echo "✓ Migrationen erfolgreich ausgeführt"
+else
+    echo "✗ Fehler bei Migrationen - versuche Fallback"
+    echo "Fallback: Verwende drizzle-kit push..."
+    npm run db:push --force
     if [ $? -eq 0 ]; then
-        echo "✓ drizzle-kit push erfolgreich ausgeführt"
+        echo "✓ Fallback push erfolgreich ausgeführt"
     else
-        echo "✗ Fehler bei drizzle-kit push"
+        echo "✗ Kritischer Fehler: Weder Migrationen noch Push funktionieren"
         exit 1
     fi
 fi
 
 echo "Vorhandene Tabellen NACHHER:"
 PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "Keine Tabellen"
+
+echo "Angewendete Migrationen (falls vorhanden):"
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT * FROM __drizzle_migrations ORDER BY id;" 2>/dev/null || echo "Keine Migrations-Historie verfügbar"
 
 echo "=== DEBUGGING END ==="
 
