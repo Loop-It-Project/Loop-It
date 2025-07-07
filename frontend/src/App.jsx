@@ -13,6 +13,8 @@ import PublicRoute from './components/PublicRoute';
 import Hobbies from './pages/Hobbies';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Imprint from './pages/Imprint';
 
 // API_URL für die gesamte App definieren
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -198,6 +200,23 @@ function App() {
               </PublicRoute>
             }
           />
+          <Route 
+            path="/privacypolicy"
+            element={
+              <PublicRoute user={user}>
+                <PrivacyPolicy />
+              </PublicRoute>
+            }
+          />
+          <Route 
+            path="/imprint"
+            element={
+              <PublicRoute user={user}>
+                <Imprint />
+              </PublicRoute>
+            }
+          />
+
 
           {/* Protected Routes - nur für eingeloggte User */}
           <Route 
