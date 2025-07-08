@@ -19,11 +19,35 @@ spec:
         imagePullPolicy: Never
         ports:
         - containerPort: 80
+          name: http
         env:
         - name: VITE_API_URL
           value: "http://localhost:3000"
         - name: VITE_APP_NAME
           value: "Loop-It"
+        
+        # HEALTH CHECKS für NGINX
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+          successThreshold: 1
+        
+        # Resource Management
         resources:
           requests:
             memory: "128Mi"
@@ -43,3 +67,4 @@ spec:
   ports:
   - port: 80
     targetPort: 80
+    name: http

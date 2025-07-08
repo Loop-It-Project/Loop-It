@@ -19,6 +19,7 @@ spec:
         imagePullPolicy: Never
         ports:
         - containerPort: 3000
+          name: http
         env:
         # Normale Config-Werte
         - name: PORT
@@ -33,8 +34,12 @@ spec:
           value: "loop_user"
         - name: POSTGRES_DB
           value: "loop-it"
+        - name: FRONTEND_URL
+          value: "http://localhost:3001"
+        - name: JWT_EXPIRES_IN
+          value: "7d"
         
-        # Secrets - sichere Werte
+        # Secrets
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -45,17 +50,53 @@ spec:
             secretKeyRef:
               name: loopit-secrets
               key: jwt-secret
-        
-        # DATABASE_URL mit Secret zusammengebaut
+        - name: JWT_REFRESH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: loopit-secrets
+              key: jwt-refresh-secret
         - name: DATABASE_URL
           value: "postgresql://loop_user:$(POSTGRES_PASSWORD)@postgres:5432/loop-it"
+        
+        # 🏥 HEALTH CHECKS (angepasst für Backend mit DB-Abhängigkeit)
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30    # Warte 30s für DB-Connection + Migrations
+          periodSeconds: 10          # Prüfe alle 10s während Startup
+          timeoutSeconds: 5          # Timeout nach 5s
+          failureThreshold: 12       # 12 failures (120s total) → failed startup
+          successThreshold: 1        # 1 success → startup complete
+        
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 60    # Warte bis Startup complete
+          periodSeconds: 30          # Prüfe alle 30s (weniger aggressiv)
+          timeoutSeconds: 10         # Längerer Timeout
+          failureThreshold: 3        # 3 failures → Neustart
+          successThreshold: 1        # 1 success → healthy
+        
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 45    # Nach Startup aber vor Liveness
+          periodSeconds: 10          # Prüfe alle 10s
+          timeoutSeconds: 5          # Timeout nach 5s
+          failureThreshold: 2        # 2 failures → aus Service entfernen
+          successThreshold: 1        # 1 success → ready
+        
+        # Resource Management
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "200m"
-          limits:
             memory: "512Mi"
-            cpu: "500m"
+            cpu: "300m"
+          limits:
+            memory: "1024Mi"
+            cpu: "1000m"
 ---
 apiVersion: v1
 kind: Service
@@ -68,3 +109,4 @@ spec:
   ports:
   - port: 3000
     targetPort: 3000
+    name: http
