@@ -619,4 +619,333 @@ export class AdminService {
       };
     }
   }
+
+  // ALLE UNIVERSES für Admin abrufen
+  static async getAllUniverses(page = 1, limit = 50, search = '', status = '') {
+    try {
+      const offset = (page - 1) * limit;
+      
+      let whereConditions = [
+        eq(universesTable.isDeleted, false) // Zeige nur nicht-gelöschte
+      ];
+
+      // Status Filter
+      if (status === 'active') {
+        whereConditions.push(eq(universesTable.isActive, true));
+      } else if (status === 'inactive') {
+        whereConditions.push(eq(universesTable.isActive, false));
+      } else if (status === 'closed') {
+        whereConditions.push(eq(universesTable.isClosed, true));
+      }
+
+      // Search Filter
+      let searchCondition = null;
+      if (search) {
+        searchCondition = or(
+          like(universesTable.name, `%${search}%`),
+          like(universesTable.slug, `%${search}%`),
+          like(universesTable.description, `%${search}%`)
+        );
+      }
+
+      // Base Query
+      let query = db
+        .select({
+          id: universesTable.id,
+          name: universesTable.name,
+          slug: universesTable.slug,
+          description: universesTable.description,
+          isActive: universesTable.isActive,
+          isClosed: universesTable.isClosed,
+          isPublic: universesTable.isPublic,
+          creatorId: universesTable.creatorId,
+          memberCount: universesTable.memberCount,
+          postCount: universesTable.postCount,
+          createdAt: universesTable.createdAt,
+          updatedAt: universesTable.updatedAt,
+          // Creator Info
+          creatorUsername: usersTable.username,
+          creatorDisplayName: usersTable.displayName,
+          creatorEmail: usersTable.email
+        })
+        .from(universesTable)
+        .leftJoin(usersTable, eq(universesTable.creatorId, usersTable.id))
+        .where(searchCondition ? and(...whereConditions, searchCondition) : and(...whereConditions))
+        .orderBy(desc(universesTable.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const universes = await query;
+
+      // Total Count
+      const totalCountQuery = db
+        .select({ count: count() })
+        .from(universesTable)
+        .where(searchCondition ? and(...whereConditions, searchCondition) : and(...whereConditions));
+      
+      const totalCount = (await totalCountQuery)[0]?.count || 0;
+
+      return {
+        success: true,
+        data: {
+          universes,
+          pagination: {
+            page,
+            limit,
+            total: totalCount,
+            hasMore: universes.length === limit
+          }
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Error getting all universes:', error);
+      return {
+        success: false,
+        error: 'Failed to get universes'
+      };
+    }
+  }
+
+  // UNIVERSE SCHLIESSEN/ÖFFNEN
+  static async toggleUniverseStatus(universeId: string, isClosed: boolean, adminId: string) {
+    try {
+      await db
+        .update(universesTable)
+        .set({
+          isClosed,
+          updatedAt: new Date()
+        })
+        .where(eq(universesTable.id, universeId));
+
+      // Aktivität loggen
+      await db
+        .insert(userActivitiesTable)
+        .values({
+          userId: adminId,
+          activityType: isClosed ? 'admin_close_universe' : 'admin_open_universe',
+          entityType: 'universe',
+          entityId: universeId,
+          metadata: { action: isClosed ? 'closed' : 'opened' }
+        });
+
+      return {
+        success: true,
+        message: `Universe ${isClosed ? 'geschlossen' : 'geöffnet'}`
+      };
+    } catch (error) {
+      console.error('❌ Error toggling universe status:', error);
+      return {
+        success: false,
+        error: 'Failed to toggle universe status'
+      };
+    }
+  }
+
+  // UNIVERSE AKTIVIEREN/DEAKTIVIEREN
+  static async toggleUniverseActive(universeId: string, isActive: boolean, adminId: string) {
+    try {
+      await db
+        .update(universesTable)
+        .set({
+          isActive,
+          updatedAt: new Date()
+        })
+        .where(eq(universesTable.id, universeId));
+
+      // Aktivität loggen
+      await db
+        .insert(userActivitiesTable)
+        .values({
+          userId: adminId,
+          activityType: isActive ? 'admin_activate_universe' : 'admin_deactivate_universe',
+          entityType: 'universe',
+          entityId: universeId,
+          metadata: { action: isActive ? 'activated' : 'deactivated' }
+        });
+
+      return {
+        success: true,
+        message: `Universe ${isActive ? 'aktiviert' : 'deaktiviert'}`
+      };
+    } catch (error) {
+      console.error('❌ Error toggling universe active status:', error);
+      return {
+        success: false,
+        error: 'Failed to toggle universe active status'
+      };
+    }
+  }
+
+  // EIGENTÜMERSCHAFT ÜBERTRAGEN
+  static async transferUniverseOwnership(universeId: string, newCreatorId: string, adminId: string) {
+    try {
+      // Prüfe ob neuer Besitzer existiert
+      const newOwner = await db
+        .select({ id: usersTable.id, username: usersTable.username })
+        .from(usersTable)
+        .where(eq(usersTable.id, newCreatorId))
+        .limit(1);
+
+      if (newOwner.length === 0) {
+        return {
+          success: false,
+          error: 'Neuer Besitzer nicht gefunden'
+        };
+      }
+
+      // Eigentümerschaft übertragen
+      await db
+        .update(universesTable)
+        .set({
+          creatorId: newCreatorId,
+          updatedAt: new Date()
+        })
+        .where(eq(universesTable.id, universeId));
+
+      // Neuen Besitzer als Admin des Universe hinzufügen (falls nicht bereits Mitglied)
+      const existingMember = await db
+        .select()
+        .from(universeMembersTable)
+        .where(and(
+          eq(universeMembersTable.universeId, universeId),
+          eq(universeMembersTable.userId, newCreatorId)
+        ))
+        .limit(1);
+
+      if (existingMember.length === 0) {
+        await db
+          .insert(universeMembersTable)
+          .values({
+            universeId,
+            userId: newCreatorId,
+            role: 'admin',
+            invitedBy: adminId,
+            joinedAt: new Date(),
+            notificationsEnabled: true
+          });
+      } else {
+        // Update existing member to admin
+        await db
+          .update(universeMembersTable)
+          .set({
+            role: 'admin',
+            updatedAt: new Date()
+          })
+          .where(and(
+            eq(universeMembersTable.universeId, universeId),
+            eq(universeMembersTable.userId, newCreatorId)
+          ));
+      }
+
+      // Aktivität loggen
+      await db
+        .insert(userActivitiesTable)
+        .values({
+          userId: adminId,
+          activityType: 'admin_transfer_universe_ownership',
+          entityType: 'universe',
+          entityId: universeId,
+          metadata: { 
+            newCreatorId, 
+            newCreatorUsername: newOwner[0].username 
+          }
+        });
+
+      return {
+        success: true,
+        message: `Eigentümerschaft auf ${newOwner[0].username} übertragen`
+      };
+    } catch (error) {
+      console.error('❌ Error transferring universe ownership:', error);
+      return {
+        success: false,
+        error: 'Failed to transfer ownership'
+      };
+    }
+  }
+
+  // UNIVERSE SOFT DELETE
+  static async deleteUniverse(universeId: string, adminId: string) {
+    try {
+      // Soft Delete
+      await db
+        .update(universesTable)
+        .set({
+          isDeleted: true,
+          isActive: false,
+          isClosed: true,
+          updatedAt: new Date()
+        })
+        .where(eq(universesTable.id, universeId));
+
+      // Alle Posts in diesem Universe auch soft deleten
+      await db
+        .update(postsTable)
+        .set({
+          isDeleted: true,
+          updatedAt: new Date()
+        })
+        .where(eq(postsTable.universeId, universeId));
+
+      // Aktivität loggen
+      await db
+        .insert(userActivitiesTable)
+        .values({
+          userId: adminId,
+          activityType: 'admin_delete_universe',
+          entityType: 'universe',
+          entityId: universeId,
+          metadata: { action: 'soft_deleted' }
+        });
+
+      return {
+        success: true,
+        message: 'Universe gelöscht'
+      };
+    } catch (error) {
+      console.error('❌ Error deleting universe:', error);
+      return {
+        success: false,
+        error: 'Failed to delete universe'
+      };
+    }
+  }
+
+  // UNIVERSE WIEDERHERSTELLEN
+  static async restoreUniverse(universeId: string, adminId: string) {
+    try {
+      await db
+        .update(universesTable)
+        .set({
+          isDeleted: false,
+          isActive: true,
+          isClosed: false,
+          updatedAt: new Date()
+        })
+        .where(eq(universesTable.id, universeId));
+
+      // Aktivität loggen
+      await db
+        .insert(userActivitiesTable)
+        .values({
+          userId: adminId,
+          activityType: 'admin_restore_universe',
+          entityType: 'universe',
+          entityId: universeId,
+          metadata: { action: 'restored' }
+        });
+
+      return {
+        success: true,
+        message: 'Universe wiederhergestellt'
+      };
+    } catch (error) {
+      console.error('❌ Error restoring universe:', error);
+      return {
+        success: false,
+        error: 'Failed to restore universe'
+      };
+    }
+  }
 }

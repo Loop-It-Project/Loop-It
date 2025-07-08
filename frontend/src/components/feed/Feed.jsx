@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { RefreshCw, Loader, Filter, ChevronDown } from 'lucide-react';
 import PostCard from './PostCard';
 import PostComposer from './PostComposer';
@@ -11,10 +12,14 @@ import useEscapeKey from '../../hooks/useEscapeKey';
 const Feed = ({ 
   type = 'personal', // 'personal', 'universe', 'trending'
   universeSlug = null,
-  timeframe = '24h',
+  timeframe = '7d',
+  currentUser,
   onUniverseClick,
-  onHashtagClick
+  onHashtagClick,
+  onTimeframeChange
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,7 +32,7 @@ const Feed = ({
   const [selectedPostId, setSelectedPostId] = useState(null);
 
   // Filter States
-  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'trending'
+  const [sortBy, setSortBy] = useState('newest');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   // Filter Optionen
@@ -36,6 +41,23 @@ const Feed = ({
     { value: 'oldest', label: 'Älteste zuerst', icon: '📅' },
     { value: 'trending', label: 'Trending', icon: '🔥' },
   ];
+
+  // ERWEITERTE TIMEFRAME OPTIONS
+  const trendingFilterOptions = [
+    { value: '1h', label: 'Letzte Stunde', icon: '⚡' },
+    { value: '6h', label: 'Letzte 6 Stunden', icon: '🔥' },
+    { value: '24h', label: 'Heute', icon: '📅' },
+    { value: '7d', label: 'Diese Woche', icon: '📊' },
+    { value: '30d', label: 'Dieser Monat', icon: '📈' },
+  ];
+
+  // Conditional filter options based on feed type
+  const getFilterOptions = () => {
+    if (type === 'trending') {
+      return trendingFilterOptions;
+    }
+    return filterOptions;
+  };
 
   // ESC-Key Handler für Filter Dropdown
   useEscapeKey(() => {
@@ -58,9 +80,6 @@ const Feed = ({
 
   // Share Handler
   const handleShare = (postId, platform, newShareCount) => {
-    // console.log('Feed handleShare called:', { postId, platform, newShareCount });
-    
-    // Update Post in der lokalen Liste
     setPosts(prev => prev.map(post => 
       post.id === postId 
         ? { ...post, shareCount: newShareCount || (post.shareCount || 0) + 1 }
@@ -74,11 +93,9 @@ const Feed = ({
       if (isRefresh) {
         setRefreshing(true);
         setError(null);
-      } else if (pageNum === 1) {
-        setLoading(true);
-        setError(null);
       } else {
-        setLoadingMore(true);
+        setLoading(pageNum === 1);
+        setLoadingMore(pageNum > 1);
       }
 
       let response;
@@ -87,13 +104,17 @@ const Feed = ({
         case 'personal':
           response = await FeedService.getPersonalFeed(pageNum, 20, sortBy);
           break;
+          
         case 'universe':
-          if (!universeSlug) throw new Error('Universe slug required for universe feed');
-          response = await FeedService.getUniverseFeed(universeSlug, pageNum, 20, sortBy); 
+          if (!universeSlug) throw new Error('Universe slug required');
+          response = await FeedService.getUniverseFeed(universeSlug, pageNum, 20, sortBy);
           break;
+          
         case 'trending':
-          response = await FeedService.getTrendingFeed(timeframe, 20);
+          console.log('🔥 Loading trending feed with timeframe:', timeframe);
+          response = await FeedService.getTrendingFeed(timeframe, pageNum, 20);
           break;
+          
         default:
           throw new Error('Invalid feed type');
       }
@@ -109,6 +130,13 @@ const Feed = ({
         
         setHasMore(response.data.pagination?.hasMore || false);
         setPage(pageNum);
+
+        console.log(`✅ Feed loaded (${type}):`, {
+          page: pageNum,
+          postsCount: newPosts.length,
+          timeframe: type === 'trending' ? timeframe : 'N/A'
+        });
+
       } else {
         throw new Error(response.error || 'Failed to load feed');
       }
@@ -122,18 +150,32 @@ const Feed = ({
     }
   }, [type, universeSlug, timeframe, sortBy]);
 
-  // Filter ändern
-  const handleFilterChange = (newSortBy) => {
-    setSortBy(newSortBy);
-    setShowFilterDropdown(false);
-    // Feed neu laden mit neuem Filter
-    loadFeed(1, true);
+  // TIMEFRAME CHANGE HANDLER (nur für Trending)
+  const handleTimeframeChange = (newTimeframe) => {
+    if (type === 'trending' && onTimeframeChange) {
+      console.log('🔄 Feed: Changing timeframe from', timeframe, 'to', newTimeframe);
+      onTimeframeChange(newTimeframe);
+    }
   };
 
-  // Initial load
+  // Filter ändern
+  const handleFilterChange = (newValue) => {
+    console.log('🔄 Filter change:', { type, newValue, currentValue: type === 'trending' ? timeframe : sortBy });
+    
+    if (type === 'trending') {
+      handleTimeframeChange(newValue);
+    } else {
+      setSortBy(newValue);
+    }
+    
+    setShowFilterDropdown(false);
+  };
+
+  // INITIAL LOAD UND RE-LOAD BEI DEPENDENCY CHANGES
   useEffect(() => {
-    loadFeed(1);
-  }, [loadFeed]);
+    // console.log('🔄 Feed: Dependencies changed, reloading...', { type, timeframe, sortBy });
+    loadFeed(1, true);
+  }, [type, timeframe, sortBy, universeSlug]); // Reagiert auf alle wichtigen Änderungen
 
   // Refresh
   const handleRefresh = () => {
@@ -149,19 +191,16 @@ const Feed = ({
 
   // Feed-Reload Funktion nach Post-Erstellung
   const handleFeedReload = useCallback(async () => {
-    // console.log('🔄 Feed wird nach Post-Erstellung neu geladen...');
     setIsCreatingPost(true);
     try {
-      await loadFeed(1, true); // Seite 1, Refresh-Modus
-      // console.log('✅ Feed-Reload erfolgreich');
+      await loadFeed(1, true);
     } catch (error) {
-      // console.error('❌ Feed-Reload Fehler:', error);
+      console.error('❌ Feed-Reload Fehler:', error);
     } finally {
       setIsCreatingPost(false);
     }
   }, [loadFeed]);
 
-  // Fallback: Post manuell hinzufügen
   const handlePostCreated = (newPost) => {
     console.log('⚠️ Fallback: Post wird manuell hinzugefügt');
     setPosts(prev => [newPost, ...prev]);
@@ -172,14 +211,13 @@ const Feed = ({
       const response = await PostService.deletePost(postId);
       
       if (response.success) {
-        // Post aus der Liste entfernen
         setPosts(prev => prev.filter(post => post.id !== postId));
       } else {
         throw new Error(response.error || 'Failed to delete post');
       }
     } catch (error) {
       console.error('Error deleting post:', error);
-      throw error; // Re-throw für PostCard error handling
+      throw error;
     }
   };
 
@@ -206,36 +244,27 @@ const Feed = ({
 
   // Like Handler
   const handleLike = (postId, isLiked, newLikeCount) => {
-    // console.log('Feed handleLike called:', { postId, isLiked, newLikeCount }); 
-    
-    // NULL/UNDEFINED Check hinzufügen
     if (isLiked === undefined || newLikeCount === undefined) {
       console.warn('⚠️ Ungültige Like-Daten erhalten:', { isLiked, newLikeCount });
-      return; // Früh beenden wenn Daten ungültig sind
+      return;
     }
 
-    // Update Post in der lokalen Liste
     setPosts(prev => {
       const updated = prev.map(post => 
         post.id === postId 
           ? { ...post, isLikedByUser: isLiked, likeCount: newLikeCount }
           : post
       );
-
-      // console.log('Posts updated in Feed:', updated.find(p => p.id === postId)); 
       return updated;
     });
   };
 
   // Hashtag Click Handler sicherstellen
   const handleHashtagClick = (targetUniverseSlug, hashtag) => {
-    // console.log('Feed handleHashtagClick called:', { targetUniverseSlug, hashtag });
-    
     if (onHashtagClick && typeof onHashtagClick === 'function') {
       onHashtagClick(targetUniverseSlug, hashtag);
     } else {
       console.warn('⚠️ onHashtagClick prop not provided to Feed');
-      // Fallback: Direct navigation if no handler provided
       if (window.confirm(`Möchtest du zum Universe #${targetUniverseSlug} wechseln?`)) {
         window.location.href = `/universe/${targetUniverseSlug}?hashtag=${hashtag}`;
       }
@@ -297,46 +326,56 @@ const Feed = ({
         <h2 className="text-xl font-bold text-primary">
           {type === 'personal' && 'Dein Feed'}
           {type === 'universe' && `${universeSlug} Universe`}
-          {type === 'trending' && 'Trending Posts'}
+          {type === 'trending' && (
+            <div className="flex items-center gap-2">
+              <span>Trending Posts</span>
+              <span className="text-sm font-normal text-secondary">
+                ({getFilterOptions().find(opt => opt.value === timeframe)?.label || 'Diese Woche'})
+              </span>
+            </div>
+          )}
         </h2>
 
         <div className="flex items-center space-x-3">
-          {/* Filter Dropdown - nur wenn nicht bereits trending */}
-          {type !== 'trending' && (
-            <div className="relative filter-dropdown">
-              <button
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center space-x-2 px-3 py-2 bg-card border border-secondary rounded-lg hover:bg-secondary hover:cursor-pointer transition-colors"
-              >
-                <Filter size={16} />
-                <span className="text-sm font-medium">
-                  {filterOptions.find(opt => opt.value === sortBy)?.label}
-                </span>
-                <ChevronDown size={14} />
-              </button>
+          {/* Filter Dropdown */}
+          <div className="relative filter-dropdown">
+            <button
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+              className="flex items-center space-x-2 px-3 py-2 bg-card border border-secondary rounded-lg hover:bg-secondary hover:cursor-pointer transition-colors"
+            >
+              <Filter size={16} />
+              <span className="text-sm font-medium">
+                {type === 'trending' 
+                  ? trendingFilterOptions.find(opt => opt.value === timeframe)?.label || 'Diese Woche'
+                  : filterOptions.find(opt => opt.value === sortBy)?.label
+                }
+              </span>
+              <ChevronDown size={14} />
+            </button>
 
-              {/* Filter Dropdown */}
-              {showFilterDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-card border border-primary rounded-lg shadow-lg py-2 min-w-[160px] z-50">
-                  {filterOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => handleFilterChange(option.value)}
-                      className={`w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-secondary hover:cursor-pointer transition-colors ${
-                        sortBy === option.value ? 'bg-purple-50 text-purple-700' : 'text-secondary'
-                      }`}
-                    >
-                      <span>{option.icon}</span>
-                      <span className="text-sm">{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            {/* Dropdown Menu */}
+            {showFilterDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-card rounded-lg shadow-lg border border-secondary z-10">
+                {getFilterOptions().map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleFilterChange(option.value)}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer transition-colors ${
+                      (type === 'trending' ? timeframe : sortBy) === option.value 
+                        ? 'bg-purple-50 text-purple-700' 
+                        : ''
+                    }`}
+                  >
+                    <span className="text-lg">{option.icon}</span>
+                    <span className="text-sm font-medium">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         
         {/* Refresh Button */}
-        <button
+          <button
             onClick={handleRefresh}
             disabled={refreshing}
             className="flex items-center space-x-2 text-tertiary hover:text-purple-600 transition-colors hover:cursor-pointer disabled:opacity-50"
@@ -385,6 +424,7 @@ const Feed = ({
             <PostCard
               key={post.id}
               post={post}
+              currentUser={currentUser}
               onUniverseClick={onUniverseClick}
               onHashtagClick={handleHashtagClick}
               onLike={handleLike}

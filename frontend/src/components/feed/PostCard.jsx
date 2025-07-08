@@ -1,9 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Heart, 
   MessageCircle, 
   Share2, 
+  Trash2,
   MoreHorizontal,
+  Edit,
+  Flag,
+  Eye,
+  EyeOff,
   User,
   Clock,
   Hash
@@ -12,15 +17,39 @@ import HashtagService from '../../services/hashtagService';
 import PostService from '../../services/postService';
 import ShareButton from './ShareButton';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import ReportModal from '../ReportModal';
 
-const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete, onShare }) => {
+const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete, onShare, currentUser }) => {
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [shareCount, setShareCount] = useState(post.shareCount || 0);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [hashtagLoading, setHashtagLoading] = useState(null);
   const [likingInProgress, setLikingInProgress] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const moreMenuRef = useRef(null);
+  const shareMenuRef = useRef(null);
+
+  // Check if current user is post author
+  const isAuthor = useMemo(() => {
+    const result = currentUser?.id === post.author?.id || currentUser?.id === post.authorId;
+    
+    console.log('🔍 PostCard isAuthor check:', {
+      postId: post.id,
+      currentUserId: currentUser?.id,
+      postAuthorId: post.author?.id,
+      postAuthorIdFallback: post.authorId,
+      isAuthor: result,
+      postAuthor: post.author,
+      currentUser: currentUser
+    });
+    
+    return result;
+  }, [currentUser?.id, post.author?.id, post.authorId]);
+
 
   // Escape Key Handler:
   useEscapeKey(() => setShowMoreMenu(false), showMoreMenu);
@@ -262,6 +291,12 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     const universeSlug = post.universe?.slug || post.universeSlug;
     const authorAvatar = post.author?.profileImage || post.authorAvatar;
 
+    const MAX_CONTENT_LENGTH = 500;
+    const shouldTruncate = post.content && post.content.length > MAX_CONTENT_LENGTH;
+    const displayContent = shouldTruncate && !isExpanded 
+      ? post.content.substring(0, MAX_CONTENT_LENGTH) + '...'
+      : post.content;
+
   return (
     <div className="bg-card rounded-lg shadow-sm border border-primary p-6 mb-4 hover:shadow-md transition-shadow">
       {/* Header */}
@@ -315,31 +350,51 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
         
         {/* More Options */}
         <div className="relative">
-          <button 
-            onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className="text-muted hover:text-secondary transition-colors p-1 rounded-lg hover:bg-hover hover:cursor-pointer"
-          >
-            <MoreHorizontal size={20} />
-          </button>
+        <button
+          onClick={() => setShowMoreMenu(!showMoreMenu)}
+          className="p-2 text-muted hover:text-secondary rounded-full hover:bg-hover hover:cursor-pointer transition-colors"
+        >
+          <MoreHorizontal size={16} />
+        </button>
 
-          {/* Dropdown Menu */}
-          {showMoreMenu && (
-            <div className="absolute right-0 top-8 bg-card border border-primary rounded-lg shadow-lg py-2 min-w-[120px] z-10">
+        {showMoreMenu && (
+            <div className="absolute right-0 top-8 bg-card border border-primary rounded-lg shadow-lg py-2 min-w-[160px] z-10">
+              {/* Report Option - Nur anzeigen wenn nicht eigener Post */}
+              {!isAuthor && (
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    setShowReportModal(true);
+                  }}
+                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors text-sm flex items-center space-x-2"
+                >
+                  <Flag size={14} />
+                  <span>Post melden</span>
+                </button>
+              )}
+
+            {/* Delete Option - Nur für Post-Autor */}
+              {isAuthor && (
               <button
-                onClick={handleDeletePost}
-                className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors text-sm"
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  handleDeletePost();
+                }}
+                className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors text-sm flex items-center space-x-2"
               >
-                Post löschen
+                <Trash2 size={14} />
+                <span>Post löschen</span>
               </button>
-              {/* Weitere Optionen können hier hinzugefügt werden */}
-              <button
-                onClick={() => setShowMoreMenu(false)}
-                className="w-full px-4 py-2 text-left text-secondary hover:bg-secondary hover:cursor-pointer transition-colors text-sm"
-              >
-                Abbrechen
-              </button>
-            </div>
-          )}
+            )}
+
+            <button
+              onClick={() => setShowMoreMenu(false)}
+              className="w-full px-4 py-2 text-left hover:bg-red-50 hover:cursor-pointer transition-colors text-sm flex items-center space-x-2"
+            >
+              Abbrechen
+            </button>
+          </div>
+        )}
         </div>
       </div>
 
@@ -355,6 +410,17 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           <p className="text-secondary whitespace-pre-wrap">
             {post.content}
           </p>
+        )}
+
+        {/* Expand/Collapse Button */}
+        {shouldTruncate && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-purple-600 hover:text-purple-700 text-sm font-medium mt-2 flex items-center space-x-1 hover:cursor-pointer"
+          >
+            {isExpanded ? <EyeOff size={14} /> : <Eye size={14} />}
+            <span>{isExpanded ? 'Weniger anzeigen' : 'Mehr anzeigen'}</span>
+          </button>
         )}
 
         {/* Media */}
@@ -462,6 +528,14 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           onClick={() => setShowMoreMenu(false)}
         />
       )}
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        postId={post.id}
+        postAuthor={post.author}
+      />
     </div>
   );
 };

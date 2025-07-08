@@ -194,6 +194,245 @@ class AdminService {
       return { success: false, error: 'Network error' };
     }
   }
+
+  // UNIVERSE MANAGEMENT
+  // Alle Universes für Admin abrufen
+  static async getAllUniverses(page = 1, limit = 50, search = '', status = '') {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        search,
+        status
+      });
+    
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${API_URL}/api/admin/universes?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('🔍 AdminService: API Response Status:', response.status);
+      const result = await response.json();
+      console.log('🔍 AdminService: API Response Data:', result);
+
+      return result;
+    } catch (error) {
+      console.error('❌ Get all universes error:', error);
+      return { success: false, error: 'Fehler beim Laden der Universes' };
+    }
+  }
+
+  // Universe Status ändern (Schließen/Öffnen)
+  static async toggleUniverseStatus(universeId, isClosed) {
+    try {
+      const response = await fetch(`${API_URL}/admin/universes/${universeId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isClosed }),
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Toggle universe status error:', error);
+      return { success: false, error: 'Fehler beim Ändern des Universe-Status' };
+    }
+  }
+
+  // Universe aktivieren/deaktivieren
+  static async toggleUniverseActive(universeId, isActive) {
+    try {
+      const response = await fetch(`${API_URL}/admin/universes/${universeId}/active`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isActive }),
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Toggle universe active error:', error);
+      return { success: false, error: 'Fehler beim Ändern des Universe-Aktiv-Status' };
+    }
+  }
+
+  // Universe Ownership übertragen
+  static async transferUniverseOwnership(universeId, newCreatorId) {
+    try {
+      const response = await fetch(`${API_URL}/admin/universes/${universeId}/transfer`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newCreatorId }),
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Transfer universe ownership error:', error);
+      return { success: false, error: 'Fehler beim Übertragen der Eigentümerschaft' };
+    }
+  }
+
+  // Universe löschen (Soft Delete)
+  static async deleteUniverse(universeId) {
+    try {
+      const response = await fetch(`${API_URL}/admin/universes/${universeId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Delete universe error:', error);
+      return { success: false, error: 'Fehler beim Löschen des Universe' };
+    }
+  }
+
+  // Universe wiederherstellen (Soft Delete)
+  static async restoreUniverse(universeId) {
+    try {
+      const response = await fetch(`${API_URL}/admin/universes/${universeId}/restore`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Restore universe error:', error);
+      return { success: false, error: 'Fehler beim Wiederherstellen des Universe' };
+    }
+  }
+
+  // REPORTS MANAGEMENT
+  // Get Reports
+  static async getReports(page = 1, limit = 20, status = 'pending') {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        status
+      });
+
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports?${params}`, {
+        method: 'GET'
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Get reports error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async processReport(reportId, actionData) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports/${reportId}/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(actionData)
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Process report error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Get Moderation Reports (Alias für Backward Compatibility)
+  static async getModerationReports(page = 1, limit = 20, status = 'pending') {
+    // Alias für getReports - für Backward Compatibility
+    return this.getReports(page, limit, status);
+  }
+
+  static async getPendingApprovals() {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/approvals`, {
+        method: 'GET'
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Get pending approvals error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async assignUniverseModerator(universeId, userId) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/universes/${universeId}/moderators`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Assign universe moderator error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async updateUserRole(userId, roleData) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(roleData)
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Update user role error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async suspendUser(userId, reason, duration) {
+    try {
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/users/${userId}/suspend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason, duration })
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Suspend user error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default AdminService;

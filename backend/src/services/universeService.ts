@@ -46,6 +46,20 @@ export interface UniverseMember {
   avatarId?: string;
 }
 
+interface ServiceResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface UniverseListData {
+  universes: any[];
+  totalCount: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
 // Slug Generation Function
 function generateSlug(name: string): string {
   return name
@@ -202,7 +216,7 @@ export class UniverseService {
   }
 
   // User's Universes abrufen
-  static async getUserUniverses(userId: string, page = 1, limit = 20) {
+  static async getUserUniverses(userId: string, page = 1, limit = 20): Promise<ServiceResponse<UniverseListData>> {
     const offset = (page - 1) * limit;
 
     try {
@@ -219,27 +233,67 @@ export class UniverseService {
           isPublic: universesTable.isPublic,
           requireApproval: universesTable.requireApproval,
           createdAt: universesTable.createdAt,
+          createdBy: universesTable.creatorId,
           role: universeMembersTable.role,
           joinedAt: universeMembersTable.joinedAt
         })
         .from(universeMembersTable)
         .innerJoin(universesTable, eq(universeMembersTable.universeId, universesTable.id))
-        .where(eq(universeMembersTable.userId, userId))
+        .where(
+          and(
+            eq(universeMembersTable.userId, userId),
+            eq(universesTable.isDeleted, false)
+          )
+        )
         .orderBy(desc(universeMembersTable.joinedAt))
         .limit(limit)
         .offset(offset);
 
+      // Total Count für Pagination
+      const totalCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(universeMembersTable)
+        .innerJoin(universesTable, eq(universeMembersTable.universeId, universesTable.id))
+        .where(
+          and(
+            eq(universeMembersTable.userId, userId),
+            eq(universesTable.isDeleted, false)
+          )
+        );
+      
+      const totalCount = totalCountResult[0]?.count || 0;
+      
+      // Format für Frontend anpassen
+      const formattedUniverses = universes.map(universe => ({
+        ...universe,
+        isOwner: universe.createdBy === userId,
+        isMember: true,
+        membershipStatus: universe.role || 'member'
+      }));
+
+      console.log('✅ getUserUniverses result:', {
+        universeCount: formattedUniverses.length,
+        totalCount,
+        sampleUniverse: formattedUniverses[0] || null
+      });
+
       return {
-        universes,
-        pagination: {
+        success: true,
+        data: {
+          universes: formattedUniverses,
+          totalCount,
           page,
           limit,
-          hasMore: universes.length === limit
+          hasMore: offset + universes.length < totalCount
         }
       };
+
     } catch (error) {
-      console.error('Error fetching user universes:', error);
-      throw new Error('Failed to fetch user universes');
+      console.error('💥 UniverseService.getUserUniverses error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get user universes'
+      };
     }
   }
 
@@ -262,14 +316,14 @@ export class UniverseService {
           createdAt: universesTable.createdAt,
           creatorId: universesTable.creatorId,
           isActive: universesTable.isActive,
-          isDeleted: universesTable.isDeleted // ✅ JETZT verfügbar
+          isDeleted: universesTable.isDeleted
         })
         .from(universesTable)
         .where(
           and(
             eq(universesTable.slug, universeSlug),
             eq(universesTable.isActive, true),
-            eq(universesTable.isDeleted, false) // ✅ JETZT verfügbar
+            eq(universesTable.isDeleted, false)
           )
         )
         .limit(1);
@@ -555,48 +609,80 @@ export class UniverseService {
     }
 
     // User's eigene Universes (erstellt) abrufen
-    static async getOwnedUniverses(userId: string, page = 1, limit = 20) {
-      const offset = (page - 1) * limit;
+    static async getOwnedUniverses(userId: string, page = 1, limit = 20): Promise<ServiceResponse<UniverseListData>> {
+    const offset = (page - 1) * limit;
       
-      try {
-        const universes = await db
-          .select({
-            id: universesTable.id,
-            name: universesTable.name,
-            slug: universesTable.slug,
-            description: universesTable.description,
-            category: universesTable.category,
-            memberCount: universesTable.memberCount,
-            postCount: universesTable.postCount,
-            isPublic: universesTable.isPublic,
-            createdAt: universesTable.createdAt,
-          })
-          .from(universesTable)
-          .where(
-            and(
-              eq(universesTable.creatorId, userId),
-              eq(universesTable.isActive, true),
-              eq(universesTable.isDeleted, false)
-            )
+    try {
+      const universes = await db
+        .select({
+          id: universesTable.id,
+          name: universesTable.name,
+          slug: universesTable.slug,
+          description: universesTable.description,
+          category: universesTable.category,
+          memberCount: universesTable.memberCount,
+          postCount: universesTable.postCount,
+          isPublic: universesTable.isPublic,
+          createdAt: universesTable.createdAt,
+          createdBy: universesTable.creatorId
+        })
+        .from(universesTable)
+        .where(
+          and(
+            eq(universesTable.creatorId, userId),
+            eq(universesTable.isActive, true),
+            eq(universesTable.isDeleted, false)
           )
-          .orderBy(desc(universesTable.createdAt))
-          .limit(limit)
-          .offset(offset);
-        
-        return {
-          universes,
-          pagination: {
-            page,
-            limit,
-            total: universes.length,
-            hasMore: universes.length === limit
-          }
-        };
-      } catch (error) {
-        console.error('Error fetching owned universes:', error);
-        throw new Error('Failed to fetch owned universes');
-      }
+        )
+        .orderBy(desc(universesTable.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Total Count
+      const totalCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(universesTable)
+        .where(
+          and(
+            eq(universesTable.creatorId, userId),
+            eq(universesTable.isActive, true),
+            eq(universesTable.isDeleted, false)
+          )
+        );
+
+      const totalCount = totalCountResult[0]?.count || 0;
+
+      // Format für Frontend anpassen
+      const formattedUniverses = universes.map(universe => ({
+        ...universe,
+        isOwner: true,
+        isMember: true,
+        membershipStatus: 'owner'
+      }));
+
+      console.log('✅ getOwnedUniverses result:', {
+        universeCount: formattedUniverses.length,
+        totalCount
+      });
+
+      return {
+        success: true,
+        data: {
+          universes: formattedUniverses,
+          totalCount,
+          page,
+          limit,
+          hasMore: offset + universes.length < totalCount
+        }
+      };
+    } catch (error) {
+      console.error('💥 UniverseService.getOwnedUniverses error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch owned universes'
+      };
     }
+  }
 
     // Name-Eindeutigkeit prüfen
     static async checkUniverseNameExists(name: string, excludeId?: string): Promise<boolean> {

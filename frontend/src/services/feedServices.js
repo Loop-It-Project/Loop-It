@@ -118,7 +118,55 @@ class FeedService {
   }
 
   // Trending Feed abrufen
-  static async getTrendingFeed(timeframe = '24h', limit = 10) {
+  static async getTrendingFeed(timeframe = '7d', page = 1, limit = 20) {
+    try {
+      console.log(`🔥 Frontend: Requesting trending feed:`, { timeframe, page, limit });
+
+      const params = new URLSearchParams({
+        timeframe: timeframe.toString(),
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add Authorization header if user is logged in
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/feed/trending?${params}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      console.log(`✅ Frontend: Trending feed received:`, {
+        success: result.success,
+        postsCount: result.data?.posts?.length || 0,
+        hasMore: result.data?.pagination?.hasMore
+      });
+
+      return result;
+    } catch (error) {
+      console.error('❌ Frontend: Error fetching trending feed:', error);
+      throw error;
+    }
+  }
+
+  // Legacy method for backward compatibility
+  static async getTrendingFeedLegacy(timeframe = '24h', limit = 10) {
     try {
       const response = await fetch(
         `${API_URL}/api/feed/trending?timeframe=${timeframe}&limit=${limit}`,
