@@ -8,6 +8,13 @@
       "when": 1751908536684,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1751876228043,
+      "tag": "0005_solid_wong",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import BackButton from '../components/Backbutton';
 
 const Login = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -88,14 +89,9 @@ const Login = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
+
         {/* Back Button */}
-        <Link 
-          to="/"
-          className="flex items-center text-white mb-8 hover:text-gray-200 transition"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Zurück
-        </Link>
+        <BackButton />
 
         {/* Login Card */}
         <div className="bg-card rounded-2xl p-8 shadow-2xl">
@@ -110,7 +106,9 @@ const Login = ({ onLogin }) => {
             </div>
           )}
 
+          {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-secondary mb-2">

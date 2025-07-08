@@ -6,88 +6,177 @@ class UniverseService {
   // User's Universes abrufen
   static async getUserUniverses(page = 1, limit = 20) {
     try {
+      console.log('📡 UniverseService.getUserUniverses:', { page, limit });
+      
       const response = await BaseService.fetchWithAuth(
         `${API_URL}/api/universes/user/my-universes?page=${page}&limit=${limit}`
       );
 
+      console.log('getUserUniverses response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('✅ getUserUniverses response:', data);
+      
+      return {
+        success: true,
+        data: data.data || data
+      };
     } catch (error) {
-      console.error('Error fetching user universes:', error);
-      throw error;
+      console.error('❌ getUserUniverses error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
   // Owned Universes abrufen
   static async getOwnedUniverses(page = 1, limit = 20) {
     try {
+      console.log('📡 UniverseService.getOwnedUniverses:', { page, limit });
+      
       const response = await BaseService.fetchWithAuth(
         `${API_URL}/api/universes/user/owned?page=${page}&limit=${limit}`
       );
-    
+
+      console.log('getOwnedUniverses response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
-    
-      return await response.json();
+
+      const data = await response.json();
+      console.log('✅ getOwnedUniverses response:', data);
+      
+      return {
+        success: true,
+        data: data.data || data
+      };
     } catch (error) {
-      console.error('Error fetching owned universes:', error);
-      throw error;
+      console.error('❌ getOwnedUniverses error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
   // Universe beitreten
   static async joinUniverse(universeSlug) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/universes/${universeSlug}/join`,
-        {
-          method: 'POST',
-          headers: BaseService.getAuthHeaders(),
+      console.log('🚀 Joining universe:', universeSlug);
+
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/universes/${universeSlug}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         }
-      );
+      });
+
+      console.log('Join response status:', response.status);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+        } catch (jsonError) {
+          const errorText = await response.text();
+          errorMessage = errorText || `HTTP Error ${response.status}`;
+        }
+
+        console.error('Join universe error response:', errorMessage);
+        return { success: false, error: errorMessage };
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('✅ Join universe success:', data);
+
+      return { 
+        success: true, 
+        data: {
+          membership: data.data?.membership || data.membership,
+          universe: data.data?.universe || data.universe,
+          // ✅ Membership status für UI
+          isMember: true,
+          membershipStatus: 'member'
+        },
+        message: data.message || 'Universe erfolgreich beigetreten'
+      };
+
     } catch (error) {
-      console.error('Error joining universe:', error);
-      throw error;
+      console.error('Join universe network error:', error);
+
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        return { success: false, error: 'Verbindung zum Server fehlgeschlagen' };
+      }
+
+      return { 
+        success: false, 
+        error: error.message || 'Netzwerkfehler beim Beitreten' 
+      };
     }
   }
 
   // Universe verlassen
   static async leaveUniverse(universeSlug) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/universes/${universeSlug}/leave`,
-        {
-          method: 'DELETE',
-          headers: BaseService.getAuthHeaders(),
+      console.log('🚪 Leaving universe:', universeSlug);
+
+      const response = await BaseService.fetchWithAuth(`${API_URL}/api/universes/${universeSlug}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         }
-      );
-    
-      const data = await response.json();
-    
-      if (response.ok) {
-        return { success: true, ...data };
-      } else {
-        return { 
-          success: false, 
-          error: data.error || 'Failed to leave universe',
-          errorCode: data.errorCode || null
-        };
+      });
+
+      console.log('Leave response status:', response.status);
+
+      if (!response.ok) {
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+        } catch (jsonError) {
+          const errorText = await response.text();
+          errorMessage = errorText || `HTTP Error ${response.status}`;
+        }
+
+        console.error('Leave universe error response:', errorMessage);
+        return { success: false, error: errorMessage };
       }
+
+      const data = await response.json();
+      console.log('✅ Leave universe success:', data);
+
+      return { 
+        success: true, 
+        data: {
+          removedMembership: data.data?.removedMembership || data.removedMembership,
+          universe: data.data?.universe || data.universe,
+          // ✅ Membership status für UI
+          isMember: false,
+          membershipStatus: 'none'
+        },
+        message: data.message || 'Universe erfolgreich verlassen'
+      };
+
     } catch (error) {
-      console.error('Error leaving universe:', error);
+      console.error('Leave universe network error:', error);
+
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        return { success: false, error: 'Verbindung zum Server fehlgeschlagen' };
+      }
+
       return { 
         success: false, 
-        error: 'Network error' 
+        error: error.message || 'Netzwerkfehler beim Verlassen' 
       };
     }
   }

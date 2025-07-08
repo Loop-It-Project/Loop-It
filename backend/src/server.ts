@@ -11,6 +11,7 @@ import hashtagRoutes from './routes/hashtagRoutes';
 import searchRoutes from './routes/searchRoutes';
 import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
+import reportRoutes from './routes/reportRoutes';
 import { TokenService } from './services/tokenService';
 import { seedAdminData } from './db/seedAdminData';
 
@@ -127,6 +128,10 @@ try {
   console.log('  - Universe routes at /api/universes');
   app.use('/api/universes', universeRoutes);
   console.log('  ✅ Universe routes loaded successfully');
+
+  console.log('  - Report routes at /api/reports');
+  app.use('/api/reports', reportRoutes);
+  console.log('  ✅ Report routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {
