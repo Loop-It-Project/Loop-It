@@ -23,6 +23,13 @@ function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Dashboard Refresh Handler
+  const [dashboardRefreshTrigger, setDashboardRefreshTrigger] = useState(0);
+
+  const triggerDashboardRefresh = () => {
+    setDashboardRefreshTrigger(prev => prev + 1);
+  };
+
   // Enhanced Login Handler mit Token-Monitoring
   const handleLogin = async (userData) => {
     setUser(userData);
@@ -227,13 +234,20 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/universe/:universeSlug" 
+          <Route
+            path="/universe/:universeSlug"
             element={
-              <ProtectedRoute user={user}>
-                <UniversePage user={user} />
-              </ProtectedRoute>
-            } 
+              user ? (
+                <UniversePage 
+                  user={user}
+                  // Join/Leave Callbacks für Dashboard Updates
+                  onUniverseJoined={triggerDashboardRefresh}
+                  onUniverseLeft={triggerDashboardRefresh}
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
           />
           <Route 
             path="/settings" 

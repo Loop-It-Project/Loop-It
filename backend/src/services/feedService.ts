@@ -1,4 +1,4 @@
-import { getPersonalFeed, getUniverseFeed, getTrendingPosts, FeedPost } from '../queries/feedQueries';
+import { getPersonalFeed, getUniverseFeed, getTrendingPosts, getTrendingPostsOptimized, FeedPost } from '../queries/feedQueries';
 import { db } from '../db/index';
 import { 
   postsTable,
@@ -67,7 +67,10 @@ export class FeedService {
         .where(
           and(
             eq(postsTable.isDeleted, false),
-            eq(universeMembersTable.userId, userId)
+            eq(universeMembersTable.userId, userId),
+            eq(universesTable.isDeleted, false),  // Keine Posts aus gelöschten Universes
+            eq(universesTable.isClosed, false),   // Keine Posts aus geschlossenen Universes
+            eq(universesTable.isActive, true)     // Nur Posts aus aktiven Universes
           )
         )
         .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : asc(postsTable.createdAt))
@@ -97,7 +100,7 @@ export class FeedService {
     try {
       const offset = (page - 1) * limit;
 
-      // ✅ Query Builder mit korrektem conditional Join
+      // Query Builder
       let query = db
         .select({
           id: postsTable.id,
@@ -151,7 +154,10 @@ export class FeedService {
           and(
             eq(postsTable.isDeleted, false),
             eq(universesTable.slug, universeSlug),
-            eq(postsTable.isPublic, true)
+            eq(postsTable.isPublic, true),
+            eq(universesTable.isDeleted, false),  // Universe nicht gelöscht
+            eq(universesTable.isClosed, false),   // Universe nicht geschlossen
+            eq(universesTable.isActive, true)     // Universe ist aktiv
           )
         )
         .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : asc(postsTable.createdAt))
@@ -177,10 +183,54 @@ export class FeedService {
   }
 
   // Trending Posts
-  static async getTrendingFeed(timeframe = '24h', limit = 10) {
+  static async getTrendingFeed(
+    timeframe = '7d', 
+    limit = 20, 
+    page = 1,
+    userId?: string | null
+  ) {
+    try {
+      const offset = (page - 1) * limit;
+
+      console.log(`🔥 Loading trending feed:`, { timeframe, limit, page, userId: userId || 'anonymous' });
+
+      // Verwende optimierte Query für bessere Performance
+      const posts = await getTrendingPostsOptimized(timeframe, limit, offset, userId);
+
+      console.log(`✅ Trending feed loaded:`, {
+        postsCount: posts.length,
+        timeframe,
+        firstPostScore: posts[0] ? {
+          likes: posts[0].likeCount,
+          comments: posts[0].commentCount,
+          shares: posts[0].shareCount
+        } : null
+      });
+
+      return {
+        success: true,
+        posts,
+        pagination: {
+          page,
+          limit,
+          hasMore: posts.length === limit
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Get trending feed error:', error);
+      throw new Error('Failed to fetch trending feed');
+    }
+  }
+
+  // Alternative: Standard trending (falls optimierte Version Probleme macht)
+  static async getTrendingFeedStandard(timeframe = '7d', limit = 10) {
     try {
       const posts = await getTrendingPosts(timeframe, limit);
-      return { posts };
+      return { 
+        success: true, 
+        posts 
+      };
     } catch (error) {
       console.error('Error fetching trending feed:', error);
       throw new Error('Failed to fetch trending feed');

@@ -11,6 +11,7 @@ import hashtagRoutes from './routes/hashtagRoutes';
 import searchRoutes from './routes/searchRoutes';
 import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
+import reportRoutes from './routes/reportRoutes';
 import { TokenService } from './services/tokenService';
 import { seedAdminData } from './db/seedAdminData';
 
@@ -68,7 +69,11 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost',      // ← Für Frontend auf Port 80
+    'http://localhost:3000'  // ← Für direkte Backend Calls
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -123,6 +128,10 @@ try {
   console.log('  - Universe routes at /api/universes');
   app.use('/api/universes', universeRoutes);
   console.log('  ✅ Universe routes loaded successfully');
+
+  console.log('  - Report routes at /api/reports');
+  app.use('/api/reports', reportRoutes);
+  console.log('  ✅ Report routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {
@@ -170,7 +179,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API Health check (für Nginx Proxy)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    env: {
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasDbUrl: !!process.env.DATABASE_URL,
+      port: process.env.PORT || 3000
+    }
+  });
+});
+
 console.log('✅ Health route registered');
+console.log('✅ API Health route registered');
 
 // 404 Handler
 app.use((req, res) => {

@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN npx drizzle-kit generate --config drizzle.config.ts
+# RUN npx drizzle-kit generate --config drizzle.config.ts  # ← ENTFERNT: Verwende committed migrations
 RUN npm run build
 
 # --- Runtime Stage ---

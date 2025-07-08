@@ -42,10 +42,10 @@ router.get('/:universeSlug/details', auth, universeSlugValidation, getUniverseDe
 router.get('/:universeSlug/members', auth, universeSlugValidation, paginationValidation, getUniverseMembers);
 
 // Join Universe
-router.post('/:universeSlug/join', auth, universeSlugValidation, joinUniverse);
+router.post('/:universeSlug/join', auth, joinUniverse);
 
 // Leave Universe
-router.delete('/:universeSlug/leave', auth, universeSlugValidation, leaveUniverse);
+router.post('/:universeSlug/leave', auth, leaveUniverse);
 
 // Universe löschen
 router.delete('/:universeSlug', auth, universeSlugValidation, deleteUniverse);

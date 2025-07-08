@@ -449,6 +449,7 @@ export const universesTable = pgTable("universes", {
   isActive: boolean().default(true).notNull(),
   isFeatured: boolean().default(false).notNull(),
   isDeleted: boolean().default(false).notNull(),
+  isClosed: boolean().default(false).notNull(),
   
   createdAt: timestamp().defaultNow().notNull(),
   updatedAt: timestamp().defaultNow().notNull(),

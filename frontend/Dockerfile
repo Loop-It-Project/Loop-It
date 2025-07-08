@@ -1,7 +1,14 @@
 # --- Build Stage ---
 FROM node:lts-alpine AS builder
-
 WORKDIR /app
+
+# Accept build arguments
+ARG VITE_API_URL=http://localhost:3000
+ARG VITE_APP_NAME=Loop-It
+
+# Set environment variables from build args
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
 
 # Copy package files for dependency installation
 COPY package*.json ./
@@ -11,6 +18,10 @@ RUN npm ci --only=production=false
 
 # Copy source code
 COPY . .
+
+# Debug: Show environment variables
+RUN echo "Build-time VITE_API_URL: ${VITE_API_URL}"
+RUN echo "Build-time VITE_APP_NAME: ${VITE_APP_NAME}"
 
 # Use Docker-specific vite config if it exists, otherwise use default
 RUN if [ -f "vite.config.docker.js" ]; then \

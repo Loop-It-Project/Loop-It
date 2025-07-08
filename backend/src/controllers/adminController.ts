@@ -46,7 +46,7 @@ export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void
     
     // Check admin permissions
     const permissionCheck = await AdminService.checkAdminPermissions(userId);
-    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) { // ✅ Optional chaining
+    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) {
       res.status(403).json({
         success: false,
         error: 'Admin access required'
@@ -88,7 +88,7 @@ export const getModerationReports = async (req: AuthRequest, res: Response): Pro
     
     // Check admin permissions
     const permissionCheck = await AdminService.checkAdminPermissions(userId);
-    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) { // ✅ Optional chaining
+    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) {
       res.status(403).json({
         success: false,
         error: 'Admin access required'
@@ -129,7 +129,7 @@ export const assignUniverseModerator = async (req: AuthRequest, res: Response): 
     
     // Check admin permissions
     const permissionCheck = await AdminService.checkAdminPermissions(userId);
-    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) { // ✅ Optional chaining
+    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) {
       res.status(403).json({
         success: false,
         error: 'Admin access required'
@@ -176,7 +176,7 @@ export const getPendingApprovals = async (req: AuthRequest, res: Response): Prom
     
     // Check admin permissions
     const permissionCheck = await AdminService.checkAdminPermissions(userId);
-    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) { // ✅ Optional chaining
+    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) {
       res.status(403).json({
         success: false,
         error: 'Admin access required'
@@ -202,6 +202,157 @@ export const getPendingApprovals = async (req: AuthRequest, res: Response): Prom
     res.status(500).json({
       success: false,
       error: 'Failed to get pending approvals'
+    });
+  }
+};
+
+// ALLE UNIVERSES ABRUFEN
+export const getAllUniverses = async (req: any, res: any): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    
+    // Check admin permissions
+    const permissionCheck = await AdminService.checkAdminPermissions(userId);
+    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) {
+      res.status(403).json({
+        success: false,
+        error: 'Admin access required'
+      });
+      return;
+    }
+
+    const { page = 1, limit = 50, search = '', status = '' } = req.query;
+    
+    const result = await AdminService.getAllUniverses(
+      parseInt(page as string),
+      parseInt(limit as string),
+      search as string,
+      status as string
+    );
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('Admin getAllUniverses error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get universes'
+    });
+  }
+};
+
+// Universe Status toggeln (geschlossen/aktiv)
+export const toggleUniverseStatus = async (req: any, res: any): Promise<void> => {
+  try {
+    const { universeId } = req.params;
+    const { isClosed } = req.body;
+    const adminId = req.user.id;
+
+    const result = await AdminService.toggleUniverseStatus(universeId, isClosed, adminId);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('Admin toggleUniverseStatus error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle universe status'
+    });
+  }
+};
+
+// Universe Aktivieren/Deaktivieren
+export const toggleUniverseActive = async (req: any, res: any): Promise<void> => {
+  try {
+    const { universeId } = req.params;
+    const { isActive } = req.body;
+    const adminId = req.user.id;
+
+    const result = await AdminService.toggleUniverseActive(universeId, isActive, adminId);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('Admin toggleUniverseActive error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle universe active status'
+    });
+  }
+};
+
+// Universe Eigentümerschaft übertragen
+export const transferUniverseOwnership = async (req: any, res: any): Promise<void> => {
+  try {
+    const { universeId } = req.params;
+    const { newCreatorId } = req.body;
+    const adminId = req.user.id;
+
+    const result = await AdminService.transferUniverseOwnership(universeId, newCreatorId, adminId);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('Admin transferUniverseOwnership error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to transfer universe ownership'
+    });
+  }
+};
+
+// Universe löschen (Soft Delete)
+export const deleteUniverse = async (req: any, res: any): Promise<void> => {
+  try {
+    const { universeId } = req.params;
+    const adminId = req.user.id;
+
+    const result = await AdminService.deleteUniverse(universeId, adminId);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('Admin deleteUniverse error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete universe'
+    });
+  }
+};
+
+// Universe wiederherstellen
+export const restoreUniverse = async (req: any, res: any): Promise<void> => {
+  try {
+    const { universeId } = req.params;
+    const adminId = req.user.id;
+
+    const result = await AdminService.restoreUniverse(universeId, adminId);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('Admin restoreUniverse error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to restore universe'
     });
   }
 };
