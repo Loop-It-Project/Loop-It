@@ -1,3 +1,26 @@
+# Projekttagebuch – 08.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Bugs beheben die sich eingeschlichen haben
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Die meisten Bugs fürs MVP zu beheben
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Niergends, ich hatte nur viel heute im Privaten zutun
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Nichts neues wirklich
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Bug Report Funktion samt dazugehörigen Ticket System, User Profil final einbinden und Media Upload als Komponente final integrieren, Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken
+
+___
 # Projekttagebuch – 07.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)
