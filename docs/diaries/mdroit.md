@@ -1,3 +1,25 @@
+# Projekttagebuch Marc Droit - 08.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+Frontend debuggen, Styling überarbeiten
+
+## *Fortschritte & Ergebnisse:*
+
+frontend debugged -> checks bestanden
+
+## *Herausforderungen & Blockaden:*
+
+Drizzle nicht funktionsfähig
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+Drizzle debuggen, Hobbies/LandingPage fertigstellen
+
 # Projekttagebuch Marc Droit - 07.07.2025
 
 ## *Heutige Hauptaufgabe(n):*

@@ -1,0 +1,1 @@
+ALTER TABLE "universes" ADD COLUMN "isClosed" boolean DEFAULT false NOT NULL;
