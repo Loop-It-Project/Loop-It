@@ -1,4 +1,4 @@
-import BackButton from "../components/BackButton,jsx";
+import BackButton from "../components/BackButton.jsx";
 
 const PrivacyPolicy = () => {
   return (
