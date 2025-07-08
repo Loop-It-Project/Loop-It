@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
-// import BackButton from '../components/BackButton';
+import BackButton from '../components/Backbutton';
 
 const Register = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -151,7 +151,7 @@ const Register = ({ onLogin }) => {
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center px-6 py-8">
       <div className="max-w-md w-full">
         {/* Back Button */}
-        {/* < BackButton /> */}
+        < BackButton />
 
         {/* Register Card */}
         <div className="bg-card rounded-2xl p-8 shadow-2xl">

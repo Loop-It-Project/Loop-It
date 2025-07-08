@@ -1,11 +1,11 @@
-// import BackButton from '../components/BackButton';
+import BackButton from '../components/Backbutton';
 
 const PrivacyPolicy = () => {
   return (
     <div className="bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700">
       <div className="min-h-screen max-w-4xl w-full text-center mx-auto p-4">
         <div>
-          {/* <BackButton /> */}
+          <BackButton />
         </div>
         <h1 className="text-2xl font-bold mb-4">Datenschutz</h1>
         <p className="mb-2">
