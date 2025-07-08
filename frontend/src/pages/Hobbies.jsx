@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import BackButton from '../components/BackButton';
+// import BackButton from '../components/BackButton';
 
 const Hobbies = ({ onNavigate }) => {
   const navigate = useNavigate();
@@ -92,7 +92,7 @@ const Hobbies = ({ onNavigate }) => {
       <div className="max-w-md w-full">
 
         {/* Back Button */}
-        < BackButton />
+        {/* < BackButton /> */}
 
         {/* Hobbies Form */}
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
