@@ -172,12 +172,28 @@ jobs:
       
       - name: Test Docker Compose Setup
         run: |
-          # Create test environment
+          # Create test environment (exactly like working version)
           echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .env
           echo "VERSION=${{ github.sha }}" >> .env
-          echo "COMPOSE_PROJECT_NAME=loop-it-ci" >> .env
+          echo "COMPOSE_PROJECT_NAME=loop-it-ci-${{ github.run_id }}" >> .env
           
-          # Start services with wait
+          # Add the required secrets (the only difference from Friday)
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}" >> .env
+          
+          # Override docker-compose to use CI-built images (new improvement)
+          cat > docker-compose.override.yml << 'EOF'
+          services:
+            backend:
+              image: ${{ vars.DOCKERHUB_USERNAME }}/loop-it-backend:${{ github.sha }}
+              build: null
+            frontend:
+              image: ${{ vars.DOCKERHUB_USERNAME }}/loop-it-frontend:${{ github.sha }}
+              build: null
+          EOF
+          
+          # Rest is EXACTLY like Friday's working version
           echo "Starting services..."
           docker compose up -d --wait
           
@@ -185,15 +201,19 @@ jobs:
           echo "=== Initial Container Status ==="
           docker compose ps
           
-          # Extended wait for backend warmup (based on local testing)
-          echo "Waiting for backend warmup..."
+          # Extended wait for backend warmup (entrypoint.sh needs time for migrations)
+          echo "Waiting for backend warmup (migrations + startup)..."
           sleep 90
           
           # Debug: Show container status after warmup
           echo "=== Container Status After Warmup ==="
           docker compose ps
           
-          # Test services in order
+          # Show backend logs to see if entrypoint.sh worked
+          echo "=== Backend Startup Logs ==="
+          docker compose logs backend | tail -30
+          
+          # Test services in order (exactly like working version)
           echo "=== Testing Database ==="
           docker compose exec -T postgres pg_isready -U loop_user -d loop-it || exit 1
           echo "✅ Database is ready!"
@@ -255,11 +275,11 @@ jobs:
           echo "=== Final Container Status ==="
           docker compose ps
           
+          echo "=== Backend Logs (entrypoint.sh output) ==="
+          docker compose logs backend
+          
           echo "=== Frontend Logs ==="
           docker compose logs frontend
-          
-          echo "=== Backend Logs ==="
-          docker compose logs backend | tail -100
           
           echo "=== Postgres Logs ==="
           docker compose logs postgres | tail -50

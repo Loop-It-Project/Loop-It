@@ -24,6 +24,14 @@ dist-ssr
 *.sw?
 
 
+# Environment files
+.env
+.env.local
+*.env
+
+*secrets-generated.yaml
+*secrets
+
 # Kubernetes Secrets
 k8s/secrets.yaml
 k8s/secrets-*.yaml
