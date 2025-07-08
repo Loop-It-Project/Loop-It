@@ -1,3 +1,25 @@
+# Projekttagebuch Marc Droit - 07.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+Datenschutz/Impressum erstellen
+
+## *Fortschritte & Ergebnisse:*
+
+Datenschutz/Impressum erstellt, über Datenschutzerklärung informiert, BackButton ausgelagert
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+Auslagern von Komponenten vertieft
+
+## *Plan für morgen:*
+
+Styling/Color-Scheme, Hobbies/LandingPage fertigstellen
+
 # Projekttagebuch Marc Droit - 04.07.2025
 
 ## *Heutige Hauptaufgabe(n):*
