@@ -3,9 +3,10 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X } from 'lucide-react';
 import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
+import UniverseService from '../services/universeService';
 import useEscapeKey from '../hooks/useEscapeKey';
 
-const UniversePage = ({ user }) => {
+const UniversePage = ({ user, onUniverseJoined, onUniverseLeft }) => {
   const { universeSlug } = useParams(); // URL Parameter aus Router
   const navigate = useNavigate();
   const [searchParams] = useSearchParams(); // Query Parameter aus Router
@@ -13,7 +14,10 @@ const UniversePage = ({ user }) => {
   const [universe, setUniverse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [message, setMessage] = useState(''); 
   const [actionLoading, setActionLoading] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showTransferOwnership, setShowTransferOwnership] = useState(false);
   const [members, setMembers] = useState([]);
@@ -28,16 +32,18 @@ const UniversePage = ({ user }) => {
         setLoading(true);
         setError(null);
 
-        console.log('🔍 Loading universe:', universeSlug); // Debug
+        console.log('🔍 Loading universe:', universeSlug);
 
-        // API Call to get Universe details
         const response = await FeedService.getUniverseDetails(universeSlug);
         
-        console.log('🔍 API Response:', response); // Debug
+        console.log('🔍 API Response:', response);
 
         if (response.success) {
-          console.log('✅ Universe Details loaded:', response.data); // Debug
+          console.log('✅ Universe Details loaded:', response.data);
           setUniverse(response.data);
+          
+          // Set membership status from API response
+          setIsJoined(response.data.isMember || response.data.membershipStatus === 'member');
         } else {
           console.error('❌ API Error:', response.error);
           throw new Error(response.error || 'Universe not found');
@@ -82,51 +88,110 @@ const UniversePage = ({ user }) => {
 
   // Handle Join/Leave Universe
   const handleJoinLeave = async () => {
-    if (!universe) return;
-    
-    setActionLoading(true);
-    try {
-      if (universe.isMember) {
-        // User is Owner and cannot Leave as Owner if correctly set
-        if (isOwner) {
-          alert('Als Creator/Owner kannst du das Universe nicht verlassen. Übertrage zuerst die Eigentümerschaft oder lösche das Universe.');
-          return;
-        }
+    if (!user) {
+      alert('Du musst angemeldet sein um einem Universe beizutreten');
+      return;
+    }
 
-        const result = await FeedService.leaveUniverse(universeSlug);
+    try {
+      setIsJoining(true);
+      setError('');
+      setMessage('');
+
+      console.log('🌌 Join/Leave action:', { 
+        universeSlug, 
+        isJoined, 
+        userId: user.id 
+      });
+
+      let result;
+
+      if (isJoined) {
+        // Universe verlassen
+        result = await UniverseService.leaveUniverse(universeSlug);
+        console.log('🚪 Leave universe result:', result);
 
         if (result.success) {
-          setUniverse(prev => ({
+          // UI SOFORT aktualisieren
+          setIsJoined(false);
+          setUniverse(prev => prev ? {
             ...prev,
             isMember: false,
             membershipStatus: 'none',
-            memberCount: prev.memberCount - 1
-          }));
-        } else {
-          if (result.errorCode === 'CREATOR_CANNOT_LEAVE') {
-            alert('Als Creator/Owner kannst du das Universe nicht verlassen. Nutze die Einstellungen um die Eigentümerschaft zu übertragen oder das Universe zu löschen.');
-          } else {
-            alert(result.error || 'Fehler beim Verlassen des Universes');
+            memberCount: Math.max(0, (prev.memberCount || 0) - 1)
+          } : null);
+          setMessage('Du hast das Universe erfolgreich verlassen');
+          
+          // Dashboard über Universe Leave informieren
+          if (onUniverseLeft) {
+            onUniverseLeft(universeSlug);
           }
+        } else {
+          throw new Error(result.error || 'Failed to leave universe');
         }
       } else {
-        const result = await FeedService.joinUniverse(universeSlug);
+        // Universe beitreten
+        result = await UniverseService.joinUniverse(universeSlug);
+        console.log('🚀 Join universe result:', result);
+
         if (result.success) {
-          setUniverse(prev => ({
+          // UI SOFORT aktualisieren
+          setIsJoined(true);
+          setUniverse(prev => prev ? {
             ...prev,
-            isMember: result.data.status === 'joined',
-            membershipStatus: result.data.status === 'pending' ? 'pending' : 'member',
-            memberCount: result.data.status === 'joined' ? prev.memberCount + 1 : prev.memberCount
-          }));
+            isMember: true,
+            membershipStatus: 'member',
+            memberCount: (prev.memberCount || 0) + 1
+          } : null);
+          setMessage('Du bist dem Universe erfolgreich beigetreten!');
+        
+          // Dashboard über Universe Join informieren
+          if (onUniverseJoined) {
+            onUniverseJoined(universeSlug);
+          }
         } else {
           throw new Error(result.error || 'Failed to join universe');
         }
       }
+
+      // Success message nach 3 Sekunden ausblenden
+      setTimeout(() => setMessage(''), 3000);
+
     } catch (error) {
       console.error('❌ Error joining/leaving universe:', error);
-      alert('Fehler bei der Aktion: ' + error.message);
+
+      // Bei Fehler - UI State zurücksetzen
+      // Reload universe data um sicherzustellen, dass UI korrekt ist
+      try {
+        const response = await FeedService.getUniverseDetails(universeSlug);
+        if (response.success) {
+          setUniverse(response.data);
+          setIsJoined(response.data.isMember || response.data.membershipStatus === 'member');
+        }
+      } catch (reloadError) {
+        console.error('Error reloading universe after failure:', reloadError);
+      }
+
+      let errorMessage = 'Unbekannter Fehler';
+
+      if (error.message.includes('Network Error') || error.message.includes('fetch')) {
+        errorMessage = 'Verbindung zum Server fehlgeschlagen';
+      } else if (error.message.includes('401')) {
+        errorMessage = 'Du musst angemeldet sein';
+      } else if (error.message.includes('403')) {
+        errorMessage = 'Du hast keine Berechtigung für diese Aktion';
+      } else if (error.message.includes('404')) {
+        errorMessage = 'Universe nicht gefunden';
+      } else if (error.message.includes('409')) {
+        errorMessage = 'Du bist bereits Mitglied dieses Universe';
+      } else {
+        errorMessage = error.message || 'Aktion fehlgeschlagen';
+      }
+
+      setError(errorMessage);
+      setTimeout(() => setError(''), 5000);
     } finally {
-      setActionLoading(false);
+      setIsJoining(false);
     }
   };
 
@@ -222,7 +287,9 @@ const UniversePage = ({ user }) => {
       postCount: universe?.postCount
     },
     isOwner,
-    universeSlug
+    universeSlug,
+    isJoined,
+    isJoining
   });
 
   // Render loading state
@@ -303,29 +370,36 @@ const UniversePage = ({ user }) => {
 
             {/* Action Buttons */}
             <div className="flex items-center space-x-3">
-              {user && (
+              {user && !isOwner && (
                 <button
                   onClick={handleJoinLeave}
-                  disabled={actionLoading}
-                  className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium hover:cursor-pointer transition disabled:opacity-50 ${
-                    universe.isMember
-                      ? 'bg-hover text-secondary hover:bg-tertiary'
-                      : universe.membershipStatus === 'pending'
-                      ? 'bg-yellow-100 text-yellow-700'
+                  disabled={isJoining}
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium hover:cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isJoined
+                      ? 'bg-gray-600 text-white hover:bg-gray-700'
                       : 'bg-purple-600 text-white hover:bg-purple-700'
                   }`}
                 >
-                  {universe.isMember ? (
+                  {isJoining ? (
+                    // Loading Spinner mit dynamischem Text
                     <>
-                      <UserMinus size={20} />
-                      <span>Verlassen</span>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent hover:cursor-pointer rounded-full animate-spin" />
+                      <span>{isJoined ? 'Verlasse...' : 'Trete bei...'}</span>
                     </>
-                  ) : universe.membershipStatus === 'pending' ? (
-                    <span>Anfrage gesendet</span>
                   ) : (
+                    // Statischer Button basierend auf isJoined
                     <>
-                      <UserPlus size={20} />
-                      <span>{actionLoading ? 'Trete bei...' : 'Beitreten'}</span>
+                      {isJoined ? (
+                        <>
+                          <UserMinus size={16} />
+                          <span>Verlassen</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus size={16} />
+                          <span>Beitreten</span>
+                        </>
+                      )}
                     </>
                   )}
                 </button>
@@ -448,6 +522,7 @@ const UniversePage = ({ user }) => {
         <Feed
           type="universe"
           universeSlug={universeSlug}
+          currentUser={user}
           fromHashtag={fromHashtag} // Optional: Hashtag Filter
           onUniverseClick={(slug) => navigate(`/universe/${slug}`)} // Router Navigation
           onHashtagClick={handleHashtagClick} // Pass Hashtag Click Handler

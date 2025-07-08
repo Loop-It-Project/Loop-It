@@ -94,14 +94,23 @@ export const getTrendingFeed = async (req: Request, res: Response): Promise<void
   }
 
   try {
-    const timeframe = req.query.timeframe as string || '24h';
-    const limit = parseInt(req.query.limit as string) || 10;
+    const timeframe = req.query.timeframe as string || '7d';
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const page = parseInt(req.query.page as string) || 1;
+    
+    // User ID für Like-Status (optional)
+    const userId = (req as AuthRequest).user?.id || null;
 
-    const result = await FeedService.getTrendingFeed(timeframe, limit);
+    console.log(`🔥 Trending feed request:`, { timeframe, limit, page, userId: userId || 'anonymous' });
+
+    const result = await FeedService.getTrendingFeed(timeframe, limit, page, userId);
     
     res.status(200).json({
       success: true,
-      data: result,
+      data: {
+        posts: result.posts,
+        pagination: result.pagination
+      },
       message: 'Trending feed retrieved successfully'
     });
   } catch (error) {
@@ -209,10 +218,14 @@ export const hashtagValidation = [
 export const trendingValidation = [
   query('timeframe')
     .optional()
-    .isIn(['1h', '6h', '24h', '7d'])
-    .withMessage('Timeframe must be one of: 1h, 6h, 24h, 7d'),
+    .isIn(['1h', '6h', '24h', '7d', '30d'])
+    .withMessage('Timeframe must be one of: 1h, 6h, 24h, 7d, 30d'),
   query('limit')
     .optional()
-    .isInt({ min: 1, max: 20 })
-    .withMessage('Limit must be between 1 and 20'),
+    .isInt({ min: 1, max: 50 })
+    .withMessage('Limit must be between 1 and 50'),
+  query('page')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Page must be between 1 and 100'),
 ];

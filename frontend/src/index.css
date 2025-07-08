@@ -228,3 +228,15 @@ body {
   border: 2px solid #ffffff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
+select option {
+  background-color: var(--color-card);
+  color: var(--color-primary);
+}
+
+/* Dark mode */
+[data-theme="dark"] select option,
+.dark select option {
+  background-color: rgb(55, 65, 81); /* gray-700 */
+  color: white;
+}

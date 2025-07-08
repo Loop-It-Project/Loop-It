@@ -56,6 +56,14 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
     }
   };
 
+  // Filtere nur verfügbare Universes für Posts
+  const availableUniverses = userUniverses?.filter(universe => {
+    // Nur aktive, offene und nicht gelöschte Universes
+    return universe.isActive !== false && 
+           universe.isClosed !== true && 
+           universe.isDeleted !== true;
+  }) || [];
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -69,21 +77,52 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Universe Selection */}
           <div>
-            <label className="block text-sm font-medium text-secondary mb-1">
+            <label className="block text-sm font-medium text-primary dark:text-white mb-1">
               Universe auswählen *
             </label>
-            <select
-              value={formData.universeId}
-              onChange={(e) => setFormData(prev => ({ ...prev, universeId: e.target.value }))}
-              className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-            >
-              <option value="">Universe wählen...</option>
-              {userUniverses.map((universe) => (
-                <option key={universe.id} value={universe.id}>
-                  {universe.name}
-                </option>
-              ))}
-            </select>
+            {loadingUniverses ? (
+              <div className="text-sm text-tertiary">Lade Universes...</div>
+            ) : (
+              <>
+                <select
+                  value={formData.universeId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, universeId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="">Universe wählen...</option>
+                  {userUniverses.map((universe) => (
+                    <option key={universe.id} value={universe.id}>
+                      {universe.slug} ({universe.memberCount} Mitglieder)
+                    </option>
+                  ))}
+                </select>
+                
+                {/* WARNUNGEN FÜR NICHT VERFÜGBARE UNIVERSES */}
+                {userUniverses.length === 0 && allUserUniverses.length > 0 && (
+                  <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-700 rounded-lg">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      ⚠️ Alle deine Universes ({allUserUniverses.length}) sind derzeit geschlossen oder inaktiv. Du kannst momentan keine Posts erstellen.
+                    </p>
+                  </div>
+                )}
+
+                {allUserUniverses.length === 0 && (
+                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      ℹ️ Du bist noch keinem Universe beigetreten. Tritt einem Universe bei, um Posts zu erstellen.
+                    </p>
+                  </div>
+                )}
+
+                {userUniverses.length > 0 && allUserUniverses.length > userUniverses.length && (
+                  <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      ℹ️ {userUniverses.length} von {allUserUniverses.length} Universes sind verfügbar. {allUserUniverses.length - userUniverses.length} sind geschlossen/inaktiv.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
             {errors.universeId && <p className="text-red-500 text-sm mt-1">{errors.universeId}</p>}
           </div>
 
@@ -151,10 +190,21 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:cursor-pointer disabled:opacity-50"
+              disabled={
+                loading || 
+                isCreatingPost || 
+                !formData.content.trim() || 
+                !formData.universeId ||
+                userUniverses.length === 0
+              }
+              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Erstelle...' : 'Post erstellen'}
+              <Send size={16} className={isCreatingPost ? 'animate-pulse' : ''} />
+              <span>
+                {userUniverses.length === 0 ? 'Keine Universes verfügbar' :
+                 isCreatingPost ? 'Wird gepostet...' : 
+                 loading ? 'Erstelle...' : 'Posten'}
+              </span>
             </button>
           </div>
         </form>
