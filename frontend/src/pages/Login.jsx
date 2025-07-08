@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import BackButton from '../components/BackButton.jsx';
+import BackButton from '../components/BackButton';
 
 const Login = ({ onLogin }) => {
   const navigate = useNavigate();

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
-import BackButton from '../components/BackButton.jsx';
+import BackButton from '../components/BackButton';
 
 const Register = ({ onLogin }) => {
   const navigate = useNavigate();

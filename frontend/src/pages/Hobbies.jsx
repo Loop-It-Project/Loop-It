@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Header from '../components/Header';
-import BackButton from '../components/BackButton.jsx';
+import BackButton from '../components/BackButton';
 
 const Hobbies = ({ onNavigate }) => {
   const navigate = useNavigate();
