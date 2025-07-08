@@ -72,18 +72,57 @@ const Register = ({ onLogin }) => {
     try {
       const { confirmPassword, ...submitData } = formData;
       
-      const response = await fetch(`/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      });
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submitData),
+    });
 
-      const data = await response.json();
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
 
-      if (response.ok) {
-        // Save token to localStorage
+    if (!response.ok) {
+      // Bei HTTP Fehler versuchen Text zu lesen statt JSON
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || 'Registrierung fehlgeschlagen';
+        
+        if (errorData.errors) {
+          // Handle validation errors
+          const errorObj = {};
+          errorData.errors.forEach(error => {
+            errorObj[error.path] = error.msg;
+          });
+          setErrors(errorObj);
+          return;
+        }
+      } catch (jsonError) {
+        // Falls JSON parsing fehlschlägt, Text lesen
+        const errorText = await response.text();
+        console.error('Error response text:', errorText);
+        errorMessage = `Server Error (${response.status}): ${errorText || 'Unbekannter Fehler'}`;
+      }
+      
+      setErrors({ general: errorMessage });
+      return;
+    }
+
+      // Erfolgreiche Response - JSON parsen
+      let data;
+      
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('JSON parse error on success response:', jsonError);
+        setErrors({ general: 'Server-Antwort konnte nicht verarbeitet werden' });
+        return;
+      }
+
+      // Erfolgreiche Registrierung
+      if (data.token && data.user) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -91,20 +130,17 @@ const Register = ({ onLogin }) => {
         onLogin(data.user);
         navigate('/dashboard');
       } else {
-        if (data.errors) {
-          // Handle validation errors
-          const errorObj = {};
-          data.errors.forEach(error => {
-            errorObj[error.path] = error.msg;
-          });
-          setErrors(errorObj);
-        } else {
-          setErrors({ general: data.error || 'Registrierung fehlgeschlagen' });
-        }
+        setErrors({ general: 'Registrierung erfolgreich, aber Login-Daten unvollständig' });
       }
+
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ general: 'Verbindungsfehler. Bitte versuche es später erneut.' });
+
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setErrors({ general: 'Verbindung zum Server fehlgeschlagen. Ist der Server gestartet?' });
+      } else {
+        setErrors({ general: 'Verbindungsfehler. Bitte versuche es später erneut.' });
+      }
     } finally {
       setIsLoading(false);
     }

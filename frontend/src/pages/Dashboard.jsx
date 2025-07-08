@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search } from 'lucide-react';
+import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search, Crown } from 'lucide-react';
 import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
 import HashtagService from '../services/hashtagService';
+import UniverseService from '../services/universeService';
 import CreateUniverse from '../components/CreateUniverse';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 // Dashboard Component
 // Zeigt den Haupt-Dashboard-Bereich mit Feed, Universes und Navigation
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ user, onLogout, refreshTrigger }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams(); // URL parameter lesen
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'feed');
@@ -29,6 +30,14 @@ const Dashboard = ({ user, onLogout }) => {
     });
   }, [searchParams, activeTab, trendingTimeframe]);
 
+  // Reload universes wenn refresh trigger sich ändert
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      console.log('🔄 Dashboard: Refreshing due to trigger:', refreshTrigger);
+      loadUserUniverses();
+    }
+  }, [refreshTrigger]);
+
   // ESC-Key Handler für Modals
   useEscapeKey(() => {
     if (showCreateUniverse) {
@@ -37,40 +46,69 @@ const Dashboard = ({ user, onLogout }) => {
   }, showCreateUniverse);
 
   // User's Universes laden für Sidebar
+  const loadUserUniverses = async () => {
+    try {
+      setLoadingUniverses(true);
+
+      console.log('🔄 Loading user universes...');
+
+      const [ownedResponse, memberResponse] = await Promise.all([
+      UniverseService.getOwnedUniverses(1, 50).catch((error) => {
+        console.error('getOwnedUniverses error:', error);
+        return { success: false, error: error.message };
+      }),
+      UniverseService.getUserUniverses(1, 50).catch((error) => {
+        console.error('getUserUniverses error:', error);
+        return { success: false, error: error.message };
+      })
+    ]);
+    
+      const ownedUniverses = ownedResponse.success ? ownedResponse.data.universes || [] : [];
+      const memberUniverses = memberResponse.success ? memberResponse.data.universes || [] : [];
+
+      console.log('📊 API Responses:', {
+        owned: {
+          success: ownedResponse.success,
+          count: ownedResponse.success ? ownedResponse.data?.universes?.length || 0 : 0,
+          error: ownedResponse.error
+        },
+        member: {
+          success: memberResponse.success,
+          count: memberResponse.success ? memberResponse.data?.universes?.length || 0 : 0,
+          error: memberResponse.error
+        }
+      });
+
+      // Duplikate entfernen (falls User Owner und Member ist)
+      const allUniversesMap = new Map();
+      
+      // Owned universes mit Owner-Flag markieren
+      ownedUniverses.forEach(universe => {
+        allUniversesMap.set(universe.id, { ...universe, isOwner: true });
+      });
+      
+      // Member universes hinzufügen (überschreibt nicht owned universes)
+      memberUniverses.forEach(universe => {
+        if (!allUniversesMap.has(universe.id)) {
+          allUniversesMap.set(universe.id, { ...universe, isOwner: false });
+        }
+      });
+    
+      const allUniverses = Array.from(allUniversesMap.values());
+      console.log('✅ Final universes list:', allUniverses);
+      setUserUniverses(allUniverses);
+
+    } catch (error) {
+      console.error('Error loading user universes:', error);
+    } finally {
+      setLoadingUniverses(false);
+    }
+  };
+
+  // User's Universes laden für Sidebar
   useEffect(() => {
-    const loadUserUniverses = async () => {
-      try {
-        setLoadingUniverses(true);
-
-        const [ownedResponse, memberResponse] = await Promise.all([
-          FeedService.getOwnedUniverses().catch(() => ({ success: false })),
-          FeedService.getUserUniverses(1, 50).catch(() => ({ success: false }))
-        ]);
-      
-        const ownedUniverses = ownedResponse.success ? ownedResponse.data.universes || [] : [];
-        const memberUniverses = memberResponse.success ? memberResponse.data.universes || [] : [];
-
-        // Duplikate entfernen (falls User Owner und Member ist)
-        const allUniversesMap = new Map();
-        
-        [...ownedUniverses, ...memberUniverses].forEach(universe => {
-          if (!allUniversesMap.has(universe.id)) {
-            allUniversesMap.set(universe.id, universe);
-          }
-        });
-      
-        const allUniverses = Array.from(allUniversesMap.values());
-        setUserUniverses(allUniverses);
-
-      } catch (error) {
-        console.error('Error loading user universes:', error);
-      } finally {
-        setLoadingUniverses(false);
-      }
-    };
-
     loadUserUniverses();
-  }, []);
+  }, [user?.id]); // Re-load wenn User sich ändert
 
   // Universe Click Handler
   const handleUniverseClick = (universeSlug) => {
@@ -95,6 +133,22 @@ const Dashboard = ({ user, onLogout }) => {
     setShowCreateUniverse(false);
     setActiveTab('feed');
     navigate('/dashboard');
+  };
+
+  // Universe List nach Join/Leave aktualisieren
+  const handleUniverseJoined = async (universeSlug) => {
+    console.log('🚀 Dashboard: Universe joined:', universeSlug);
+    
+    // Sofort reload der Universe-Liste
+    await loadUserUniverses();
+  };
+
+  // Universe aus User's List entfernen
+  const handleUniverseLeft = async (universeSlug) => {
+    console.log('🚪 Dashboard: Universe left:', universeSlug);
+    
+    // Sofort reload der Universe-Liste
+    await loadUserUniverses();
   };
 
   // Tab change mit URL update
@@ -211,7 +265,7 @@ const Dashboard = ({ user, onLogout }) => {
                   <Plus size={20} />
                 </button>
               </div>
-              
+
               {loadingUniverses ? (
                 <div className="text-center py-4 text-tertiary">
                   Lädt...
@@ -238,16 +292,22 @@ const Dashboard = ({ user, onLogout }) => {
                         <Hash className="text-white" size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-primary truncate">
-                          {universe.slug}
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm font-medium text-primary truncate">
+                            {universe.slug}
+                          </p>
+                          {/* Owner/Member Indikator - Crown Icon ist jetzt verfügbar */}
+                          {universe.isOwner && (
+                            <Crown size={12} className="text-yellow-500 flex-shrink-0" />
+                          )}
+                        </div>
                         <p className="text-xs text-tertiary">
                           {universe.memberCount} Mitglieder
                         </p>
                       </div>
                     </button>
                   ))}
-                  
+
                   {userUniverses.length > 8 && (
                     <button
                       onClick={() => {/* TODO: Show all universes */}}

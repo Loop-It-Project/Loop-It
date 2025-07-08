@@ -3,7 +3,11 @@ import { UniverseService } from '../services/universeService';
 import { body, param, query, validationResult } from 'express-validator';
 
 interface AuthRequest extends Request {
-  user?: { id: string; email: string };
+  user?: { 
+    id: string; 
+    email: string; 
+    username: string; 
+  };
 }
 
 // Universum beitreten
@@ -79,14 +83,36 @@ export const getUserUniverses = async (req: AuthRequest, res: Response): Promise
   try {
     const userId = req.user!.id;
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+
+    console.log('🔍 getUserUniverses request:', { userId, page, limit });
 
     const result = await UniverseService.getUserUniverses(userId, page, limit);
-    
-    res.status(200).json(result);
+
+    if (result.success && result.data) {
+      console.log('✅ getUserUniverses success:', {
+        universeCount: result.data.universes.length,
+        totalCount: result.data.totalCount
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: result.data
+      });
+    } else {
+      console.log('❌ getUserUniverses failed:', result.error);
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
   } catch (error) {
-    console.error('Get user universes error:', error);
-    res.status(500).json({ error: 'Failed to fetch user universes' });
+    console.error('💥 getUserUniverses controller error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal server error'
+    });
   }
 };
 
@@ -187,24 +213,40 @@ export const createUniverse = async (req: AuthRequest, res: Response): Promise<v
 };
 
 // User's eigene Universes abrufen
+// ✅ Get User's Owned Universes
 export const getOwnedUniverses = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+
+    console.log('🔍 getOwnedUniverses request:', { userId, page, limit });
 
     const result = await UniverseService.getOwnedUniverses(userId, page, limit);
-    
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: 'Owned universes retrieved successfully'
-    });
+
+    if (result.success && result.data) {
+      console.log('✅ getOwnedUniverses success:', {
+        universeCount: result.data.universes.length,
+        totalCount: result.data.totalCount
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: result.data
+      });
+    } else {
+      console.log('❌ getOwnedUniverses failed:', result.error);
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
   } catch (error) {
-    console.error('Get owned universes error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to retrieve owned universes' 
+    console.error('💥 getOwnedUniverses controller error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal server error'
     });
   }
 };
