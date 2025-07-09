@@ -1,4 +1,4 @@
-import { db } from '../db/index';
+import { db } from '../db/connection';
 import { 
   postsTable, 
   usersTable, 

@@ -13,7 +13,7 @@ import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
 import reportRoutes from './routes/reportRoutes';
 import { TokenService } from './services/tokenService';
-import { seedAdminData } from './db/seedAdminData';
+import { seedAdminData } from './db/seeds/seedAdminData';
 
 // Environment variables laden
 dotenv.config();

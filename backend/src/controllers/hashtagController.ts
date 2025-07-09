@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { db } from '../db/index';
+import { db } from '../db/connection';
 import { universesTable } from '../db/Schemas';
 import { eq, desc, and, sql } from 'drizzle-orm';
 

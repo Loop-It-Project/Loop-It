@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { validationResult, body } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db } from '../db';
+import { db } from '../db/connection';
 import { 
   usersTable, 
   rolesTable, 

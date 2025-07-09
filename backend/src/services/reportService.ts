@@ -15,6 +15,9 @@ export interface CreateReportData {
   reportedUserId?: string;
   reason: string;
   description?: string;
+  category?: string;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  priority?: number;
 }
 
 export interface ReportActionData {
@@ -69,6 +72,28 @@ export class ReportService {
         throw new Error('You have already reported this content');
       }
 
+      // Mapping für category basierend auf reason
+      const categoryMapping: Record<string, string> = {
+        'spam': 'spam',
+        'harassment': 'harassment', 
+        'hate_speech': 'hate_speech',
+        'inappropriate_content': 'inappropriate',
+        'copyright': 'copyright',
+        'misinformation': 'misinformation',
+        'other': 'other'
+      };
+
+      // Severity basierend auf reason
+      const severityMapping: Record<string, string> = {
+        'spam': 'low',
+        'harassment': 'high',
+        'hate_speech': 'critical',
+        'inappropriate_content': 'medium',
+        'copyright': 'high',
+        'misinformation': 'medium',
+        'other': 'medium'
+      };
+
       // Report erstellen
       await db
         .insert(moderationReportsTable)
@@ -80,6 +105,10 @@ export class ReportService {
           reportedContentId: data.reportedContentId,
           reason: data.reason,
           description: data.description || null,
+          category: categoryMapping[data.reason] || 'other',
+          severity: severityMapping[data.reason] || 'medium',
+          priority: data.reason === 'hate_speech' ? 1 : 
+                   data.reason === 'harassment' ? 2 : 3,
           status: 'pending',
           createdAt: now,
           updatedAt: now

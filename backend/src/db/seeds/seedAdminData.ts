@@ -1,5 +1,5 @@
-import { db } from './index';
-import { rolesTable, userRolesTable, usersTable } from './schema';
+import { db } from '../connection';
+import { rolesTable, userRolesTable, usersTable } from '../Schemas';
 import { eq } from 'drizzle-orm';
 
 export async function seedAdminData() {
