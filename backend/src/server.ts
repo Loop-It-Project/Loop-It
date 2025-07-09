@@ -13,6 +13,7 @@ import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
 import reportRoutes from './routes/reportRoutes';
 import { TokenService } from './services/tokenService';
+import { metricsMiddleware, getMetrics } from './middleware/metrics';
 import { seedAdminData } from './db/seeds/seedAdminData';
 
 // Environment variables laden
@@ -81,6 +82,7 @@ app.use(cors({
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(metricsMiddleware);
 
 // Debug Middleware
 app.use((req, res, next) => {
@@ -191,6 +193,8 @@ app.get('/api/health', (req, res) => {
     }
   });
 });
+
+app.get('/metrics', getMetrics);
 
 console.log('✅ Health route registered');
 console.log('✅ API Health route registered');

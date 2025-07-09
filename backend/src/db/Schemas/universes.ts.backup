@@ -1,18 +1,15 @@
-import {
-  integer,
-  pgTable,
-  varchar,
-  boolean,
-  timestamp,
+import { 
+  integer, 
+  pgTable, 
+  varchar, 
+  boolean, 
+  timestamp, 
   text,
   uuid,
   json,
   unique,
   index
 } from "drizzle-orm/pg-core";
-
-import { usersTable } from "./users";
-
 
 // Enhanced Universe System
 export const universesTable = pgTable("universes", {
@@ -23,7 +20,7 @@ export const universesTable = pgTable("universes", {
   description: text(),
   
   // Ownership & Moderation
-  creatorId: uuid().notNull().references(() => usersTable.id),
+  creatorId: uuid().notNull(),
   moderatorIds: json(),
   
   // Content

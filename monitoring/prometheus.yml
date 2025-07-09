@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Backend (wird funktionieren sobald du /metrics hinzufügst)
+  - job_name: 'loop-it-backend'
+    static_configs:
+      - targets: ['loop-it-backend:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Health Checks
+  - job_name: 'loop-it-health'
+    static_configs:
+      - targets: ['loop-it-backend:3000']
+    metrics_path: '/health'
+    scrape_interval: 30s
