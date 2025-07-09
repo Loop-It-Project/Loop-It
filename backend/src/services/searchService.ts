@@ -1,5 +1,5 @@
-import { db } from '../db';
-import { universesTable, postsTable, usersTable } from '../db/schema';
+import { db } from '../db/connection';
+import { universesTable, postsTable, usersTable } from '../db/Schemas';
 import { eq, and, desc, sql, ilike, or } from 'drizzle-orm';
 
 // Interfaces für die Typisierung

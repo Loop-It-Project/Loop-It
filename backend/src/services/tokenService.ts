@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { db } from '../db';
-import { refreshTokensTable, usersTable } from '../db/schema';
+import { db } from '../db/connection';
+import { refreshTokensTable, usersTable } from '../db/Schemas';
 import { eq, and, lt } from 'drizzle-orm';
 
 export interface TokenPayload {

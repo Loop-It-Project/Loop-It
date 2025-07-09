@@ -2,14 +2,14 @@ import { Request, Response } from 'express';
 import { validationResult, body } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db } from '../db';
+import { db } from '../db/connection';
 import { 
   usersTable, 
   rolesTable, 
   userRolesTable, 
   profilesTable, 
   refreshTokensTable 
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, or } from 'drizzle-orm';
 import { AuthService } from '../services/authService';
 

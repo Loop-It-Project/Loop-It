@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { db } from '../db';
-import { usersTable, profilesTable, rolesTable, userRolesTable  } from '../db/schema';
+import { db } from '../db/connection';
+import { usersTable, profilesTable, rolesTable, userRolesTable  } from '../db/Schemas';
 import { eq, and, or, sql } from 'drizzle-orm';
 
 export class UserService {
