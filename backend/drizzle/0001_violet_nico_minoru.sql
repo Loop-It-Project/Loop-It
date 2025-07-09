@@ -1,0 +1,1 @@
+ALTER TABLE "universes" ADD CONSTRAINT "universes_creatorId_users_id_fk" FOREIGN KEY ("creatorId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
