@@ -1,3 +1,26 @@
+# Projekttagebuch – 09.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Die Datenbank von einem Monolithen Schema Modular zu machen und die meisten auszulagern.
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Von einer Monolithen Schema habe ich es geschafft es in 13 Schemas auszulagern.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Ein bisschen beim Updaten der ganzen Dateien für die Imports, aber nicht weil es schwer war sondern nur die Überprüfung davon.
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Nichts neues wirklich
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Bug Report Funktion samt dazugehörigen Ticket System, User Profil final einbinden und Media Upload als Komponente final integrieren, Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken
+
+___
 # Projekttagebuch – 08.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)
