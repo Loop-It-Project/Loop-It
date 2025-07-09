@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../db/connection';
 import { 
   postsTable,
   postReactionsTable,
@@ -9,7 +9,7 @@ import {
   universeMembersTable, 
   usersTable, 
   profilesTable 
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, and, asc, sql, desc, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 

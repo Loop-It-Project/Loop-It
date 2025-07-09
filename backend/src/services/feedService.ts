@@ -1,5 +1,5 @@
 import { getPersonalFeed, getUniverseFeed, getTrendingPosts, getTrendingPostsOptimized, FeedPost } from '../queries/feedQueries';
-import { db } from '../db/index';
+import { db } from '../db/connection';
 import { 
   postsTable,
   postReactionsTable,
@@ -7,7 +7,7 @@ import {
   profilesTable,
   universesTable, 
   universeMembersTable, 
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, and, sql, desc, asc, inArray } from 'drizzle-orm';
 
 export class FeedService {
