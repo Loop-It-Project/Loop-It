@@ -1,10 +1,10 @@
-import { db } from '../db/index';
+import { db } from '../db/connection';
 import { 
   moderationReportsTable, 
   postsTable, 
   usersTable, 
   userActivitiesTable 
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 

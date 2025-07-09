@@ -1,11 +1,11 @@
-import { db } from '../db/index';
+import { db } from '../db/connection';
 import { 
   universesTable, 
   universeMembersTable, 
   universeJoinRequestsTable,
   usersTable,
   profilesTable 
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, and, desc, sql, count, not } from 'drizzle-orm';
 
 export interface CreateUniverseData {

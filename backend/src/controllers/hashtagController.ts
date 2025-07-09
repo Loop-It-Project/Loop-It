@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { db } from '../db/index';
-import { universesTable } from '../db/schema';
+import { universesTable } from '../db/Schemas';
 import { eq, desc, and, sql } from 'drizzle-orm';
 
 export const getUniverseByHashtag = async (req: Request, res: Response): Promise<void> => {

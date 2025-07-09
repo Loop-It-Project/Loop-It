@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../db/connection';
 import { 
   usersTable, 
   rolesTable, 
@@ -9,7 +9,7 @@ import {
   universeJoinRequestsTable,
   postsTable,
   userActivitiesTable
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, and, or, like, desc, asc, count, sql, inArray, gte } from 'drizzle-orm';
 
 export class AdminService {

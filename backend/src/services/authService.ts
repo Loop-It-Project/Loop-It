@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { db } from '../db';
-import { usersTable } from '../db/schema';
+import { db } from '../db/connection';
+import { usersTable } from '../db/Schemas';
 import { eq, sql } from 'drizzle-orm';
 import { TokenService } from './tokenService';
 

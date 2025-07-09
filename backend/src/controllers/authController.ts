@@ -9,7 +9,7 @@ import {
   userRolesTable, 
   profilesTable, 
   refreshTokensTable 
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, or } from 'drizzle-orm';
 import { AuthService } from '../services/authService';
 

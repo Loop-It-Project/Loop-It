@@ -7,7 +7,7 @@ import {
   profilesTable,
   mediaTable,
   postReactionsTable
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, desc, asc, and, inArray, sql, isNull, gte } from 'drizzle-orm';
 
 export interface FeedPost {
