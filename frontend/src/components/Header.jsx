@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search, Shield } from 'lucide-react';
+import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search, Shield, Bell } from 'lucide-react';
 import CreateUniverse from './CreateUniverse'; 
 import FeedService from '../services/feedServices';
 import AdminService from '../services/adminService';
@@ -222,6 +222,23 @@ const Header = ({ user, setUser, onLogout }) => {
                   Admin: {isAdmin ? 'YES' : 'NO'}
                 </div>
               )} */}
+
+              {/* Profile Button */}
+              <Link
+                to={`/profile/${user.username}`}
+                className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all"
+                title="Mein Profil"
+              >
+                <User size={20} />
+              </Link>
+
+              {/* Notifications Button (für später) */}
+              <button
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-all"
+                title="Benachrichtigungen"
+              >
+                <Bell size={20} />
+              </button>
               
               {/* Settings Button */}
               <button 

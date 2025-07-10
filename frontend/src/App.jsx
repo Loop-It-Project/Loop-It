@@ -15,6 +15,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Imprint from './pages/Imprint';
+import UserProfile from './pages/UserProfile';
 
 // API_URL für die gesamte App definieren
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -231,6 +232,15 @@ function App() {
             element={
               <ProtectedRoute user={user}>
                 <Dashboard user={user} onLogout={() => handleLogout('manual')} />
+              </ProtectedRoute>
+            } 
+          />
+          {/* User Profile Route */}
+          <Route 
+            path="/profile/:username" 
+            element={
+              <ProtectedRoute user={user}>
+                <UserProfile currentUser={user} />
               </ProtectedRoute>
             } 
           />

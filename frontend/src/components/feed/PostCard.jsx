@@ -13,13 +13,17 @@ import {
   Clock,
   Hash
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import HashtagService from '../../services/hashtagService';
 import PostService from '../../services/postService';
 import ShareButton from './ShareButton';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import ReportModal from '../ReportModal';
 
-const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete, onShare, currentUser }) => {
+const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, onDelete, onShare, currentUser, showUserInfo = true }) => {
+  const navigate = useNavigate();
+  const [showUserPreview, setShowUserPreview] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [isLiked, setIsLiked] = useState(post.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(post.likeCount || 0);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
@@ -248,6 +252,105 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
     }
   };
 
+  // Zum User-Profil navigieren
+  const handleUserClick = () => {
+    console.log('🔍 User click:', post.author);
+    if (post.author?.username) {
+      navigate(`/profile/${post.author.username}`);
+    } else {
+      console.warn('⚠️ No username available for navigation');
+    }
+  };
+
+  // ERWEITERTE User-Darstellung mit Hover-Preview
+  const UserInfo = ({ compact = false }) => (
+    <div 
+      className={`flex items-center space-x-3 relative`}
+      onMouseEnter={() => setShowUserPreview(true)}
+      onMouseLeave={() => setShowUserPreview(false)}
+    >
+      {/* Avatar */}
+      <button
+        onClick={handleUserClick}
+        className="relative w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 hover:scale-105 transition-all duration-200 cursor-pointer group"
+      >
+        <User className="text-white group-hover:scale-110 transition-transform" size={16} />
+
+        {/* Hover Ring */}
+        <div className="absolute inset-0 rounded-full ring-2 ring-purple-400 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
+      </button>
+
+      <div className="flex-1 min-w-0">
+        {/* Display Name */}
+        <button
+          onClick={handleUserClick}
+          className="font-medium text-primary hover:text-purple-600 transition-colors cursor-pointer text-left block truncate group"
+        >
+          <span className="group-hover:underline">
+            {post.author?.displayName || post.author?.username || 'Unbekannt'}
+          </span>
+        </button>
+
+        {/* Username */}
+        <button
+          onClick={handleUserClick}
+          className="text-sm text-tertiary hover:text-purple-600 transition-colors cursor-pointer text-left block truncate"
+        >
+          @{post.author?.username || 'unknown'}
+        </button>
+      </div>
+
+      {/* Zeit & Universe als separate Anzeige */}
+      <div className="flex items-center space-x-2 text-sm text-tertiary">
+        <div className="flex items-center space-x-1">
+          <Clock size={14} />
+          <span>{formatTimeAgo(post.createdAt)}</span>
+        </div>
+
+        {post.universe && (
+          <>
+            <span>•</span>
+            <button
+              onClick={() => onUniverseClick?.(post.universe.slug)}
+              className="flex items-center space-x-1 hover:text-purple-600 transition-colors"
+            >
+              <Hash size={14} />
+              <span>{post.universe.name}</span>
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Mini User Preview on Hover */}
+      {showUserPreview && (
+        <div className="absolute z-20 bg-card border border-primary rounded-lg p-4 shadow-lg mt-2 min-w-[250px] top-full left-0">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+              <User className="text-white" size={20} />
+            </div>
+            <div>
+              <p className="font-medium text-primary">
+                {post.author?.displayName || post.author?.username}
+              </p>
+              <p className="text-sm text-tertiary">@{post.author?.username}</p>
+            </div>
+          </div>
+          {post.author?.bio && (
+            <p className="text-sm text-secondary mb-2 line-clamp-2">
+              {post.author.bio}
+            </p>
+          )}
+          <button
+            onClick={handleUserClick}
+            className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+          >
+            Profil anzeigen →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   // Delete Post Handler:
   const handleDeletePost = async () => {
     if (!window.confirm('Möchtest du diesen Post wirklich löschen?')) {
@@ -299,65 +402,23 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
 
   return (
     <div className="bg-card rounded-lg shadow-sm border border-primary p-6 mb-4 hover:shadow-md transition-shadow">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          {/* Avatar */}
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-            {authorAvatar ? (
-              <img 
-                src={`/api/media/${authorAvatar}`} 
-                alt={authorName}
-                className="w-10 h-10 rounded-full object-cover"
-              />
-            ) : (
-              <User className="text-white" size={20} />
-            )}
-          </div>
-          
-          {/* Author Info */}
-          <div>
-            <div className="flex items-center space-x-2">
-              <h3 className="font-semibold text-primary">
-                {authorName || authorUsername}
-              </h3>
-              <span className="text-tertiary text-sm">@{authorUsername}</span>
-            </div>
-            
-            {/* Universe & Time */}
-            <div className="flex items-center space-x-2 text-sm text-tertiary">
-              {universeName && (
-                <>
-                  <button
-                    onClick={handleUniverseHashtagClick}
-                    disabled={false}
-                    className="flex items-center space-x-1 hover:text-purple-600 hover:cursor-pointer transition-colors"
-                    title={`Zum Universe ${universeName}`}
-                  >
-                    <Hash size={14} />
-                    <span>{universeName}</span>
-                  </button>
-                  <span>•</span>
-                </>
-              )}
-              <div className="flex items-center space-x-1">
-                <Clock size={14} />
-                <span>{formatTimeAgo(post.createdAt)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* More Options */}
-        <div className="relative">
-        <button
-          onClick={() => setShowMoreMenu(!showMoreMenu)}
-          className="p-2 text-muted hover:text-secondary rounded-full hover:bg-hover hover:cursor-pointer transition-colors"
-        >
-          <MoreHorizontal size={16} />
-        </button>
+    
+    {/* User Info mit UserInfo Komponente */}
+    {showUserInfo && (
+      <div className="flex items-center justify-between mb-4">
+        {/* User Info Komponente verwenden */}
+        <UserInfo />
 
-        {showMoreMenu && (
+        {/* More Options INNERHALB des showUserInfo Blocks */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className="p-2 text-muted hover:text-secondary rounded-full hover:bg-hover transition-colors"
+          >
+            <MoreHorizontal size={16} />
+          </button>
+
+          {showMoreMenu && (
             <div className="absolute right-0 top-8 bg-card border border-primary rounded-lg shadow-lg py-2 min-w-[160px] z-10">
               {/* Report Option - Nur anzeigen wenn nicht eigener Post */}
               {!isAuthor && (
@@ -366,37 +427,38 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
                     setShowMoreMenu(false);
                     setShowReportModal(true);
                   }}
-                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors text-sm flex items-center space-x-2"
+                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm flex items-center space-x-2"
                 >
                   <Flag size={14} />
                   <span>Post melden</span>
                 </button>
               )}
 
-            {/* Delete Option - Nur für Post-Autor */}
+              {/* Delete Option - Nur für Post-Autor */}
               {isAuthor && (
-              <button
-                onClick={() => {
-                  setShowMoreMenu(false);
-                  handleDeletePost();
-                }}
-                className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:cursor-pointer transition-colors text-sm flex items-center space-x-2"
-              >
-                <Trash2 size={14} />
-                <span>Post löschen</span>
-              </button>
-            )}
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleDeletePost();
+                  }}
+                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm flex items-center space-x-2"
+                >
+                  <Trash2 size={14} />
+                  <span>Post löschen</span>
+                </button>
+              )}
 
-            <button
-              onClick={() => setShowMoreMenu(false)}
-              className="w-full px-4 py-2 text-left hover:bg-red-50 hover:cursor-pointer transition-colors text-sm flex items-center space-x-2"
-            >
-              Abbrechen
-            </button>
-          </div>
-        )}
+              <button
+                onClick={() => setShowMoreMenu(false)}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm"
+              >
+                Abbrechen
+              </button>
+            </div>
+          )}
         </div>
       </div>
+    )}
 
       {/* Content */}
       <div className="mb-4">
