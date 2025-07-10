@@ -6,7 +6,7 @@ Ein vollständiges Kubernetes-Setup für die Loop-It Anwendung mit Docker Deskto
 
 ```bash
 # 1. Repository clonen
-git clone <https://github.com/Loop-It-Project/Loop-It>
+git clone https://github.com/Loop-It-Project/Loop-It
 cd Loop-It
 
 # 2. Docker Desktop mit Kubernetes starten
