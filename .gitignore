@@ -1,5 +1,12 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,28 +14,19 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-
 # Environment files
 .env
 .env.local
+.env.development
+.env.production
+.env.monitoring
 *.env
 
+# Security & secrets
+*.key
+*.pem
+*.crt
+secrets/
 *secrets-generated.yaml
 *secrets
 
@@ -36,9 +34,21 @@ dist-ssr
 k8s/secrets.yaml
 k8s/secrets-*.yaml
 k8s/*-secrets.yaml
-
-# Generated secrets
 k8s/secrets-generated.yaml
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Runtime files
+*.local
 
 # Backup/temp files
 k8s/*.bak

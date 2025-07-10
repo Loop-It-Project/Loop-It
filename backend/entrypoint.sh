@@ -1,62 +1,49 @@
 #!/bin/sh
-set -e  # Stoppe bei Fehlern
+set -e
 
-echo "Warte auf Datenbank..."
+echo "🚀 Starting Loop-It Backend (Final Robust Version)..."
+
+echo "⏳ Waiting for database..."
 while ! nc -z postgres 5432; do
   sleep 1
 done
-echo "Datenbank ist bereit!"
+echo "✅ Database is ready!"
 
-echo "Installiere postgresql-client..."
+echo "📦 Installing postgresql-client..."
 apk add --no-cache postgresql-client
 
-echo "=== DEBUGGING START ==="
-echo "Umgebungsvariablen:"
-echo "DATABASE_URL: $DATABASE_URL"
-echo "DB_HOST: $DB_HOST"
-echo "POSTGRES_USER: $POSTGRES_USER"
-echo "POSTGRES_DB: $POSTGRES_DB"
+echo "🔍 Testing database connection..."
+if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;" > /dev/null 2>&1; then
+    echo "❌ Database connection failed"
+    exit 1
+fi
+echo "✅ Database connection successful"
 
-echo "Dateisystem Check:"
-echo "Drizzle Ordner:"
-ls -la drizzle/ 2>/dev/null || echo "Kein drizzle Ordner"
+echo "🗄️ Existing tables BEFORE migration:"
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "No tables"
 
-echo "Migration Dateien:"
-ls -la drizzle/*.sql 2>/dev/null || echo "Keine SQL-Migrationsdateien gefunden"
-
-echo "Schema Datei:"
-ls -la src/db/schema.ts 2>/dev/null || echo "Keine Schema-Datei gefunden"
-
-echo "Vorhandene Tabellen VORHER:"
-PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "Keine Tabellen"
-
-echo "=== FÜHRE MIGRATIONEN AUS ==="
-echo "Verwende versionierte Drizzle-Migrationen..."
-
-# Führe versionierte Migrationen aus
+echo "🚀 Executing schema sync..."
 npm run db:migrate
 
 if [ $? -eq 0 ]; then
-    echo "✓ Migrationen erfolgreich ausgeführt"
+    echo "✅ Schema sync successful"
 else
-    echo "✗ Fehler bei Migrationen - versuche Fallback"
-    echo "Fallback: Verwende drizzle-kit push..."
-    npm run db:push --force
-    if [ $? -eq 0 ]; then
-        echo "✓ Fallback push erfolgreich ausgeführt"
-    else
-        echo "✗ Kritischer Fehler: Weder Migrationen noch Push funktionieren"
-        exit 1
-    fi
+    echo "❌ Schema sync failed"
+    exit 1
 fi
 
-echo "Vorhandene Tabellen NACHHER:"
-PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "Keine Tabellen"
+echo "ℹ️ Skipping manual foreign key fixes — handled by Drizzle migrations"
 
-echo "Angewendete Migrationen (falls vorhanden):"
-PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT * FROM __drizzle_migrations ORDER BY id;" 2>/dev/null || echo "Keine Migrations-Historie verfügbar"
 
-echo "=== DEBUGGING END ==="
+echo "🔍 Final validation..."
+if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT \"creatorId\" FROM universes LIMIT 1;" > /dev/null 2>&1; then
+    echo "❌ Schema validation failed"
+    exit 1
+fi
 
-echo "Starte Backend..."
-npm start
+echo "📊 Final database status:"
+echo "- Tables: $(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)"
+echo "- Foreign Keys: $(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_type = 'FOREIGN KEY';" | xargs)"
+
+echo "🎯 Backend ready to start!"
+exec npm start
