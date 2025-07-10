@@ -44,6 +44,12 @@ Unser erster geplanter Sprint und dessen Items sind zu finden in unserer:
 
 [docs/planing.md](docs/planing.md)
 
+## Sprint 2 Planing
+
+Unser zweiter geplanter Sprint und dessen Items sind hier zu finden:
+
+[docs/planing.md](docs/planing.md)
+
 ## Abschlusspräsentation
 
 Der Entwurf unserer Abschlusspräsentation befindet sich unter:

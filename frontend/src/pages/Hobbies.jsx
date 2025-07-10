@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, Check} from 'lucide-react';
-import Header from '../components/Header';
+import BackButton from '../components/Backbutton';
 
 const Hobbies = ({ onNavigate }) => {
   const navigate = useNavigate();
@@ -93,13 +92,7 @@ const Hobbies = ({ onNavigate }) => {
       <div className="max-w-md w-full">
 
         {/* Back Button */}
-        <Link 
-          to="/"
-          className="flex items-center text-white mb-8 hover:text-gray-200 transition"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Zurück
-        </Link>
+        < BackButton />
 
         {/* Hobbies Form */}
         <div className="bg-white rounded-2xl p-8 shadow-2xl">

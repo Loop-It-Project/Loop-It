@@ -13,6 +13,7 @@ import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
 import reportRoutes from './routes/reportRoutes';
 import { TokenService } from './services/tokenService';
+import { metricsMiddleware, getMetrics } from './middleware/metrics';
 import { seedAdminData } from './db/seeds/seedAdminData';
 
 // Environment variables laden
@@ -69,7 +70,11 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost',      // ← Für Frontend auf Port 80
+    'http://localhost:3000'  // ← Für direkte Backend Calls
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -77,6 +82,7 @@ app.use(cors({
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(metricsMiddleware);
 
 // Debug Middleware
 app.use((req, res, next) => {
@@ -175,7 +181,23 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API Health check (für Nginx Proxy)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    env: {
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasDbUrl: !!process.env.DATABASE_URL,
+      port: process.env.PORT || 3000
+    }
+  });
+});
+
+app.get('/metrics', getMetrics);
+
 console.log('✅ Health route registered');
+console.log('✅ API Health route registered');
 
 // 404 Handler
 app.use((req, res) => {

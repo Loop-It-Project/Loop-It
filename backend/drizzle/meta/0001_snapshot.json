@@ -1,6 +1,6 @@
 {
-  "id": "8355045b-07fd-4edb-9c33-5dbc8e128bff",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "905c4d52-d0d1-440a-b9af-b8bd68af8817",
+  "prevId": "8355045b-07fd-4edb-9c33-5dbc8e128bff",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2937,7 +2937,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "universes_creatorId_users_id_fk": {
+          "name": "universes_creatorId_users_id_fk",
+          "tableFrom": "universes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "creatorId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "universes_slug_unique": {

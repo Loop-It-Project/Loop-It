@@ -1,70 +1,49 @@
 #!/bin/sh
-set -e  # Stoppe bei Fehlern
+set -e
 
-echo "Warte auf Datenbank..."
+echo "🚀 Starting Loop-It Backend (Final Robust Version)..."
+
+echo "⏳ Waiting for database..."
 while ! nc -z postgres 5432; do
   sleep 1
 done
-echo "Datenbank ist bereit!"
+echo "✅ Database is ready!"
 
-echo "Installiere postgresql-client..."
+echo "📦 Installing postgresql-client..."
 apk add --no-cache postgresql-client
 
-echo "=== DEBUGGING START ==="
-echo "Umgebungsvariablen:"
-echo "DATABASE_URL: $DATABASE_URL"
-echo "DB_HOST: $DB_HOST"
-echo "POSTGRES_USER: $POSTGRES_USER"
-echo "POSTGRES_DB: $POSTGRES_DB"
+echo "🔍 Testing database connection..."
+if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;" > /dev/null 2>&1; then
+    echo "❌ Database connection failed"
+    exit 1
+fi
+echo "✅ Database connection successful"
 
-echo "Dateisystem Check:"
-echo "Drizzle Ordner:"
-ls -la drizzle/ 2>/dev/null || echo "Kein drizzle Ordner"
+echo "🗄️ Existing tables BEFORE migration:"
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "No tables"
 
-echo "Schema Datei:"
-ls -la src/db/schema.ts 2>/dev/null || echo "Keine Schema-Datei gefunden"
+echo "🚀 Executing schema sync..."
+npm run db:migrate
 
-echo "Vorhandene Tabellen VORHER:"
-PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "Keine Tabellen"
-
-echo "=== FÜHRE MIGRATIONEN AUS ==="
-echo "1. Generate migrations..."
-npm run db:generate
-
-echo "2. Prüfe generierte SQL-Dateien..."
-ls -la drizzle/*.sql 2>/dev/null || echo "Keine SQL-Dateien gefunden"
-
-echo "3. Führe SQL-Dateien direkt aus..."
-SQL_EXECUTED=false
-for sql_file in drizzle/*.sql; do
-    if [ -f "$sql_file" ]; then
-        echo "Führe aus: $sql_file"
-        PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$sql_file"
-        if [ $? -eq 0 ]; then
-            echo "✓ $sql_file erfolgreich ausgeführt"
-            SQL_EXECUTED=true
-        else
-            echo "✗ Fehler bei $sql_file"
-        fi
-    fi
-done
-
-if [ "$SQL_EXECUTED" = false ]; then
-    echo "Keine SQL-Dateien gefunden oder ausgeführt!"
-    echo "4. Fallback: Verwende drizzle-kit push..."
-    npm run db:push -- --force
-    if [ $? -eq 0 ]; then
-        echo "✓ drizzle-kit push erfolgreich ausgeführt"
-    else
-        echo "✗ Fehler bei drizzle-kit push"
-        exit 1
-    fi
+if [ $? -eq 0 ]; then
+    echo "✅ Schema sync successful"
+else
+    echo "❌ Schema sync failed"
+    exit 1
 fi
 
-echo "Vorhandene Tabellen NACHHER:"
-PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" 2>/dev/null || echo "Keine Tabellen"
+echo "ℹ️ Skipping manual foreign key fixes — handled by Drizzle migrations"
 
-echo "=== DEBUGGING END ==="
 
-echo "Starte Backend..."
-npm start
+echo "🔍 Final validation..."
+if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT \"creatorId\" FROM universes LIMIT 1;" > /dev/null 2>&1; then
+    echo "❌ Schema validation failed"
+    exit 1
+fi
+
+echo "📊 Final database status:"
+echo "- Tables: $(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)"
+echo "- Foreign Keys: $(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_type = 'FOREIGN KEY';" | xargs)"
+
+echo "🎯 Backend ready to start!"
+exec npm start
