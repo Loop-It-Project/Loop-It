@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, User, MessageCircle, UserMinus, AlertTriangle } from 'lucide-react';
 import FriendshipService from '../services/friendshipService';
+import ChatService from '../services/chatService';
 import { useNavigate } from 'react-router-dom';
 
 const FriendsModal = ({ 
@@ -104,6 +105,25 @@ const FriendsModal = ({
   const handleProfileClick = (friendUsername) => {
     navigate(`/profile/${friendUsername}`);
     onClose(); // Modal schließen nach Navigation
+  };
+
+  const handleStartChat = async (friend) => {
+    try {
+      console.log('🔄 Starting chat with:', friend.username, 'ID:', friend.id);
+      
+      const response = await ChatService.getOrCreateConversation(friend.id);
+      
+      if (response.success) {
+        console.log('✅ Chat created/found:', response.conversation);
+        onClose();
+      } else {
+        console.error('❌ Chat creation failed:', response.error);
+        alert('Chat konnte nicht gestartet werden: ' + response.error);
+      }
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      alert('Fehler beim Starten des Chats');
+    }
   };
 
   const formatDate = (dateString) => {
@@ -241,10 +261,7 @@ const FriendsModal = ({
                   <div className="flex items-center space-x-2">
                     {/* Message Button (für alle) */}
                     <button
-                      onClick={() => {
-                        // TODO: Message functionality
-                        console.log('Send message to:', friend.username);
-                      }}
+                      onClick={() => handleStartChat(friend)}
                       className="p-2 text-blue-600 cursor-pointer hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Nachricht senden"
                     >

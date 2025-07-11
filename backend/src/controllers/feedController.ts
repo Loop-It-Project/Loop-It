@@ -101,7 +101,7 @@ export const getTrendingFeed = async (req: Request, res: Response): Promise<void
     // User ID für Like-Status (optional)
     const userId = (req as AuthRequest).user?.id || null;
 
-    console.log(`🔥 Trending feed request:`, { timeframe, limit, page, userId: userId || 'anonymous' });
+    // console.log(`🔥 Trending feed request:`, { timeframe, limit, page, userId: userId || 'anonymous' });
 
     const result = await FeedService.getTrendingFeed(timeframe, limit, page, userId);
     

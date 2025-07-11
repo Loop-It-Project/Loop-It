@@ -228,11 +228,11 @@ export class FriendshipService {
       // Filtere den aktuellen User aus den Ergebnissen
       const filteredFriends = friends.filter(friend => friend.id !== userId);
 
-    console.log('🔍 Filtered friends result:', { 
-      total: friends.length, 
-      filtered: filteredFriends.length,
-      userIdToFilter: userId 
-    });
+    // console.log('🔍 Filtered friends result:', { 
+    //   total: friends.length, 
+    //   filtered: filteredFriends.length,
+    //   userIdToFilter: userId 
+    // });
 
       return {
         success: true,

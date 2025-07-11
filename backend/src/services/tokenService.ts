@@ -86,19 +86,19 @@ export class TokenService {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       
-      console.log('🔍 JWT decoded payload:', {
-        fullPayload: JSON.stringify(decoded, null, 2),
-        id: decoded.id,
-        userId: decoded.userId,
-        email: decoded.email,
-        username: decoded.username,
-        iat: decoded.iat,
-        exp: decoded.exp
-      });
+      // console.log('🔍 JWT decoded payload:', {
+      //   fullPayload: JSON.stringify(decoded, null, 2),
+      //   id: decoded.id,
+      //   userId: decoded.userId,
+      //   email: decoded.email,
+      //   username: decoded.username,
+      //   iat: decoded.iat,
+      //   exp: decoded.exp
+      // });
 
       // Prüfe ob es id oder userId ist
       if (!decoded.id && decoded.userId) {
-        console.log('🔍 Converting userId to id');
+        // console.log('🔍 Converting userId to id');
         decoded.id = decoded.userId;
       }
 

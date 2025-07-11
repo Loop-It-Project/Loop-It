@@ -20,21 +20,21 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
     }
 
     // KRITISCHE DEBUG-LOGS
-    console.log('🔍 =============AUTH MIDDLEWARE DEBUG=============');
-    console.log('🔍 Raw token (first 30 chars):', token.substring(0, 30) + '...');
+    // console.log('🔍 =============AUTH MIDDLEWARE DEBUG=============');
+    // console.log('🔍 Raw token (first 30 chars):', token.substring(0, 30) + '...');
 
     // Token mit TokenService validieren
     const decoded = TokenService.verifyAccessToken(token);
     
     // DECODED TOKEN KOMPLETT AUSGEBEN
-    console.log('🔍 TokenService.verifyAccessToken returned:', {
-      fullObject: JSON.stringify(decoded, null, 2),
-      id: decoded.id,
-      email: decoded.email,
-      username: decoded.username,
-      userId: decoded.id, // Falls es userId statt id ist
-      allKeys: Object.keys(decoded)
-    });
+    // console.log('🔍 TokenService.verifyAccessToken returned:', {
+    //   fullObject: JSON.stringify(decoded, null, 2),
+    //   id: decoded.id,
+    //   email: decoded.email,
+    //   username: decoded.username,
+    //   userId: decoded.id, // Falls es userId statt id ist
+    //   allKeys: Object.keys(decoded)
+    // });
 
     // VALIDIERUNG HINZUFÜGEN
     if (!decoded.id) {
@@ -54,12 +54,12 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
     };
 
     // FINAL REQ.USER AUSGEBEN
-    console.log('🔍 Final req.user assigned:', {
-      id: req.user.id,
-      email: req.user.email,
-      username: req.user.username
-    });
-    console.log('🔍 ===============================================');
+    // console.log('🔍 Final req.user assigned:', {
+    //   id: req.user.id,
+    //   email: req.user.email,
+    //   username: req.user.username
+    // });
+    // console.log('🔍 ===============================================');
 
     next();
 

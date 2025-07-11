@@ -72,11 +72,11 @@ export const togglePostLike = async (req: AuthRequest, res: Response): Promise<v
     const { postId } = req.params;
     const userId = req.user?.id;
 
-    console.log('🔍 PostController.togglePostLike:', { 
-      postId, 
-      userId,
-      userFromToken: req.user 
-    });
+    // console.log('🔍 PostController.togglePostLike:', { 
+    //   postId, 
+    //   userId,
+    //   userFromToken: req.user 
+    // });
 
     if (!userId) {
       res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -90,7 +90,7 @@ export const togglePostLike = async (req: AuthRequest, res: Response): Promise<v
 
     const result = await PostService.toggleLike(postId, userId);
     
-    console.log('🔍 PostController result:', result);
+    // console.log('🔍 PostController result:', result);
     
     if (result.success) {
       res.status(200).json(result);

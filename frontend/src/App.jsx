@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
 import AuthInterceptor from './utils/authInterceptor';
+import UserService from './services/userService';
+import WebSocketService from './services/websocketService';
+
 import Settings from './pages/Settings';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
@@ -16,6 +20,7 @@ import Footer from './components/Footer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Imprint from './pages/Imprint';
 import UserProfile from './pages/UserProfile';
+import ChatWidget from './components/chat/ChatWidget';
 
 // API_URL für die gesamte App definieren
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -65,6 +70,13 @@ function App() {
   const handleLogin = async (userData) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+
+    // WebSocket-Verbindung initialisieren
+    const token = localStorage.getItem('token');
+    if (token) {
+      console.log('🔌 Initializing WebSocket connection...');
+      WebSocketService.connect(token, userData);
+    }
     
     // Optional: Check for admin permissions after login
     try {
@@ -78,6 +90,8 @@ function App() {
   // Enhanced Logout Handler
   const handleLogout = async (reason = 'manual') => {
     try {
+      // WebSocket-Verbindung trennen
+      WebSocketService.disconnect();
       const refreshToken = localStorage.getItem('refreshToken');
       
       if (refreshToken && reason === 'manual') {
@@ -123,6 +137,13 @@ function App() {
               await AuthInterceptor.refreshTokens();
               setUser(JSON.parse(savedUser));
               console.log('✅ Session wiederhergestellt');
+
+              // WebSocket nach Token-Refresh verbinden
+              const newToken = localStorage.getItem('token');
+              if (newToken) {
+                WebSocketService.connect(newToken, userData);
+              }
+
             } catch (refreshError) {
               console.warn('Session konnte nicht wiederhergestellt werden');
               handleLogout('tokenExpired');
@@ -130,6 +151,9 @@ function App() {
           } else {
             setUser(JSON.parse(savedUser));
             console.log('✅ Session wiederhergestellt');
+
+            // WebSocket mit existierendem Token verbinden
+            WebSocketService.connect(token, userData);
           }
         }
       } catch (error) {
@@ -318,6 +342,9 @@ function App() {
             element={<Navigate to={user ? "/dashboard" : "/"} replace />} 
           />
         </Routes>
+
+        {/* CHAT WIDGET - nur wenn User eingeloggt */}
+        {user && <ChatWidget currentUser={user} />}
       </div>
       
       <Footer />

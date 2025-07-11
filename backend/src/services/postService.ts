@@ -243,9 +243,9 @@ export class PostService {
   // Like/Unlike Post
   static async toggleLike(postId: string, userId: string) {
   try {
-    console.log('🔍 ToggleLike called with:', { postId, userId });
-    console.log('🔍 userId type:', typeof userId);
-    console.log('🔍 userId length:', userId?.length);
+    // console.log('🔍 ToggleLike called with:', { postId, userId });
+    // console.log('🔍 userId type:', typeof userId);
+    // console.log('🔍 userId length:', userId?.length);
 
     // ERST den Post laden für Debug-Zwecke
     const [post] = await db
@@ -258,12 +258,12 @@ export class PostService {
       .where(eq(postsTable.id, postId))
       .limit(1);
 
-    //  JETZT können wir debuggen
-    console.log('🔍 LIKE DEBUG:', {
-      postId,
-      userId, // ← Das sollte Max Mustermann sein
-      postAuthorId: post.authorId // ← Das ist Zerrelius
-    });
+    // Debug
+    // console.log('🔍 LIKE DEBUG:', {
+    //   postId,
+    //   userId, // ← Das sollte Max Mustermann sein
+    //   postAuthorId: post.authorId // ← Das ist Zerrelius
+    // });
 
     if (!post) {
       throw new Error('Post not found');
@@ -282,23 +282,23 @@ export class PostService {
       )
       .limit(1);
 
-    console.log('🔍 Existing like check:', { 
-      found: existingLike.length > 0, 
-      userId,
-      postId 
-    });
+    // console.log('🔍 Existing like check:', { 
+    //   found: existingLike.length > 0, 
+    //   userId,
+    //   postId 
+    // });
 
     let isLiked = false;
     let newLikeCount = 0;
 
     if (existingLike.length > 0) {
       // Unlike
-      console.log('🔍 Removing existing like with ID:', existingLike[0].id);
+      // console.log('🔍 Removing existing like with ID:', existingLike[0].id);
       await db
         .delete(postReactionsTable)
         .where(eq(postReactionsTable.id, existingLike[0].id));
       isLiked = false;
-      console.log('🔍 Removed like for userId:', userId);
+      // console.log('🔍 Removed like for userId:', userId);
     } else {
       // Like hinzufügen - ERWEITERTE DEBUG-INFO
       const newLikeData = {
@@ -308,13 +308,13 @@ export class PostService {
         createdAt: new Date()
       };
       
-      console.log('🔍 About to insert like with data:', {
-        postId: newLikeData.postId,
-        userId: newLikeData.userId,
-        reactionType: newLikeData.reactionType,
-        userIdType: typeof newLikeData.userId,
-        userIdLength: newLikeData.userId?.length
-      });
+      // console.log('🔍 About to insert like with data:', {
+      //   postId: newLikeData.postId,
+      //   userId: newLikeData.userId,
+      //   reactionType: newLikeData.reactionType,
+      //   userIdType: typeof newLikeData.userId,
+      //   userIdLength: newLikeData.userId?.length
+      // });
 
       const insertResult = await db
         .insert(postReactionsTable)
@@ -325,8 +325,8 @@ export class PostService {
           postId: postReactionsTable.postId
         });
 
-      console.log('🔍 Insert result:', insertResult);
-      console.log('🔍 Inserted like for userId:', userId);
+      // console.log('🔍 Insert result:', insertResult);
+      // console.log('🔍 Inserted like for userId:', userId);
       isLiked = true;
     }
 
@@ -354,8 +354,8 @@ export class PostService {
     
     newLikeCount = actualLikeCount[0]?.count || 0;
 
-    // 🔍 ZUSÄTZLICHE VERIFICATION
-    console.log('🔍 Verifying what was actually inserted...');
+    // ZUSÄTZLICHE VERIFICATION
+    // console.log('🔍 Verifying what was actually inserted...');
     const verifyLike = await db
       .select({
         id: postReactionsTable.id,
@@ -373,7 +373,7 @@ export class PostService {
       .orderBy(desc(postReactionsTable.createdAt))
       .limit(3);
 
-    console.log('🔍 Recent likes for this post:', verifyLike);
+    // console.log('🔍 Recent likes for this post:', verifyLike);
 
     return {
       success: true,
