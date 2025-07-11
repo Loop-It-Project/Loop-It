@@ -39,15 +39,58 @@ class PostService {
   // Post liken/unliken
   static async toggleLike(postId) {
     try {
+      console.log('🔍 Frontend toggleLike called for postId:', postId);
+    
+    // ERWEITERTE NETWORK DEBUG-INFO
+    const token = localStorage.getItem('token');
+    const url = `${API_URL}/api/posts/${postId}/like`;
+    
+    console.log('🔍 Frontend: Request details:', {
+      url,
+      method: 'POST',
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 30) + '...' : 'none',
+      API_URL
+    });
+      
       const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/${postId}/like`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      const data = await response.json();
-      return response.ok ? { success: true, data } : { success: false, error: data.error };
+      console.log('🔍 Frontend: Raw response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
+      const result = await response.json();
+      console.log('🔍 Frontend toggleLike response:', result);
+      
+      if (response.ok && result.success) {
+        // Konsistente Response-Struktur
+        return { 
+          success: true, 
+          data: {
+            isLiked: result.data.isLiked,
+            likeCount: result.data.likeCount
+          }
+        };
+      } else {
+        return { 
+          success: false, 
+          error: result.error || 'Failed to toggle like' 
+        };
+      }
     } catch (error) {
       console.error('Toggle like error:', error);
-      return { success: false, error: 'Network error' };
+      return { 
+        success: false, 
+        error: 'Network error' 
+      };
     }
   }
 

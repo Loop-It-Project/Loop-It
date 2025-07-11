@@ -200,7 +200,7 @@ const Dashboard = ({ user, onLogout, refreshTrigger }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-secondary">
+    <div className="min-h-screen bg-primary">
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex gap-8">
