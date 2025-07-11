@@ -46,13 +46,63 @@ NGINX Ingress Controller
                       ↓
                  PostgreSQL
                  Port 5432
+                 (Persistent Storage)
 ```
 
 ### Services
 - **Frontend**: React/Vite App (NGINX Container)
 - **Backend**: Node.js API Server
-- **PostgreSQL**: Datenbank
+- **PostgreSQL**: Datenbank mit persistentem Storage
 - **NGINX Ingress**: Load Balancer & Reverse Proxy
+
+## 🗃️ Datenpersistenz (PostgreSQL Persistent Volume)
+
+Die PostgreSQL-Datenbank speichert ihre Daten **persistent** mit einem `PersistentVolumeClaim`. Dadurch bleiben alle Nutzerdaten (z.B. Registrierung, Inhalte, Beziehungen) auch nach einem Neustart des Pods erhalten.
+
+### 🔐 Speicherort der Daten
+Die Daten liegen im Container unter:
+```bash
+/var/lib/postgresql/data
+```
+Und sind über ein PVC mit dem Cluster verbunden.
+
+### 📦 Genutzter PVC (`k8s/postgres.yaml`)
+```yaml
+volumeMounts:
+  - name: postgres-storage
+    mountPath: /var/lib/postgresql/data
+volumes:
+  - name: postgres-storage
+    persistentVolumeClaim:
+      claimName: postgres-pvc
+```
+
+Der PVC wird beim Deployment automatisch erstellt:
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: loopit-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+### ✅ Datenpersistenz testen
+```bash
+# PVC Status prüfen
+kubectl get pvc -n loopit-dev
+kubectl describe pvc postgres-pvc -n loopit-dev
+
+# Pod neustarten und Daten testen
+kubectl delete pod -l app=postgres -n loopit-dev
+kubectl exec -it deployment/postgres -n loopit-dev -- psql -U loop_user -d loop-it
+# SQL: SELECT * FROM users WHERE username = 'Max';
+```
 
 ## 🔧 Deployment
 
@@ -113,6 +163,9 @@ kubectl get services -n loopit-dev
 # Ingress Status
 kubectl get ingress -n loopit-dev
 
+# PVC Status
+kubectl get pvc -n loopit-dev
+
 # Detaillierte Informationen
 kubectl describe ingress loopit-ingress -n loopit-dev
 ```
@@ -160,6 +213,7 @@ kubectl delete namespace loopit-dev
 **Was wird gelöscht:**
 - Alle Loop-It Services und Pods
 - Generierte Secrets
+- PersistentVolumeClaim (Daten gehen verloren!)
 - Docker Images (optional)
 - NGINX Ingress Controller (optional)
 
@@ -277,6 +331,18 @@ kubectl describe pod <pod-name> -n loopit-dev
 kubectl get events -n loopit-dev --sort-by=.metadata.creationTimestamp
 ```
 
+**PVC/Storage Probleme:**
+```bash
+# PVC Status detailliert
+kubectl describe pvc postgres-pvc -n loopit-dev
+
+# Volume Mount Probleme
+kubectl describe pod <postgres-pod> -n loopit-dev
+
+# Storage Events
+kubectl get events -n loopit-dev | grep -i volume
+```
+
 **Ingress funktioniert nicht:**
 ```bash
 # NGINX Ingress Controller Status
@@ -313,11 +379,12 @@ curl -v http://localhost/api/health
 ```
 k8s/
 ├── backend.yaml          # Backend Deployment & Service
-├── frontend.yaml         # Frontend Deployment & Service
-├── postgres.yaml         # PostgreSQL Deployment & Service
+├── frontend.yaml         # Frontend Deployment & Service  
+├── postgres.yaml         # PostgreSQL Deployment, Service & PVC
 ├── ingress.yaml          # NGINX Ingress Configuration
 ├── deploy.sh             # Automatisches Deployment
-└── cleanup.sh            # Cleanup Script
+├── cleanup.sh            # Cleanup Script
+└── README.md             # Diese Dokumentation
 ```
 
 ## 🔄 Updates
@@ -346,5 +413,6 @@ kubectl rollout status deployment/backend -n loopit-dev
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 - [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/)
 - [Docker Desktop Kubernetes](https://docs.docker.com/desktop/kubernetes/)
+- [Kubernetes Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
 
 ---
