@@ -20,6 +20,7 @@ import PostCard from '../components/feed/PostCard';
 import EditProfileModal from '../components/EditProfileModal';
 import FriendsList from '../components/FriendsList';
 import FriendshipButton from '../components/FriendshipButton';
+import FriendsModal from '../components/FriendsModal';
 
 const UserProfile = ({ currentUser }) => {
   const { username } = useParams();
@@ -42,6 +43,9 @@ const UserProfile = ({ currentUser }) => {
   const [sortBy, setSortBy] = useState('newest');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // State für Friends Modal
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
 
   // Filter Optionen
   const filterOptions = [
@@ -175,8 +179,7 @@ const UserProfile = ({ currentUser }) => {
 
   const handleFriendClick = (friendUsername) => {
     if (friendUsername === 'show-all') {
-      // TODO: Navigate to full friends page or show modal
-      console.log('Show all friends');
+      setShowFriendsModal(true);
     } else {
       navigate(`/profile/${friendUsername}`);
     }
@@ -350,8 +353,17 @@ const UserProfile = ({ currentUser }) => {
                   <div className="text-tertiary">Universes</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold text-primary">{stats.totalFriends || 0}</div>
-                  <div className="text-tertiary">Freunde</div>
+                  <button
+                    onClick={() => setShowFriendsModal(true)}
+                    className="hover:bg-hover rounded-lg p-2 cursor-pointer transition-colors group"
+                  >
+                    <div className="font-semibold text-primary group-hover:text-purple-600 transition-colors">
+                      {stats.totalFriends || 0}
+                    </div>
+                    <div className="text-tertiary group-hover:text-purple-600 transition-colors">
+                      Freunde
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
@@ -459,6 +471,7 @@ const UserProfile = ({ currentUser }) => {
             username={username}
             currentUser={currentUser}
             onFriendClick={handleFriendClick}
+            onShowAllClick={() => setShowFriendsModal(true)}
           />
 
             {/* Interessen (falls vorhanden) */}
@@ -513,6 +526,15 @@ const UserProfile = ({ currentUser }) => {
           onSave={handleProfileUpdate}
         />
       )}
+
+      {/* FRIENDS MODAL */}
+      <FriendsModal
+        isOpen={showFriendsModal}
+        onClose={() => setShowFriendsModal(false)}
+        username={username}
+        currentUser={currentUser}
+        isOwnProfile={isOwnProfile}
+      />
     </div>
   );
 };

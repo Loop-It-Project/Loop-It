@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Hash, MessageCircle, MoreHorizontal } from 'lucide-react';
 import FriendshipService from '../services/friendshipService';
 
-const FriendsList = ({ username, currentUser, showAllFriends = false, onFriendClick }) => {
+const FriendsList = ({ username, currentUser, showAllFriends = false, onFriendClick, onShowAllClick }) => {
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -97,14 +97,24 @@ const FriendsList = ({ username, currentUser, showAllFriends = false, onFriendCl
   return (
     <div className="bg-card rounded-lg p-6 border border-primary">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-primary">
-          {showAllFriends ? `Alle Freunde (${friends.length})` : `Freunde (${friends.length})`}
-        </h3>
+        <button
+          onClick={() => onShowAllClick?.()}
+          className="flex items-center space-x-2 cursor-pointer hover:bg-hover rounded-lg p-2 -ml-2 transition-colors group"
+        >
+          <h3 className="font-semibold text-primary group-hover:text-purple-600 transition-colors">
+            {showAllFriends ? `Alle Freunde (${friends.length})` : `Freunde (${friends.length})`}
+          </h3>
+          {!showAllFriends && (
+            <div className="text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              →
+            </div>
+          )}
+        </button>
         
         {!showAllFriends && friends.length > 5 && (
           <button
-            onClick={() => onFriendClick?.('show-all')}
-            className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+            onClick={() => onShowAllClick?.()}
+            className="text-purple-600 cursor-pointer hover:text-purple-700 text-sm font-medium"
           >
             Alle anzeigen
           </button>
