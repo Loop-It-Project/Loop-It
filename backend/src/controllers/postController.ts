@@ -67,35 +67,39 @@ export const deletePost = async (req: AuthRequest, res: Response): Promise<void>
 };
 
 // Post liken/unliken
-export const toggleLikePost = async (req: AuthRequest, res: Response): Promise<void> => {
+export const togglePostLike = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { postId } = req.params;
-    const userId = req.user!.id;
+    const userId = req.user?.id;
 
-    // console.log('🔄 Toggle like request:', { postId, userId });
+    // console.log('🔍 PostController.togglePostLike:', { 
+    //   postId, 
+    //   userId,
+    //   userFromToken: req.user 
+    // });
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    if (!postId) {
+      res.status(400).json({ success: false, error: 'Post ID is required' });
+      return;
+    }
 
     const result = await PostService.toggleLike(postId, userId);
     
-    // console.log('✅ Toggle like result:', result); 
-    // console.log('✅ Response structure:', {
-    //   hasData: !!result,
-    //   dataKeys: result ? Object.keys(result) : null,
-    //   isLiked: result?.isLiked,
-    //   likeCount: result?.likeCount
-    // }); 
-
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: result.isLiked ? 'Post liked successfully' : 'Post unliked successfully'
-    });
+    // console.log('🔍 PostController result:', result);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
   } catch (error) {
-    console.error('Toggle like error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to toggle like';
-    res.status(500).json({ 
-      success: false, 
-      error: message 
-    });
+    console.error('Toggle post like error:', error);
+    res.status(500).json({ success: false, error: 'Failed to toggle like' });
   }
 };
 

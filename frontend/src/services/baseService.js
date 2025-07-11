@@ -21,6 +21,14 @@ class BaseService {
   static async fetchWithAuth(url, options = {}) {
     try {
       let token = localStorage.getItem('token');
+
+      // ERWEITERTE DEBUG-INFO
+      console.log('🔍 BaseService.fetchWithAuth called:', {
+        url,
+        method: options.method || 'GET',
+        hasToken: !!token,
+        tokenExpired: AuthInterceptor.isTokenExpired(token)
+      });
       
       if (AuthInterceptor.isTokenExpired(token)) {
         console.log('🔄 Token läuft bald ab - erneuere präventiv...');

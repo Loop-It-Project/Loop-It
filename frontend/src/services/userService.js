@@ -58,10 +58,7 @@ class UserService {
   // Eigenes Profil abrufen
   static async getUserProfile() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/profile`, {
-        method: 'GET'
-      });
-
+      const response = await this.fetchWithAuth(`${API_URL}/api/users/profile`);
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {
@@ -73,10 +70,7 @@ class UserService {
   // Öffentliches Profil abrufen
   static async getPublicUserProfile(username) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/profile/${username}`, {
-        method: 'GET'
-      });
-
+      const response = await this.fetchWithAuth(`${API_URL}/api/users/profile/${username}`);
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {

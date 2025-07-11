@@ -1,19 +1,24 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/userService';
 import { body, validationResult } from 'express-validator';
+import { db } from '../db/connection';
+import { 
+  usersTable, 
+  postsTable, 
+  universesTable, 
+  profilesTable 
+} from '../db/Schemas';
+import { eq, desc, asc, and } from 'drizzle-orm';
 
 interface AuthRequest extends Request {
   user?: { id: string; email: string; username: string };
 }
 
-// USER PROFILE abrufen
+// Eigenes Profil abrufen
 export const getUserProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.user?.id) {
-      res.status(401).json({
-        success: false,
-        error: 'User not authenticated'
-      });
+      res.status(401).json({ success: false, error: 'User not authenticated' });
       return;
     }
 
@@ -32,16 +37,13 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-// PUBLIC USER PROFILE abrufen (für andere User)
+// Öffentliches Profil abrufen
 export const getPublicUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username } = req.params;
     
     if (!username) {
-      res.status(400).json({
-        success: false,
-        error: 'Username is required'
-      });
+      res.status(400).json({ success: false, error: 'Username is required' });
       return;
     }
 
@@ -55,16 +57,202 @@ export const getPublicUserProfile = async (req: Request, res: Response): Promise
     console.error('Get public user profile error:', error);
     
     if (error instanceof Error && error.message === 'User not found') {
-      res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      res.status(404).json({ success: false, error: 'User not found' });
     } else {
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get user profile'
-      });
+      res.status(500).json({ success: false, error: 'Failed to get user profile' });
     }
+  }
+};
+
+// User's eigene Posts abrufen
+export const getUserPosts = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const sortBy = req.query.sortBy as string || 'newest';
+
+    // Finde User by username
+    const [user] = await db
+      .select({ 
+        id: usersTable.id,
+        username: usersTable.username,
+        displayName: usersTable.displayName
+      })
+      .from(usersTable)
+      .where(eq(usersTable.username, username))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    // Posts MIT Author-Informationen laden
+    const offset = (page - 1) * limit;
+    
+    const posts = await db
+      .select({
+        id: postsTable.id,
+        title: postsTable.title,
+        content: postsTable.content,
+        contentType: postsTable.contentType,
+        mediaIds: postsTable.mediaIds,
+        hashtags: postsTable.hashtags,
+        likeCount: postsTable.likeCount,
+        commentCount: postsTable.commentCount,
+        shareCount: postsTable.shareCount,
+        createdAt: postsTable.createdAt,
+        // Author-Informationen
+        author: {
+          id: usersTable.id,
+          username: usersTable.username,
+          displayName: usersTable.displayName,
+          profileImage: profilesTable.avatarId
+        },
+        universe: {
+          id: universesTable.id,
+          name: universesTable.name,
+          slug: universesTable.slug
+        }
+      })
+      .from(postsTable)
+      .leftJoin(usersTable, eq(postsTable.authorId, usersTable.id))
+      .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
+      .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id))
+      .where(
+        and(
+          eq(postsTable.authorId, user.id),
+          eq(postsTable.isDeleted, false)
+        )
+      )
+      .orderBy(
+        sortBy === 'newest' ? desc(postsTable.createdAt) :
+        sortBy === 'oldest' ? asc(postsTable.createdAt) :
+        sortBy === 'likes' ? desc(postsTable.likeCount) :
+        desc(postsTable.createdAt)
+      )
+      .offset(offset)
+      .limit(limit);
+
+    const result = {
+      posts,
+      pagination: {
+        page,
+        limit,
+        hasMore: posts.length === limit
+      }
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Get user posts error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user posts'
+    });
+  }
+};
+
+// User Profil-Statistiken abrufen
+export const getUserStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username } = req.params;
+
+    // Finde User by username
+    const [user] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.username, username))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    const stats = await UserService.getUserStats(user.id);
+    
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Get user stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user stats'
+    });
+  }
+};
+
+// Freunde mit gemeinsamen Interessen
+export const getFriendsWithCommonInterests = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+    const friends = await UserService.getFriendsWithCommonInterests(req.user.id, limit);
+    
+    res.status(200).json({
+      success: true,
+      data: friends
+    });
+  } catch (error) {
+    console.error('Get friends with common interests error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get friends with common interests'
+    });
+  }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  console.log('🔍 Update Profile Request:', {
+    userId: req.user?.id,
+    body: JSON.stringify(req.body, null, 2),
+    bodyKeys: Object.keys(req.body),
+    contentType: req.headers['content-type']
+  });
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log('❌ Validation Errors:', JSON.stringify(errors.array(), null, 2)); // ← Detaillierte Errors
+    res.status(400).json({ 
+      success: false, 
+      errors: errors.array(),
+      message: 'Validation failed'
+    });
+    return;
+  }
+
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    console.log('📝 Calling UserService.updateProfile with:', req.body);
+
+    const result = await UserService.updateProfile(req.user.id, req.body);
+    
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Profile updated successfully'
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update profile'
+    });
   }
 };
 
@@ -126,45 +314,6 @@ export const updateUserSettings = async (req: AuthRequest, res: Response): Promi
     res.status(500).json({
       success: false,
       error: 'Failed to update user settings'
-    });
-  }
-};
-
-// USER PROFILE aktualisieren
-export const updateUserProfile = async (req: AuthRequest, res: Response): Promise<void> => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({ 
-      success: false,
-      errors: errors.array() 
-    });
-    return;
-  }
-
-  try {
-    if (!req.user?.id) {
-      res.status(401).json({
-        success: false,
-        error: 'User not authenticated'
-      });
-      return;
-    }
-
-    // ✅ Stelle sicher, dass Profile existiert
-    await UserService.ensureUserProfile(req.user.id);
-    
-    const result = await UserService.updateUserProfile(req.user.id, req.body);
-    
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: 'Profile updated successfully'
-    });
-  } catch (error) {
-    console.error('Update user profile error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update user profile'
     });
   }
 };
@@ -296,15 +445,95 @@ export const updateUserLocation = async (req: AuthRequest, res: Response): Promi
   }
 };
 
+// Helper-Funktionen für Array-Validation
+const validateStringArray = (items: unknown[], fieldName: string, maxLength: number = 50): boolean => {
+  if (!Array.isArray(items)) {
+    throw new Error(`${fieldName} müssen ein Array sein`);
+  }
+  
+  const validItems = items.every((item: unknown) => 
+    typeof item === 'string' && 
+    (item as string).trim().length > 0 && 
+    (item as string).length <= maxLength
+  );
+  
+  if (!validItems) {
+    throw new Error(`Jeder ${fieldName} Eintrag muss ein Text zwischen 1-${maxLength} Zeichen sein`);
+  }
+  
+  return true;
+};
+
 // VALIDATION RULES
 export const updateProfileValidation = [
-  body('displayName').optional().isLength({ min: 1, max: 100 }).withMessage('Display name must be 1-100 characters'),
-  body('firstName').optional().isLength({ min: 1, max: 50 }).withMessage('First name must be 1-50 characters'),
-  body('lastName').optional().isLength({ min: 1, max: 50 }).withMessage('Last name must be 1-50 characters'),
-  body('bio').optional().isLength({ max: 500 }).withMessage('Bio must be max 500 characters'),
-  body('website').optional().isURL().withMessage('Website must be a valid URL'),
-  body('interests').optional().isArray().withMessage('Interests must be an array'),
-  body('hobbies').optional().isArray().withMessage('Hobbies must be an array'),
+  body('displayName')
+    .optional({ nullable: true, checkFalsy: false })
+    .trim()
+    .isLength({ min: 0, max: 100 })
+    .withMessage('Display Name darf maximal 100 Zeichen haben'),
+    
+  body('firstName')
+    .optional({ nullable: true, checkFalsy: false })
+    .trim()
+    .isLength({ min: 0, max: 50 })
+    .withMessage('Vorname darf maximal 50 Zeichen haben'),
+    
+  body('lastName')
+    .optional({ nullable: true, checkFalsy: false })
+    .trim()
+    .isLength({ min: 0, max: 50 })
+    .withMessage('Nachname darf maximal 50 Zeichen haben'),
+    
+  body('bio')
+    .optional({ nullable: true, checkFalsy: false })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Bio darf maximal 500 Zeichen haben'),
+    
+  body('website')
+    .optional({ nullable: true, checkFalsy: false })
+    .custom((value) => {
+      // Leere Strings und null explizit erlauben
+      if (!value || value === '' || value === null) {
+        return true;
+      }
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        throw new Error('Ungültiges URL-Format');
+      }
+    }),
+    
+  body('socialLinks')
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'object' && !Array.isArray(value)) return true;
+      throw new Error('Social Links müssen ein Objekt sein');
+    }),
+    
+  body('interests')
+    .optional({ nullable: true })
+    .isArray({ max: 10 })
+    .withMessage('Interessen müssen ein Array mit maximal 10 Einträgen sein')
+    .custom((interests) => {
+      if (interests) {
+        return validateStringArray(interests, 'Interesse');
+      }
+      return true;
+    }),
+    
+  body('hobbies')
+    .optional({ nullable: true })
+    .isArray({ max: 10 })
+    .withMessage('Hobbys müssen ein Array mit maximal 10 Einträgen sein')
+    .custom((hobbies) => {
+      if (hobbies) {
+        return validateStringArray(hobbies, 'Hobby');
+      }
+      return true;
+    }),
 ];
 
 export const updateSettingsValidation = [

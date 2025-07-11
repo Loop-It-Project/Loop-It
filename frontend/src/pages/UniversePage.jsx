@@ -323,7 +323,7 @@ const UniversePage = ({ user, onUniverseJoined, onUniverseLeft }) => {
 
   // Render Universe Page
   return (
-    <div className="min-h-screen bg-secondary">
+    <div className="min-h-screen bg-primary">
 
       {/* Universe Header */}
       <div className="bg-card border-b">
