@@ -19,6 +19,7 @@ import UserProfileService from '../services/userProfileService';
 import PostCard from '../components/feed/PostCard';
 import EditProfileModal from '../components/EditProfileModal';
 import FriendsList from '../components/FriendsList';
+import FriendshipButton from '../components/FriendshipButton';
 
 const UserProfile = ({ currentUser }) => {
   const { username } = useParams();
@@ -33,6 +34,7 @@ const UserProfile = ({ currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [friendshipStatus, setFriendshipStatus] = useState('none');
 
   // Posts Pagination & Filter
   const [page, setPage] = useState(1);
@@ -163,6 +165,23 @@ const UserProfile = ({ currentUser }) => {
     setShowEditModal(false);
   };
 
+  const handleFriendshipStatusChange = (newStatus) => {
+    setFriendshipStatus(newStatus);
+    // Optional: Profile neu laden für aktualisierte Friend Counts
+    if (newStatus === 'accepted' || newStatus === 'none') {
+      loadProfile();
+    }
+  };
+
+  const handleFriendClick = (friendUsername) => {
+    if (friendUsername === 'show-all') {
+      // TODO: Navigate to full friends page or show modal
+      console.log('Show all friends');
+    } else {
+      navigate(`/profile/${friendUsername}`);
+    }
+  };
+
   // Loading State
   if (loading) {
     return (
@@ -222,6 +241,17 @@ const UserProfile = ({ currentUser }) => {
                 <p className="text-secondary">@{profile?.username}</p>
               </div>
 
+              {/* Action Buttons */}
+              <div className="flex items-center space-x-3">
+                {/* Friendship Button (nur für andere Profile) */}
+                {!isOwnProfile && (
+                  <FriendshipButton
+                    targetUsername={username}
+                    currentUser={currentUser}
+                    onStatusChange={handleFriendshipStatusChange}
+                  />
+                )}
+
               {/* Edit Button (nur für eigenes Profil) */}
               {isOwnProfile && (
                 <button
@@ -232,6 +262,7 @@ const UserProfile = ({ currentUser }) => {
                   <span>Profil bearbeiten</span>
                 </button>
               )}
+              </div>
             </div>
 
             {/* Bio */}
@@ -302,8 +333,8 @@ const UserProfile = ({ currentUser }) => {
                 </div>
               </div>
             )}
-
-            {/* Stats */}
+          
+          {/* Stats */}
             {stats && (
               <div className="flex items-center space-x-6 text-sm">
                 <div className="text-center">
@@ -423,13 +454,12 @@ const UserProfile = ({ currentUser }) => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Freunde mit gemeinsamen Interessen (nur für eigenes Profil) */}
-          {isOwnProfile && friends.length > 0 && (
-            <FriendsList 
-              friends={friends}
-              onFriendClick={(friendUsername) => navigate(`/profile/${friendUsername}`)}
-            />
-          )}
+          {/* Freunde Liste */}
+          <FriendsList 
+            username={username}
+            currentUser={currentUser}
+            onFriendClick={handleFriendClick}
+          />
 
             {/* Interessen (falls vorhanden) */}
             {profile?.interests && profile.interests.length > 0 && (

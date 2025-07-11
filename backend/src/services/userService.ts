@@ -13,6 +13,7 @@ import {
 } from '../db/Schemas';
 import { eq, and, desc, asc, count, sql, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { FriendshipService } from './friendshipService';
 
 export class UserService {
   
@@ -197,7 +198,6 @@ export class UserService {
       const [stats] = await db
         .select({
           totalPosts: sql<number>`COUNT(DISTINCT ${postsTable.id})`,
-          totalLikes: sql<number>`SUM(${postsTable.likeCount})`,
           totalUniverses: sql<number>`COUNT(DISTINCT ${universeMembersTable.universeId})`,
           totalFriends: sql<number>`COUNT(DISTINCT ${friendshipsTable.id})`
         })
@@ -217,7 +217,24 @@ export class UserService {
         )
         .where(eq(usersTable.id, userId));
 
-      return stats;
+      const [likeStats] = await db
+        .select({
+          totalLikes: sql<number>`COUNT(*)`
+        })
+        .from(postReactionsTable)
+        .where(
+          and(
+            eq(postReactionsTable.userId, userId),
+            eq(postReactionsTable.reactionType, 'like')
+          )
+        );
+
+      return {
+        totalPosts: stats.totalPosts || 0,
+        totalLikes: likeStats?.totalLikes || 0,
+        totalUniverses: stats.totalUniverses || 0,
+        totalFriends: stats.totalFriends || 0
+      };
     } catch (error) {
       console.error('Error getting user stats:', error);
       throw error;
@@ -279,91 +296,96 @@ export class UserService {
     }
   }
 
-  // Freunde mit gemeinsamen Interessen finden
-  static async getFriendsWithCommonInterests(userId: string, limit: number = 10) {
-    try {
-      // Hole User's Interessen
-      const [userProfile] = await db
-        .select({ 
-          interests: profilesTable.interests, 
-          hobbies: profilesTable.hobbies 
-        })
-        .from(profilesTable)
-        .where(eq(profilesTable.userId, userId))
-        .limit(1);
+  // // Freunde mit gemeinsamen Interessen finden
+  // static async getFriendsWithCommonInterests(userId: string, limit: number = 10) {
+  //   try {
+  //     // Hole User's Interessen
+  //     const [userProfile] = await db
+  //       .select({ 
+  //         interests: profilesTable.interests, 
+  //         hobbies: profilesTable.hobbies 
+  //       })
+  //       .from(profilesTable)
+  //       .where(eq(profilesTable.userId, userId))
+  //       .limit(1);
 
-      if (!userProfile) return [];
+  //     if (!userProfile) return [];
 
-      // Type Safety für Arrays
-      const userInterests = Array.isArray(userProfile.interests) 
-        ? userProfile.interests 
-        : [];
-      const userHobbies = Array.isArray(userProfile.hobbies) 
-        ? userProfile.hobbies 
-        : [];
+  //     // Type Safety für Arrays
+  //     const userInterests = Array.isArray(userProfile.interests) 
+  //       ? userProfile.interests 
+  //       : [];
+  //     const userHobbies = Array.isArray(userProfile.hobbies) 
+  //       ? userProfile.hobbies 
+  //       : [];
       
-      if (userInterests.length === 0 && userHobbies.length === 0) return [];
+  //     if (userInterests.length === 0 && userHobbies.length === 0) return [];
 
-      // Finde Freunde
-      const friends = await db
-        .select({
-          id: usersTable.id,
-          username: usersTable.username,
-          displayName: usersTable.displayName,
-          bio: profilesTable.bio,
-          interests: profilesTable.interests,
-          hobbies: profilesTable.hobbies,
-          avatarId: profilesTable.avatarId
-        })
-        .from(friendshipsTable)
-        .innerJoin(usersTable, eq(friendshipsTable.addresseeId, usersTable.id))
-        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
-        .where(
-          and(
-            eq(friendshipsTable.requesterId, userId),
-            eq(friendshipsTable.status, 'accepted')
-          )
-        )
-        .limit(limit);
+  //     // Finde Freunde
+  //     const friends = await db
+  //       .select({
+  //         id: usersTable.id,
+  //         username: usersTable.username,
+  //         displayName: usersTable.displayName,
+  //         bio: profilesTable.bio,
+  //         interests: profilesTable.interests,
+  //         hobbies: profilesTable.hobbies,
+  //         avatarId: profilesTable.avatarId
+  //       })
+  //       .from(friendshipsTable)
+  //       .innerJoin(usersTable, eq(friendshipsTable.addresseeId, usersTable.id))
+  //       .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
+  //       .where(
+  //         and(
+  //           eq(friendshipsTable.requesterId, userId),
+  //           eq(friendshipsTable.status, 'accepted')
+  //         )
+  //       )
+  //       .limit(limit);
 
-      // Filter für gemeinsame Interessen mit Type Safety
-      return friends
-        .filter(friend => {
-          const friendInterests = Array.isArray(friend.interests) 
-            ? friend.interests 
-            : [];
-          const friendHobbies = Array.isArray(friend.hobbies) 
-            ? friend.hobbies 
-            : [];
+  //     // Filter für gemeinsame Interessen mit Type Safety
+  //     return friends
+  //       .filter(friend => {
+  //         const friendInterests = Array.isArray(friend.interests) 
+  //           ? friend.interests 
+  //           : [];
+  //         const friendHobbies = Array.isArray(friend.hobbies) 
+  //           ? friend.hobbies 
+  //           : [];
 
-          const commonInterests = userInterests.filter((interest: string) => 
-            friendInterests.includes(interest)
-          );
-          const commonHobbies = userHobbies.filter((hobby: string) => 
-            friendHobbies.includes(hobby)
-          );
+  //         const commonInterests = userInterests.filter((interest: string) => 
+  //           friendInterests.includes(interest)
+  //         );
+  //         const commonHobbies = userHobbies.filter((hobby: string) => 
+  //           friendHobbies.includes(hobby)
+  //         );
 
-          return commonInterests.length > 0 || commonHobbies.length > 0;
-        })
-        .map(friend => ({
-          ...friend,
-          commonInterests: userInterests.filter((interest: string) => {
-            const friendInterests = Array.isArray(friend.interests) 
-              ? friend.interests 
-              : [];
-            return friendInterests.includes(interest);
-          }),
-          commonHobbies: userHobbies.filter((hobby: string) => {
-            const friendHobbies = Array.isArray(friend.hobbies) 
-              ? friend.hobbies 
-              : [];
-            return friendHobbies.includes(hobby);
-          })
-        }));
-    } catch (error) {
-      console.error('Error getting friends with common interests:', error);
-      return [];
-    }
+  //         return commonInterests.length > 0 || commonHobbies.length > 0;
+  //       })
+  //       .map(friend => ({
+  //         ...friend,
+  //         commonInterests: userInterests.filter((interest: string) => {
+  //           const friendInterests = Array.isArray(friend.interests) 
+  //             ? friend.interests 
+  //             : [];
+  //           return friendInterests.includes(interest);
+  //         }),
+  //         commonHobbies: userHobbies.filter((hobby: string) => {
+  //           const friendHobbies = Array.isArray(friend.hobbies) 
+  //             ? friend.hobbies 
+  //             : [];
+  //           return friendHobbies.includes(hobby);
+  //         })
+  //       }));
+  //   } catch (error) {
+  //     console.error('Error getting friends with common interests:', error);
+  //     return [];
+  //   }
+  // }
+
+  // Methode für Freunde mit gemeinsamen Interessen 
+  static async getFriendsWithCommonInterests(userId: string, limit: number = 10) {
+    return FriendshipService.getFriendsWithCommonInterests(userId, limit);
   }
 
   // PASSWORD ändern

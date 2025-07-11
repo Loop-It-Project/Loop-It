@@ -71,72 +71,50 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
   // Like Handler:
   // Hier wird der Like-Status geändert und die Anzahl aktualisiert
   // Bei Fehlern wird der Status revertiert
-  const handleLike = async () => {
-    if (likingInProgress) return;
+  const handleLike = async (e) => {
+  e.stopPropagation();
+  
+  if (!currentUser) {
+    alert('Du musst angemeldet sein um Posts zu liken');
+    return;
+  }
 
-    try {
-      setLikingInProgress(true);
+  const prevLiked = isLiked;
+  const prevCount = likeCount;
 
-      // console.log('🔄 Starting like action:', { isLiked, likeCount });
+  try {
+    // Optimistic Update
+    setIsLiked(!isLiked);
+    setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
 
-      // Sicherheitsprüfung für likeCount
-      const currentLikeCount = typeof likeCount === 'number' ? likeCount : (post.likeCount || 0);
-      const currentIsLiked = typeof isLiked === 'boolean' ? isLiked : (post.isLikedByUser || false);
-
-      // Optimistisches Update mit korrigierten Werten
-      const newLikedState = !currentIsLiked;
-      const newLikeCount = newLikedState ? currentLikeCount + 1 : currentLikeCount - 1;
-
-      // console.log('🔧 Corrected values:', { currentLikeCount, currentIsLiked, newLikedState, newLikeCount });
-
-      setIsLiked(newLikedState);
-      setLikeCount(newLikeCount);
-
-      // console.log('⚡ Optimistic update:', { newLikedState, newLikeCount });
-
-      // Server-Request
-      const response = await PostService.toggleLike(post.id);
-
-      // console.log('📥 Server response:', response);
-
-      if (response.success && response.data) {
-        // Server-Response Validierung
-        const serverIsLiked = typeof response.data.isLiked === 'boolean' ? response.data.isLiked : newLikedState;
-        const serverLikeCount = typeof response.data.likeCount === 'number' ? response.data.likeCount : newLikeCount;
-
-        // console.log('✅ Validated server data:', { serverIsLiked, serverLikeCount });
-
-        // Update mit validierten Server-Daten
-        setIsLiked(serverIsLiked);
-        setLikeCount(serverLikeCount);
-
-        // Parent-Komponente nur mit gültigen Daten benachrichtigen
-        if (onLike && typeof onLike === 'function') {
-        //   console.log('📢 Notifying parent component with validated data:', {
-        //     postId: post.id,
-        //     isLiked: serverIsLiked,
-        //     likeCount: serverLikeCount
-        //   });
-          onLike(post.id, serverIsLiked, serverLikeCount);
-        }
-      } else {
-        // Revert bei fehlerhafter Server-Response
-        setIsLiked(currentIsLiked);
-        setLikeCount(currentLikeCount);
-        console.error('❌ Invalid server response:', response);
-      }
-    } catch (error) {
-      // Revert bei Fehler - mit korrigierten Original-Werten
-      const originalLikeCount = typeof likeCount === 'number' ? likeCount : (post.likeCount || 0);
-      const originalIsLiked = typeof isLiked === 'boolean' ? isLiked : (post.isLikedByUser || false);
-
-      setIsLiked(originalIsLiked);
-      setLikeCount(originalLikeCount);
-      console.error('❌ Error liking post:', error);
-    } finally {
-      setLikingInProgress(false);
+    console.log('🔍 Frontend: Attempting like toggle for post:', post.id);
+    
+    const response = await PostService.toggleLike(post.id);
+    
+    console.log('🔍 Frontend: Like toggle response:', response);
+    
+    if (response.success) {
+      // Verwende response.data statt response direkt
+      setIsLiked(response.data.isLiked);
+      setLikeCount(response.data.likeCount);
+      
+      console.log('🔍 Frontend: Like updated successfully:', {
+        isLiked: response.data.isLiked,
+        likeCount: response.data.likeCount
+      });
+    } else {
+      // Rollback bei Fehler
+      setIsLiked(prevLiked);
+      setLikeCount(prevCount);
+      console.error('Like toggle failed:', response.error);
     }
-  };
+  } catch (error) {
+    // Rollback bei Fehler
+    setIsLiked(prevLiked);
+    setLikeCount(prevCount);
+    console.error('Like toggle error:', error);
+  }
+};
 
   // Comment Handler
   const handleComment = () => {
@@ -413,7 +391,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
         <div className="relative">
           <button
             onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className="p-2 text-muted hover:text-secondary rounded-full hover:bg-hover transition-colors"
+            className="p-2 text-muted hover:text-secondary rounded-full cursor-pointer hover:bg-hover transition-colors"
           >
             <MoreHorizontal size={16} />
           </button>
@@ -427,7 +405,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
                     setShowMoreMenu(false);
                     setShowReportModal(true);
                   }}
-                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm flex items-center space-x-2"
+                  className="w-full px-4 py-2 text-left text-red-600 cursor-pointer hover:bg-red-50 transition-colors text-sm flex items-center space-x-2"
                 >
                   <Flag size={14} />
                   <span>Post melden</span>
@@ -441,7 +419,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
                     setShowMoreMenu(false);
                     handleDeletePost();
                   }}
-                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors text-sm flex items-center space-x-2"
+                  className="w-full px-4 py-2 text-left text-red-600 cursor-pointer hover:bg-red-50 transition-colors text-sm flex items-center space-x-2"
                 >
                   <Trash2 size={14} />
                   <span>Post löschen</span>
@@ -450,7 +428,7 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
 
               <button
                 onClick={() => setShowMoreMenu(false)}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm"
+                className="w-full px-4 py-2 text-left cursor-pointer hover:bg-gray-50 transition-colors text-sm"
               >
                 Abbrechen
               </button>

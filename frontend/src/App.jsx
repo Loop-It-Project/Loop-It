@@ -31,6 +31,36 @@ function App() {
     setDashboardRefreshTrigger(prev => prev + 1);
   };
 
+  // User Data Refresh
+  const refreshUserData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !user) return;
+
+      console.log('🔄 App: Refreshing user data...');
+      
+      // User-Profil neu laden
+      const response = await fetch(`${API_URL}/api/users/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const updatedUser = { ...user, ...data.data };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          console.log('✅ App: User data refreshed successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  };
+
   // Enhanced Login Handler mit Token-Monitoring
   const handleLogin = async (userData) => {
     setUser(userData);
@@ -171,7 +201,14 @@ function App() {
   return (
     <Router>
       {/* Header nur für eingeloggte User anzeigen */}
-      {user && <Header user={user} setUser={setUser} onLogout={handleLogout} />}
+      {user && (
+        <Header 
+          user={user} 
+          setUser={setUser} 
+          onLogout={handleLogout}
+          refreshUserData={refreshUserData}
+        />
+      )}
       
       <div className="App">
         <Routes>

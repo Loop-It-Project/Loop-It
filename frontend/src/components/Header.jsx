@@ -1,18 +1,29 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, User, Settings, Plus, Compass, TrendingUp, Hash, Search, Shield, Bell } from 'lucide-react';
+import { LogOut, User, Users, Settings, Plus, Hash, Search, Shield, Bell } from 'lucide-react';
 import CreateUniverse from './CreateUniverse'; 
 import FeedService from '../services/feedServices';
 import AdminService from '../services/adminService';
 import useEscapeKey from '../hooks/useEscapeKey';
+import PendingFriendRequests from './PendingFriendRequests';
+import FriendshipService from '../services/friendshipService';
 
-const Header = ({ user, setUser, onLogout }) => { 
+// Header-Komponente für die Navigation und Aktionen im Dashboard
+// Importiere die benötigten Icons von Lucide
+// Verwende React Router für Navigation und Links
+
+const Header = ({ user, setUser, onLogout, refreshUserData }) => { 
   const navigate = useNavigate();
   const [showCreateUniverse, setShowCreateUniverse] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // States für Friendship Requests
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [friendRequestsLoading, setFriendRequestsLoading] = useState(false);
 
   // Enhanced Admin Check mit Debug-Logs
   useEffect(() => {
@@ -47,6 +58,68 @@ const Header = ({ user, setUser, onLogout }) => {
 
     checkAdminAccess();
   }, [user]);
+
+  // Pending Friend Requests laden
+  useEffect(() => {
+    if (user) {
+      loadPendingRequestsCount();
+      
+      // Auto-refresh alle 30 Sekunden
+      const interval = setInterval(loadPendingRequestsCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Pending Requests Count laden
+  const loadPendingRequestsCount = async () => {
+    try {
+      setFriendRequestsLoading(true);
+      const response = await FriendshipService.getPendingRequests();
+      
+      if (response.success) {
+        const totalCount = response.data.received.length + response.data.sent.length;
+        setPendingRequestsCount(totalCount);
+        
+        console.log('🔔 Friend requests loaded:', {
+          received: response.data.received.length,
+          sent: response.data.sent.length,
+          total: totalCount
+        });
+      }
+    } catch (error) {
+      console.error('Error loading pending requests count:', error);
+    } finally {
+      setFriendRequestsLoading(false);
+    }
+  };
+
+  // Friend Request Handler
+  const handleFriendRequestUpdate = () => {
+    console.log('🔄 Friend request handled, refreshing data...');
+    
+    // Requests neu laden
+    loadPendingRequestsCount();
+    
+    // User-Daten refresh (für Friend Count etc.)
+    refreshUserDataInternal();
+  };
+
+  // User Data Refresh
+  const refreshUserDataInternal = async () => {
+    try {
+      console.log('🔄 Refreshing user data...');
+      
+      if (refreshUserData && typeof refreshUserData === 'function') {
+        // Verwende die übergebene Funktion aus App.jsx
+        await refreshUserData();
+      } else {
+        // Fallback: Lokaler Refresh
+        console.log('✅ User data refresh completed (no external function provided)');
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  };
 
   // ESC-Key Handler
   useEscapeKey(() => {
@@ -206,7 +279,6 @@ const Header = ({ user, setUser, onLogout }) => {
               {isAdmin && (
                 <button
                   onClick={() => {
-                    // console.log('🔧 Admin button clicked - navigating to /admin');
                     navigate('/admin');
                   }}
                   className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 hover:scale-110 hover:cursor-pointer transition-all duration-200 rounded-lg"
@@ -216,17 +288,69 @@ const Header = ({ user, setUser, onLogout }) => {
                 </button>
               )}
 
-              {/* {/* Debug Info (nur in Development) */}
-              {/* {import.meta.env.DEV && (
-                <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                  Admin: {isAdmin ? 'YES' : 'NO'}
-                </div>
-              )} */}
+              {/* Friend Requests Button */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowFriendRequests(!showFriendRequests)}
+                  className="relative p-2 text-blue-600 cursor-pointer hover:text-blue-700 hover:scale-110 hover:bg-blue-50 rounded-lg transition-all"
+                  title="Freundschaftsanfragen"
+                >
+                  <Users size={20} />
+                  
+                  {/* Notification Badge */}
+                  {pendingRequestsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold animate-pulse">
+                      {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                    </span>
+                  )}
+                  
+                  {/* Loading Indicator */}
+                  {friendRequestsLoading && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  )}
+                </button>
+
+                {/* Friend Requests Dropdown */}
+                {showFriendRequests && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-primary rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <div className="p-3 border-b border-primary bg-card">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-primary">Freundschaftsanfragen</h3>
+                        <button
+                          onClick={loadPendingRequestsCount}
+                          disabled={friendRequestsLoading}
+                          className="text-blue-600 cursor-pointer hover:text-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {friendRequestsLoading ? (
+                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            '🔄'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="max-h-80 overflow-y-auto">
+                      <PendingFriendRequests 
+                        currentUser={user}
+                        onRequestHandled={handleFriendRequestUpdate}
+                      />
+                    </div>
+                    
+                    {pendingRequestsCount === 0 && (
+                      <div className="p-6 text-center text-tertiary">
+                        <Users size={32} className="mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Keine ausstehenden Anfragen</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Profile Button */}
               <Link
                 to={`/profile/${user.username}`}
-                className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all"
+                className="p-2 text-purple-600 cursor-pointer hover:text-purple-700 hover:scale-110 hover:bg-purple-50 rounded-lg transition-all"
                 title="Mein Profil"
               >
                 <User size={20} />
@@ -234,7 +358,7 @@ const Header = ({ user, setUser, onLogout }) => {
 
               {/* Notifications Button (für später) */}
               <button
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-all"
+                className="p-2 text-gray-500 cursor-pointer hover:text-gray-700 hover:scale-110 hover:bg-gray-50 rounded-lg transition-all"
                 title="Benachrichtigungen"
               >
                 <Bell size={20} />
@@ -243,7 +367,7 @@ const Header = ({ user, setUser, onLogout }) => {
               {/* Settings Button */}
               <button 
                 onClick={() => navigate('/settings')}
-                className="p-2 text-muted hover:text-primary hover:bg-hover hover:scale-110 hover:cursor-pointer transition-all duration-200 rounded-lg"
+                className="p-2 text-muted hover:text-primary hover:bg-hover hover:bg-purple-50 hover:scale-110 hover:cursor-pointer transition-all duration-200 rounded-lg"
               >
                 <Settings size={20} />
               </button>
@@ -251,7 +375,7 @@ const Header = ({ user, setUser, onLogout }) => {
               {/* Logout Button */}
               <button 
                 onClick={handleLogout}
-                className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 hover:cursor-pointer transition"
+                className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:scale-110 hover:bg-red-600 hover:cursor-pointer transition"
               >
                 <LogOut size={16} />
                 <span>Abmelden</span>
@@ -259,6 +383,14 @@ const Header = ({ user, setUser, onLogout }) => {
             </div>
           </div>
         </div>
+
+      {/* Click-away Handler für Friend Requests */}
+        {showFriendRequests && (
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShowFriendRequests(false)}
+          />
+        )}
       </header>
 
       {/* CreateUniverse Modal */}

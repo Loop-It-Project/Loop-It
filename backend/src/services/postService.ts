@@ -242,83 +242,152 @@ export class PostService {
 
   // Like/Unlike Post
   static async toggleLike(postId: string, userId: string) {
-    try {
-      // Prüfe ob Like bereits existiert
-      const existingLike = await db
-        .select()
-        .from(postReactionsTable)
-        .where(
-          and(
-            eq(postReactionsTable.postId, postId),
-            eq(postReactionsTable.userId, userId),
-            eq(postReactionsTable.reactionType, 'like')
-          )
+  try {
+    console.log('🔍 ToggleLike called with:', { postId, userId });
+    console.log('🔍 userId type:', typeof userId);
+    console.log('🔍 userId length:', userId?.length);
+
+    // ERST den Post laden für Debug-Zwecke
+    const [post] = await db
+      .select({
+        id: postsTable.id,
+        authorId: postsTable.authorId,
+        likeCount: postsTable.likeCount
+      })
+      .from(postsTable)
+      .where(eq(postsTable.id, postId))
+      .limit(1);
+
+    //  JETZT können wir debuggen
+    console.log('🔍 LIKE DEBUG:', {
+      postId,
+      userId, // ← Das sollte Max Mustermann sein
+      postAuthorId: post.authorId // ← Das ist Zerrelius
+    });
+
+    if (!post) {
+      throw new Error('Post not found');
+    }
+
+    // Prüfe ob Like bereits existiert
+    const existingLike = await db
+      .select()
+      .from(postReactionsTable)
+      .where(
+        and(
+          eq(postReactionsTable.postId, postId),
+          eq(postReactionsTable.userId, userId),
+          eq(postReactionsTable.reactionType, 'like')
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      let isLiked = false;
-      let newLikeCount = 0;
+    console.log('🔍 Existing like check:', { 
+      found: existingLike.length > 0, 
+      userId,
+      postId 
+    });
 
-      if (existingLike.length > 0) {
-        // Unlike: Like entfernen
-        await db
-          .delete(postReactionsTable)
-          .where(eq(postReactionsTable.id, existingLike[0].id));
+    let isLiked = false;
+    let newLikeCount = 0;
 
-        // Like-Count verringern
-        await db
-          .update(postsTable)
-          .set({
-            likeCount: sql`${postsTable.likeCount} - 1`,
-            updatedAt: new Date()
-          })
-          .where(eq(postsTable.id, postId));
+    if (existingLike.length > 0) {
+      // Unlike
+      console.log('🔍 Removing existing like with ID:', existingLike[0].id);
+      await db
+        .delete(postReactionsTable)
+        .where(eq(postReactionsTable.id, existingLike[0].id));
+      isLiked = false;
+      console.log('🔍 Removed like for userId:', userId);
+    } else {
+      // Like hinzufügen - ERWEITERTE DEBUG-INFO
+      const newLikeData = {
+        postId,
+        userId,
+        reactionType: 'like',
+        createdAt: new Date()
+      };
+      
+      console.log('🔍 About to insert like with data:', {
+        postId: newLikeData.postId,
+        userId: newLikeData.userId,
+        reactionType: newLikeData.reactionType,
+        userIdType: typeof newLikeData.userId,
+        userIdLength: newLikeData.userId?.length
+      });
 
-        isLiked = false;
-      } else {
-        // Like: Neuen Like hinzufügen
-        await db
-          .insert(postReactionsTable)
-          .values({
-            id: uuidv4(),
-            postId,
-            userId,
-            reactionType: 'like',
-            createdAt: new Date()
-          });
+      const insertResult = await db
+        .insert(postReactionsTable)
+        .values(newLikeData)
+        .returning({
+          id: postReactionsTable.id,
+          userId: postReactionsTable.userId,
+          postId: postReactionsTable.postId
+        });
 
-        // Like-Count erhöhen
-        await db
-          .update(postsTable)
-          .set({
-            likeCount: sql`${postsTable.likeCount} + 1`,
-            updatedAt: new Date()
-          })
-          .where(eq(postsTable.id, postId));
+      console.log('🔍 Insert result:', insertResult);
+      console.log('🔍 Inserted like for userId:', userId);
+      isLiked = true;
+    }
 
-        isLiked = true;
-      }
+    // Post-Count aktualisieren
+    await db
+    .update(postsTable)
+    .set({
+      likeCount: isLiked 
+        ? sql`${postsTable.likeCount} + 1`
+        : sql`${postsTable.likeCount} - 1`,
+      updatedAt: new Date()
+    })
+    .where(eq(postsTable.id, postId));
 
-      // Aktuellen Like-Count abrufen
-      const updatedPost = await db
-        .select({ likeCount: postsTable.likeCount })
-        .from(postsTable)
-        .where(eq(postsTable.id, postId))
-        .limit(1);
+    // Aktuellen Like-Count abrufen
+    const actualLikeCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(postReactionsTable)
+      .where(
+        and(
+          eq(postReactionsTable.postId, postId),
+          eq(postReactionsTable.reactionType, 'like')
+        )
+      );
+    
+    newLikeCount = actualLikeCount[0]?.count || 0;
 
-      newLikeCount = updatedPost[0]?.likeCount || 0;
+    // 🔍 ZUSÄTZLICHE VERIFICATION
+    console.log('🔍 Verifying what was actually inserted...');
+    const verifyLike = await db
+      .select({
+        id: postReactionsTable.id,
+        postId: postReactionsTable.postId,
+        userId: postReactionsTable.userId,
+        reactionType: postReactionsTable.reactionType
+      })
+      .from(postReactionsTable)
+      .where(
+        and(
+          eq(postReactionsTable.postId, postId),
+          eq(postReactionsTable.reactionType, 'like')
+        )
+      )
+      .orderBy(desc(postReactionsTable.createdAt))
+      .limit(3);
 
-      return {
-        success: true,
+    console.log('🔍 Recent likes for this post:', verifyLike);
+
+    return {
+      success: true,
+      data: {
         isLiked,
         likeCount: newLikeCount
-      };
+      }
+    };
 
-    } catch (error) {
-      console.error('Toggle like error:', error);
-      throw new Error('Failed to toggle like');
-    }
+  } catch (error) {
+    console.error('Toggle like error:', error);
+    throw new Error('Failed to toggle like');
   }
+}
 
   // Comment zu Post hinzufügen
   static async addComment(postId: string, authorId: string, content: string, parentId?: string) {

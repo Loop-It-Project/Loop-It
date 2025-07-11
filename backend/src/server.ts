@@ -12,6 +12,7 @@ import searchRoutes from './routes/searchRoutes';
 import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
 import reportRoutes from './routes/reportRoutes';
+import friendshipRoutes from './routes/friendshipRoutes';
 import { TokenService } from './services/tokenService';
 import { metricsMiddleware, getMetrics } from './middleware/metrics';
 import { seedAdminData } from './db/seeds/seedAdminData';
@@ -134,6 +135,10 @@ try {
   console.log('  - Report routes at /api/reports');
   app.use('/api/reports', reportRoutes);
   console.log('  ✅ Report routes loaded successfully');
+
+  console.log('  - Friendship routes at /api/friendships');
+  app.use('/api/friendships', friendshipRoutes);
+  console.log('  ✅ Friendship routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {
