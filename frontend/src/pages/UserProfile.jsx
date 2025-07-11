@@ -259,7 +259,7 @@ const UserProfile = ({ currentUser }) => {
               {isOwnProfile && (
                 <button
                   onClick={() => setShowEditModal(true)}
-                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-purple-700 transition-colors"
                 >
                   <Edit3 size={16} />
                   <span>Profil bearbeiten</span>

@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { X, Save, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
-import { Hash } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Save, Link as LinkIcon, Plus, Trash2, Hash } from 'lucide-react';
 import TagInput from './TagInput';
 import UserProfileService from '../services/userProfileService';
 
@@ -18,6 +17,40 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // USEEFFECT FÜR ESC-KEY UND SCROLL-PREVENTION
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    // ESC-Key Listener hinzufügen
+    document.addEventListener('keydown', handleEsc);
+    
+    // Scrolling im Hintergrund verhindern
+    document.body.style.overflow = 'hidden';
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'unset';
+    };
+  }, [onClose]);
+
+  // FUNKTION FÜR BACKDROP CLICK
+  const handleBackdropClick = (e) => {
+    // Nur schließen wenn direkt auf das Backdrop geklickt wird
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  // FUNKTION FÜR MODAL CLICK (verhindert Propagation)
+  const handleModalClick = (e) => {
+    e.stopPropagation();
+  };
 
   // Social Media Platforms
   const socialPlatforms = [
@@ -155,14 +188,20 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={handleModalClick}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-primary">
           <h2 className="text-xl font-bold text-primary">Profil bearbeiten</h2>
           <button
             onClick={onClose}
-            className="text-tertiary hover:text-secondary transition-colors"
+            className="text-tertiary hover:text-secondary cursor-pointer transition-colors"
           >
             <X size={24} />
           </button>
@@ -256,7 +295,7 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
                   <button
                     type="button"
                     onClick={() => removeSocialLink(platform.key)}
-                    className="text-red-500 hover:text-red-700 mt-6"
+                    className="text-red-500 hover:text-red-700 mt-6 cursor-pointer"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -300,14 +339,14 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-secondary hover:text-primary transition-colors"
+              className="px-4 py-2 text-secondary cursor-pointer hover:text-primary transition-colors"
             >
               Abbrechen
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center space-x-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center space-x-2 bg-purple-600 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <>

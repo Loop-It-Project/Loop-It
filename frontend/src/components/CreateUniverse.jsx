@@ -39,7 +39,25 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
   ];
 
   // Escape key handler to close the modal
-  useEscapeKey(() => onClose(), true);
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    // ESC-Key Listener hinzufügen
+    document.addEventListener('keydown', handleEsc);
+    
+    // Scrolling im Hintergrund verhindern
+    document.body.style.overflow = 'hidden';
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'unset';
+    };
+  }, [onClose]);
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -159,9 +177,28 @@ const CreateUniverse = ({ onClose, onUniverseCreated }) => {
     }
   };
 
+  // FUNKTION FÜR BACKDROP CLICK
+  const handleBackdropClick = (e) => {
+    // Nur schließen wenn direkt auf das Backdrop geklickt wird
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  // FUNKTION FÜR MODAL CLICK (verhindert Propagation)
+  const handleModalClick = (e) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-card rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={handleModalClick}
+      >
         <div className="p-6 border-b border-primary flex items-center justify-between">
           <h2 className="text-xl font-bold text-primary">Neues Universe erstellen</h2>
           <button
