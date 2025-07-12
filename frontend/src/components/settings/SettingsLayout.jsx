@@ -14,6 +14,7 @@ const SettingsLayout = ({
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: '👤' },
+    { id: 'privacy', name: 'Privacy', icon: '🔒' },
     { id: 'location', name: 'Location', icon: '📍' },
     { id: 'appearance', name: 'Appearance', icon: '🎨' },
     { id: 'security', name: 'Security', icon: '🔒' }

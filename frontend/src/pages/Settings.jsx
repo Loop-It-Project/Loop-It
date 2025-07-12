@@ -7,6 +7,7 @@ import ProfileTab from '../components/settings/ProfileTab';
 import LocationTab from '../components/settings/LocationTab';
 import AppearanceTab from '../components/settings/AppearanceTab';
 import SecurityTab from '../components/settings/SecurityTab';
+import PrivacyTab from '../components/settings/PrivacyTab';
 
 const Settings = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
@@ -36,12 +37,14 @@ const Settings = ({ user, onLogout }) => {
     hobbies: []
   });
 
+  // Password State
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
 
+  // Geo Tracking Settings State
   const [geoSettings, setGeoSettings] = useState({
     geoTrackingEnabled: false,
     geoTrackingAccuracy: 'city',
@@ -51,7 +54,16 @@ const Settings = ({ user, onLogout }) => {
     locationVisibility: 'private',
     currentLocation: null
   });
+  
+  // Privacy Settings State
+  const [privacySettings, setPrivacySettings] = useState({
+    profileVisibility: 'public',
+    allowMessagesFrom: 'friends',
+    showAge: true,
+    showLocation: false
+  });
 
+  // useStates
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
 
@@ -90,6 +102,23 @@ const Settings = ({ user, onLogout }) => {
           interests: profile.profile?.interests || [],
           hobbies: profile.profile?.hobbies || []
         });
+
+        // Privacy Settings laden
+        setPrivacySettings({
+          profileVisibility: profile.profile?.profileVisibility || 'public',
+          allowMessagesFrom: profile.profile?.allowMessagesFrom || 'friends',
+          showAge: profile.profile?.showAge ?? true,
+          showLocation: profile.profile?.showLocation ?? false
+        });
+      }
+
+      // Message Settings separat laden
+      const messageSettingsResult = await UserService.getMessageSettings();
+      if (messageSettingsResult.success) {
+        setPrivacySettings(prev => ({
+          ...prev,
+          allowMessagesFrom: messageSettingsResult.data.allowMessagesFrom || 'friends'
+        }));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -133,6 +162,37 @@ const Settings = ({ user, onLogout }) => {
         setTimeout(() => setMessage(''), 3000);
       } else {
         setError(result.error || 'Failed to update profile');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Privacy Settings Handler
+  const handlePrivacySubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setMessage('');
+
+    try {
+      // Profile Privacy Settings aktualisieren
+      const profileResult = await UserService.updateUserProfile({
+        profileVisibility: privacySettings.profileVisibility,
+        showAge: privacySettings.showAge,
+        showLocation: privacySettings.showLocation
+      });
+
+      // Message Settings separat aktualisieren
+      const messageResult = await UserService.updateMessageSettings(privacySettings.allowMessagesFrom);
+
+      if (profileResult.success && messageResult.success) {
+        setMessage('Privacy settings updated successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setError(profileResult.error || messageResult.error || 'Failed to update privacy settings');
       }
     } catch (error) {
       setError('Network error. Please try again.');
@@ -263,6 +323,16 @@ const Settings = ({ user, onLogout }) => {
           user={user}
           saving={saving}
           onSubmit={handleProfileSubmit}
+        />
+      )}
+
+      {/* Privacy Tab */}
+      {activeTab === 'privacy' && (
+        <PrivacyTab 
+          privacySettings={privacySettings}
+          setPrivacySettings={setPrivacySettings}
+          saving={saving}
+          onSubmit={handlePrivacySubmit}
         />
       )}
 

@@ -217,6 +217,37 @@ class UserService {
       );
     });
   }
+
+  // Message Settings abrufen
+  static async getMessageSettings() {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/users/message-settings`, {
+        method: 'GET'
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Get message settings error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  // Message Settings aktualisieren
+  static async updateMessageSettings(allowMessagesFrom) {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/users/message-settings`, {
+        method: 'PUT',
+        body: JSON.stringify({ allowMessagesFrom })
+      });
+
+      const data = await response.json();
+      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+    } catch (error) {
+      console.error('Update message settings error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default UserService;
