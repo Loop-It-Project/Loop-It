@@ -14,6 +14,7 @@ export * from './universes';
 
 // Communication
 export * from './conversations';
+export * from './universeChat';
 
 // System
 export * from './moderation';
@@ -127,6 +128,17 @@ export type {
   MigrationLog,
   NewMigrationLog
 } from './legacy';
+
+export type {
+  UniverseChatRoom, 
+  NewUniverseChatRoom, 
+  UniverseChatMessage,  
+  NewUniverseChatMessage,
+  UniverseChatParticipant, 
+  NewUniverseChatParticipant,
+  UniverseChatModeration,
+  NewUniverseChatModeration
+} from './universeChat';
 
 // Schema Overview Comment
 /**

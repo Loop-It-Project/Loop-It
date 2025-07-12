@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X } from 'lucide-react';
+import { ArrowLeft, Users, Hash, Settings, UserPlus, UserMinus, Trash2, Crown, X, MessageCircle } from 'lucide-react';
 import Feed from '../components/feed/Feed';
 import FeedService from '../services/feedServices';
 import UniverseService from '../services/universeService';
 import useEscapeKey from '../hooks/useEscapeKey';
+import UniverseChatWidget from '../components/chat/UniverseChatWidget';
 
 const UniversePage = ({ user, onUniverseJoined, onUniverseLeft }) => {
   const { universeSlug } = useParams(); // URL Parameter aus Router
@@ -22,6 +23,7 @@ const UniversePage = ({ user, onUniverseJoined, onUniverseLeft }) => {
   const [showTransferOwnership, setShowTransferOwnership] = useState(false);
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [showUniverseChat, setShowUniverseChat] = useState(false);
 
   // Load Universe details on mount
   // and whenever universeSlug or user changes
@@ -370,6 +372,18 @@ const UniversePage = ({ user, onUniverseJoined, onUniverseLeft }) => {
 
             {/* Action Buttons */}
             <div className="flex items-center space-x-3">
+              {/* CHAT BUTTON - für alle Mitglieder */}
+              {user && isJoined && (
+                <button
+                  onClick={() => setShowUniverseChat(true)}
+                  className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors"
+                  title="Universe Chat öffnen"
+                >
+                  <MessageCircle size={16} />
+                  <span>Chat</span>
+                </button>
+              )}
+
               {user && !isOwner && (
                 <button
                   onClick={handleJoinLeave}
@@ -515,6 +529,16 @@ const UniversePage = ({ user, onUniverseJoined, onUniverseLeft }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* UNIVERSE CHAT WIDGET */}
+      {showUniverseChat && (
+        <UniverseChatWidget
+          universe={universe}
+          currentUser={user}
+          isVisible={showUniverseChat}
+          onToggle={() => setShowUniverseChat(false)}
+        />
       )}
 
       {/* Content */}

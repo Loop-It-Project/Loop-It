@@ -1,6 +1,6 @@
 {
-  "id": "ddc19846-9b0a-42cf-b3d3-ac94da245bd3",
-  "prevId": "fa25b8d9-4012-4b45-9589-655e6b72855c",
+  "id": "0ae2adeb-fa7f-465f-905f-c5695f36970e",
+  "prevId": "8cf2b0dd-44b7-434d-abe9-45747cb08fd9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2571,6 +2571,58 @@
           "notNull": true,
           "default": "'member'"
         },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "isBanned": {
+          "name": "isBanned",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "isMuted": {
+          "name": "isMuted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "approvalNotes": {
+          "name": "approvalNotes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approvalBy": {
+          "name": "approvalBy",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approvalAt": {
+          "name": "approvalAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requestMessage": {
+          "name": "requestMessage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "permissions": {
           "name": "permissions",
           "type": "json",
@@ -2659,6 +2711,36 @@
           "columns": [
             {
               "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_members_status_idx": {
+          "name": "universe_members_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_members_active_idx": {
+          "name": "universe_members_active_idx",
+          "columns": [
+            {
+              "expression": "isActive",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2973,8 +3055,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.conversation_participants": {
-      "name": "conversation_participants",
+    "public.chat_participants": {
+      "name": "chat_participants",
       "schema": "",
       "columns": {
         "id": {
@@ -3003,18 +3085,32 @@
           "notNull": true,
           "default": "'member'"
         },
-        "joinedAt": {
-          "name": "joinedAt",
-          "type": "timestamp",
+        "canWrite": {
+          "name": "canWrite",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "default": true
         },
-        "lastReadAt": {
-          "name": "lastReadAt",
+        "muteUntil": {
+          "name": "muteUntil",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
+        },
+        "emailNotifications": {
+          "name": "emailNotifications",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "pushNotifications": {
+          "name": "pushNotifications",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "isActive": {
           "name": "isActive",
@@ -3022,11 +3118,30 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "lastSeenAt": {
+          "name": "lastSeenAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "joinedAt": {
+          "name": "joinedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "leftAt": {
+          "name": "leftAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "conv_participants_conv_id_idx": {
-          "name": "conv_participants_conv_id_idx",
+        "chat_participants_conversation_idx": {
+          "name": "chat_participants_conversation_idx",
           "columns": [
             {
               "expression": "conversationId",
@@ -3040,8 +3155,8 @@
           "method": "btree",
           "with": {}
         },
-        "conv_participants_user_id_idx": {
-          "name": "conv_participants_user_id_idx",
+        "chat_participants_user_idx": {
+          "name": "chat_participants_user_idx",
           "columns": [
             {
               "expression": "userId",
@@ -3059,8 +3174,8 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "conversation_participants_conversationId_userId_unique": {
-          "name": "conversation_participants_conversationId_userId_unique",
+        "chat_participants_conversationId_userId_unique": {
+          "name": "chat_participants_conversationId_userId_unique",
           "nullsNotDistinct": false,
           "columns": [
             "conversationId",
@@ -3087,25 +3202,71 @@
           "name": "type",
           "type": "varchar(20)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'direct'"
         },
-        "name": {
-          "name": "name",
+        "title": {
+          "name": "title",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
-        "universeId": {
-          "name": "universeId",
+        "participant1Id": {
+          "name": "participant1Id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "participant2Id": {
+          "name": "participant2Id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "isBlocked": {
+          "name": "isBlocked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "blockedBy": {
+          "name": "blockedBy",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "createdBy": {
-          "name": "createdBy",
+        "lastMessageId": {
+          "name": "lastMessageId",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "lastMessageAt": {
+          "name": "lastMessageAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requiresMatch": {
+          "name": "requiresMatch",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "matchId": {
+          "name": "matchId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "createdAt": {
           "name": "createdAt",
@@ -3120,21 +3281,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "isActive": {
-          "name": "isActive",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
         }
       },
       "indexes": {
-        "conversations_type_idx": {
-          "name": "conversations_type_idx",
+        "conversations_participant1_idx": {
+          "name": "conversations_participant1_idx",
           "columns": [
             {
-              "expression": "type",
+              "expression": "participant1Id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3145,11 +3299,26 @@
           "method": "btree",
           "with": {}
         },
-        "conversations_universe_id_idx": {
-          "name": "conversations_universe_id_idx",
+        "conversations_participant2_idx": {
+          "name": "conversations_participant2_idx",
           "columns": [
             {
-              "expression": "universeId",
+              "expression": "participant2Id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "conversations_last_message_at_idx": {
+          "name": "conversations_last_message_at_idx",
+          "columns": [
+            {
+              "expression": "lastMessageAt",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3163,7 +3332,16 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "conversations_participant1Id_participant2Id_unique": {
+          "name": "conversations_participant1Id_participant2Id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "participant1Id",
+            "participant2Id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -3185,8 +3363,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "senderId": {
+          "name": "senderId",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -3195,13 +3373,7 @@
           "name": "content",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "mediaId": {
-          "name": "mediaId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "messageType": {
           "name": "messageType",
@@ -3210,15 +3382,54 @@
           "notNull": true,
           "default": "'text'"
         },
-        "replyToId": {
-          "name": "replyToId",
-          "type": "uuid",
+        "attachments": {
+          "name": "attachments",
+          "type": "json",
           "primaryKey": false,
           "notNull": false
+        },
+        "isEdited": {
+          "name": "isEdited",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "editedAt": {
           "name": "editedAt",
           "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "isDeleted": {
+          "name": "isDeleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "isRead": {
+          "name": "isRead",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "readAt": {
+          "name": "readAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "replyToId": {
+          "name": "replyToId",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
@@ -3229,17 +3440,17 @@
           "notNull": true,
           "default": "now()"
         },
-        "isDeleted": {
-          "name": "isDeleted",
-          "type": "boolean",
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
-          "default": false
+          "default": "now()"
         }
       },
       "indexes": {
-        "messages_conversation_id_idx": {
-          "name": "messages_conversation_id_idx",
+        "messages_conversation_idx": {
+          "name": "messages_conversation_idx",
           "columns": [
             {
               "expression": "conversationId",
@@ -3253,11 +3464,11 @@
           "method": "btree",
           "with": {}
         },
-        "messages_user_id_idx": {
-          "name": "messages_user_id_idx",
+        "messages_sender_idx": {
+          "name": "messages_sender_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "senderId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3282,11 +3493,674 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "messages_conversation_created_at_idx": {
+          "name": "messages_conversation_created_at_idx",
+          "columns": [
+            {
+              "expression": "conversationId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.typing_indicators": {
+      "name": "typing_indicators",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "conversationId": {
+          "name": "conversationId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "startedAt": {
+          "name": "startedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "typing_indicators_conversation_idx": {
+          "name": "typing_indicators_conversation_idx",
+          "columns": [
+            {
+              "expression": "conversationId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "typing_indicators_expires_at_idx": {
+          "name": "typing_indicators_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expiresAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "typing_indicators_conversationId_userId_unique": {
+          "name": "typing_indicators_conversationId_userId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "conversationId",
+            "userId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.universe_chat_messages": {
+      "name": "universe_chat_messages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "chatRoomId": {
+          "name": "chatRoomId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "universeId": {
+          "name": "universeId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "senderId": {
+          "name": "senderId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "messageType": {
+          "name": "messageType",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'text'"
+        },
+        "isDeleted": {
+          "name": "isDeleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "deletedBy": {
+          "name": "deletedBy",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletionReason": {
+          "name": "deletionReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "isSystemMessage": {
+          "name": "isSystemMessage",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "systemData": {
+          "name": "systemData",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "universe_chat_messages_room_idx": {
+          "name": "universe_chat_messages_room_idx",
+          "columns": [
+            {
+              "expression": "chatRoomId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_messages_universe_idx": {
+          "name": "universe_chat_messages_universe_idx",
+          "columns": [
+            {
+              "expression": "universeId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_messages_sender_idx": {
+          "name": "universe_chat_messages_sender_idx",
+          "columns": [
+            {
+              "expression": "senderId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_messages_created_at_idx": {
+          "name": "universe_chat_messages_created_at_idx",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.universe_chat_moderation": {
+      "name": "universe_chat_moderation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "chatRoomId": {
+          "name": "chatRoomId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "universeId": {
+          "name": "universeId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "moderatorId": {
+          "name": "moderatorId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "targetUserId": {
+          "name": "targetUserId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "targetMessageId": {
+          "name": "targetMessageId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actionType": {
+          "name": "actionType",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actionReason": {
+          "name": "actionReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actionData": {
+          "name": "actionData",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration": {
+          "name": "duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "universe_chat_moderation_room_idx": {
+          "name": "universe_chat_moderation_room_idx",
+          "columns": [
+            {
+              "expression": "chatRoomId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_moderation_moderator_idx": {
+          "name": "universe_chat_moderation_moderator_idx",
+          "columns": [
+            {
+              "expression": "moderatorId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_moderation_target_user_idx": {
+          "name": "universe_chat_moderation_target_user_idx",
+          "columns": [
+            {
+              "expression": "targetUserId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_moderation_action_type_idx": {
+          "name": "universe_chat_moderation_action_type_idx",
+          "columns": [
+            {
+              "expression": "actionType",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.universe_chat_participants": {
+      "name": "universe_chat_participants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "chatRoomId": {
+          "name": "chatRoomId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "universeId": {
+          "name": "universeId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "isMuted": {
+          "name": "isMuted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "mutedUntil": {
+          "name": "mutedUntil",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mutedBy": {
+          "name": "mutedBy",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "joinedAt": {
+          "name": "joinedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "lastSeenAt": {
+          "name": "lastSeenAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "leftAt": {
+          "name": "leftAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "universe_chat_participants_room_idx": {
+          "name": "universe_chat_participants_room_idx",
+          "columns": [
+            {
+              "expression": "chatRoomId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_participants_user_idx": {
+          "name": "universe_chat_participants_user_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "universe_chat_participants_active_idx": {
+          "name": "universe_chat_participants_active_idx",
+          "columns": [
+            {
+              "expression": "isActive",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "universe_chat_participants_chatRoomId_userId_unique": {
+          "name": "universe_chat_participants_chatRoomId_userId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chatRoomId",
+            "userId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.universe_chat_rooms": {
+      "name": "universe_chat_rooms",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "universeId": {
+          "name": "universeId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "isLocked": {
+          "name": "isLocked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "slowMode": {
+          "name": "slowMode",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "slowModeDelay": {
+          "name": "slowModeDelay",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "allowedRoles": {
+          "name": "allowedRoles",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[\"member\",\"moderator\",\"creator\"]'::json"
+        },
+        "bannedWords": {
+          "name": "bannedWords",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::json"
+        },
+        "autoModeration": {
+          "name": "autoModeration",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "universe_chat_rooms_universe_idx": {
+          "name": "universe_chat_rooms_universe_idx",
+          "columns": [
+            {
+              "expression": "universeId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "universe_chat_rooms_universeId_unique": {
+          "name": "universe_chat_rooms_universeId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "universeId"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

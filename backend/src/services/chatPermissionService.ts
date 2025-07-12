@@ -1,6 +1,6 @@
 import { db } from '../db/connection';
 import { profilesTable, friendshipsTable, universeMembersTable } from '../db/Schemas';
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and, or, sql } from 'drizzle-orm';
 
 export class ChatPermissionService {
   
@@ -94,19 +94,28 @@ export class ChatPermissionService {
   // Prüfe gemeinsame Universe-Mitgliedschaft
   private static async checkSharedUniverse(user1Id: string, user2Id: string): Promise<boolean> {
     try {
-      const sharedUniverse = await db
-        .select()
+      // Verwende Subquery oder Alias für bessere Performance
+      const user1Universes = db
+        .select({ universeId: universeMembersTable.universeId })
         .from(universeMembersTable)
-        .innerJoin(
-          universeMembersTable as any, // Alias für zweite Tabelle
-          eq(universeMembersTable.universeId, (universeMembersTable as any).universeId)
-        )
         .where(
           and(
             eq(universeMembersTable.userId, user1Id),
-            eq((universeMembersTable as any).userId, user2Id),
             eq(universeMembersTable.isActive, true),
-            eq((universeMembersTable as any).isActive, true)
+            eq(universeMembersTable.status, 'approved')
+          )
+        );
+
+      const sharedUniverse = await db
+        .select({ universeId: universeMembersTable.universeId })
+        .from(universeMembersTable)
+        .where(
+          and(
+            eq(universeMembersTable.userId, user2Id),
+            eq(universeMembersTable.isActive, true),
+            eq(universeMembersTable.status, 'approved'),
+            // Check if universe is in user1's universes
+            sql`${universeMembersTable.universeId} IN (${user1Universes})`
           )
         )
         .limit(1);
