@@ -30,6 +30,12 @@ const UniverseChatWidget = ({
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const isJoinedRef = useRef(false);
+
+  // Sync isJoined state mit ref
+  useEffect(() => {
+    isJoinedRef.current = isJoined;
+  }, [isJoined]);
 
   // WebSocket Event Listeners
   useEffect(() => {
@@ -99,19 +105,37 @@ const UniverseChatWidget = ({
         }
       };
 
+      // WebSocket confirmation handlers
+      // Bestätigungs-Handler für Join/Leave Events
+      const handleUniverseChatJoined = (data) => {
+        if (data.universeId === universe.id) {
+          console.log('✅ Successfully joined universe chat via WebSocket');
+        }
+      };
+  
+      const handleUniverseChatLeft = (data) => {
+        if (data.universeId === universe.id) {
+          console.log('✅ Successfully left universe chat via WebSocket');
+        }
+      };
+
       WebSocketService.on('universe_chat_message', handleUniverseChatMessage);
       WebSocketService.on('universe_chat_user_typing', handleUserTyping);
       WebSocketService.on('universe_chat_user_stopped_typing', handleUserStoppedTyping);
       WebSocketService.on('universe_chat_message_deleted', handleMessageDeleted);
       WebSocketService.on('universe_chat_system', handleSystemMessage);
+      WebSocketService.on('universe_chat_joined', handleUniverseChatJoined);
+      WebSocketService.on('universe_chat_left', handleUniverseChatLeft);
 
-      return () => {
-        WebSocketService.off('universe_chat_message', handleUniverseChatMessage);
-        WebSocketService.off('universe_chat_user_typing', handleUserTyping);
-        WebSocketService.off('universe_chat_user_stopped_typing', handleUserStoppedTyping);
-        WebSocketService.off('universe_chat_message_deleted', handleMessageDeleted);
-        WebSocketService.off('universe_chat_system', handleSystemMessage);
-      };
+    return () => {
+      WebSocketService.off('universe_chat_message', handleUniverseChatMessage);
+      WebSocketService.off('universe_chat_user_typing', handleUserTyping);
+      WebSocketService.off('universe_chat_user_stopped_typing', handleUserStoppedTyping);
+      WebSocketService.off('universe_chat_message_deleted', handleMessageDeleted);
+      WebSocketService.off('universe_chat_system', handleSystemMessage);
+      WebSocketService.off('universe_chat_joined', handleUniverseChatJoined);
+      WebSocketService.off('universe_chat_left', handleUniverseChatLeft);
+    };
     }, [currentUser, universe]);
 
   // Auto-scroll to bottom
@@ -326,6 +350,61 @@ const UniverseChatWidget = ({
     }
   };
 
+  // Cleanup beim Component Unmount
+  useEffect(() => {
+    return () => {
+      if (isJoinedRef.current && universe?.id && WebSocketService.isWebSocketConnected()) {
+        console.log(`🔌 UniverseChatWidget unmounting - leaving universe chat: ${universe.id}`);
+        WebSocketService.leaveUniverseChat(universe.id);
+      }
+      
+      // Cleanup typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [universe?.id]);
+
+  // Browser/Tab close cleanup
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isJoinedRef.current && universe?.id && WebSocketService.isWebSocketConnected()) {
+        console.log(`🔌 Page unloading - leaving universe chat: ${universe.id}`);
+        WebSocketService.leaveUniverseChat(universe.id);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [universe?.id]);
+
+  // onToggle (X-Button) macht keinen WebSocket cleanup
+  const handleClose = async () => {
+    if (isJoined && universe?.id) {
+      console.log(`🔌 Chat closing - leaving universe chat: ${universe.id}`);
+      
+      // WebSocket cleanup
+      if (WebSocketService.isWebSocketConnected()) {
+        WebSocketService.leaveUniverseChat(universe.id);
+      }
+      
+      // Backend cleanup
+      try {
+        await UniverseChatService.leaveUniverseChat(universe.id);
+      } catch (error) {
+        console.error('Error leaving universe chat:', error);
+      }
+      
+      // UI cleanup
+      setIsJoined(false);
+      setMessages([]);
+      setParticipants([]);
+      setTypingUsers([]);
+    }
+    
+    onToggle(); // Schließe Widget
+  };
+
   if (!isVisible) return null;
 
   return (
@@ -411,11 +490,11 @@ const UniverseChatWidget = ({
             </div>
           )}
           <button
-            onClick={onToggle}
-            className="cursor-pointer hover:bg-purple-700 p-1 rounded transition-colors"
-          >
-            <X size={16} />
-          </button>
+              onClick={handleClose}
+              className="cursor-pointer hover:bg-purple-700 p-1 rounded transition-colors"
+            >
+              <X size={16} />
+            </button>
         </div>
       </div>
 

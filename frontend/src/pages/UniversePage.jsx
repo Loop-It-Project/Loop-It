@@ -268,6 +268,31 @@ const UniversePage = ({ user, onUniverseJoined, onUniverseLeft }) => {
     }
   };
 
+  // Page cleanup beim Verlassen
+  useEffect(() => {
+    return () => {
+      // Cleanup beim Verlassen der Universe Page
+      if (showUniverseChat && universe?.id) {
+        console.log(`🔌 Leaving UniversePage - cleanup universe chat: ${universe.id}`);
+        // Informiere Chat Widget über cleanup
+        setShowUniverseChat(false);
+      }
+    };
+  }, [showUniverseChat, universe?.id]);
+
+  // beforeunload Event für Browser-Close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (showUniverseChat && universe?.id && WebSocketService.isWebSocketConnected()) {
+        console.log(`🔌 Page unloading - leaving universe chat: ${universe.id}`);
+        WebSocketService.socket?.emit('leave_universe_chat', { universeId: universe.id });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [showUniverseChat, universe?.id]);
+
   // Check if user is the owner
   const isOwner = user && universe && (
     universe.creatorId === user.id || 

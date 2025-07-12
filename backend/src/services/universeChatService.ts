@@ -88,30 +88,56 @@ export class UniverseChatService {
 
       const chatRoom = roomResult.chatRoom;
 
-      // Prüfe ob User bereits aktiver Teilnehmer ist
+      // Prüfe bestehenden Teilnehmer (aktiv ODER inaktiv)
       const existingParticipant = await db
         .select()
         .from(universeChatParticipantsTable)
         .where(
           and(
             eq(universeChatParticipantsTable.universeId, universeId),
-            eq(universeChatParticipantsTable.userId, userId),
-            eq(universeChatParticipantsTable.isActive, true)
+            eq(universeChatParticipantsTable.userId, userId)
           )
         )
         .limit(1);
 
       if (existingParticipant.length > 0) {
-        // Update last seen
-        await db
-          .update(universeChatParticipantsTable)
-          .set({ lastSeenAt: new Date() })
-          .where(eq(universeChatParticipantsTable.id, existingParticipant[0].id));
+        const participant = existingParticipant[0];
+        
+        if (participant.isActive) {
+          // User ist bereits aktiv - nur last seen aktualisieren
+          await db
+            .update(universeChatParticipantsTable)
+            .set({ lastSeenAt: new Date() })
+            .where(eq(universeChatParticipantsTable.id, participant.id));
 
-        return { success: true, chatRoom, alreadyJoined: true };
+          console.log(`✅ User ${userId} already active in chat ${universeId}`);
+          return { success: true, chatRoom, alreadyJoined: true };
+        } else {
+          // User war inaktiv - reaktiviere ihn
+          await db
+            .update(universeChatParticipantsTable)
+            .set({
+              isActive: true,
+              joinedAt: new Date(),
+              lastSeenAt: new Date(),
+              leftAt: null // Reset leftAt
+            })
+            .where(eq(universeChatParticipantsTable.id, participant.id));
+
+          console.log(`✅ User ${userId} reactivated in chat ${universeId}`);
+          
+          // System-Nachricht senden
+          await this.sendSystemMessage(chatRoom.id, universeId, {
+            type: 'user_rejoined',
+            userId,
+            timestamp: new Date()
+          });
+
+          return { success: true, chatRoom, rejoined: true };
+        }
       }
 
-      // Füge User als Teilnehmer hinzu
+      // Neuen Teilnehmer hinzufügen (nur wenn keiner existiert)
       await db
         .insert(universeChatParticipantsTable)
         .values({
@@ -134,6 +160,45 @@ export class UniverseChatService {
 
     } catch (error) {
       console.error('❌ Error joining chat room:', error);
+      
+      // Bessere Error-Behandlung für Constraint-Violations
+      if (error instanceof Error && error.message.includes('duplicate key')) {
+        console.log(`🔄 Duplicate key error - trying to update existing participant for user ${userId}`);
+        
+        try {
+          // Versuche bestehenden Teilnehmer zu reaktivieren
+          const updateResult = await db
+            .update(universeChatParticipantsTable)
+            .set({
+              isActive: true,
+              joinedAt: new Date(),
+              lastSeenAt: new Date(),
+              leftAt: null
+            })
+            .where(
+              and(
+                eq(universeChatParticipantsTable.universeId, universeId),
+                eq(universeChatParticipantsTable.userId, userId)
+              )
+            )
+            .returning();
+
+          if (updateResult.length > 0) {
+            console.log(`✅ Successfully reactivated participant for user ${userId}`);
+            
+            // Chat Room Info holen
+            const roomResult = await this.getOrCreateChatRoom(universeId);
+            return { 
+              success: true, 
+              chatRoom: roomResult.chatRoom, 
+              reactivated: true 
+            };
+          }
+        } catch (updateError) {
+          console.error('❌ Error reactivating participant:', updateError);
+        }
+      }
+      
       return { success: false, error: 'Failed to join chat room' };
     }
   }
@@ -154,20 +219,39 @@ export class UniverseChatService {
         return { success: false, error: 'Chat room not found' };
       }
 
-      // Teilnehmer deaktivieren
+      // Prüfe ob Teilnehmer existiert und aktiv ist
+      const existingParticipant = await db
+        .select()
+        .from(universeChatParticipantsTable)
+        .where(
+          and(
+            eq(universeChatParticipantsTable.universeId, universeId),
+            eq(universeChatParticipantsTable.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (existingParticipant.length === 0) {
+        console.log(`⚠️ User ${userId} was not a participant in chat ${universeId}`);
+        return { success: true, message: 'User was not in chat' };
+      }
+
+      const participant = existingParticipant[0];
+
+      if (!participant.isActive) {
+        console.log(`⚠️ User ${userId} was already inactive in chat ${universeId}`);
+        return { success: true, message: 'User was already inactive' };
+      }
+
+      // Teilnehmer deaktivieren (nicht löschen)
       await db
         .update(universeChatParticipantsTable)
         .set({
           isActive: false,
-          leftAt: new Date()
+          leftAt: new Date(),
+          lastSeenAt: new Date() // Update last seen
         })
-        .where(
-          and(
-            eq(universeChatParticipantsTable.universeId, universeId),
-            eq(universeChatParticipantsTable.userId, userId),
-            eq(universeChatParticipantsTable.isActive, true)
-          )
-        );
+        .where(eq(universeChatParticipantsTable.id, participant.id));
 
       // System-Nachricht senden
       await this.sendSystemMessage(chatRoom[0].id, universeId, {
@@ -621,30 +705,60 @@ export class UniverseChatService {
   }
 
   // Cleanup: Inaktive Teilnehmer entfernen
-  static async cleanupInactiveParticipants() {
+  static async cleanupInactiveParticipants(olderThanDays = 30) {
     try {
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
       
-      const result = await db
-        .update(universeChatParticipantsTable)
-        .set({
-          isActive: false,
-          leftAt: new Date()
-        })
+      const deletedParticipants = await db
+        .delete(universeChatParticipantsTable)
         .where(
           and(
-            eq(universeChatParticipantsTable.isActive, true),
-            lt(universeChatParticipantsTable.lastSeenAt, fiveMinutesAgo)
+            eq(universeChatParticipantsTable.isActive, false),
+            lt(universeChatParticipantsTable.leftAt, cutoffDate)
           )
         )
-        .returning({ userId: universeChatParticipantsTable.userId });
+        .returning({ id: universeChatParticipantsTable.id });
 
-      console.log(`🧹 Cleaned up ${result.length} inactive chat participants`);
-      return { success: true, cleanedCount: result.length };
+      console.log(`🧹 Cleaned up ${deletedParticipants.length} old inactive participants`);
+      return { success: true, cleanedCount: deletedParticipants.length };
 
     } catch (error) {
       console.error('❌ Error cleaning up inactive participants:', error);
-      return { success: false };
+      return { success: false, error: 'Failed to cleanup participants' };
+    }
+  }
+
+  // Get participant status
+  static async getParticipantStatus(universeId: string, userId: string) {
+    try {
+      const participant = await db
+        .select()
+        .from(universeChatParticipantsTable)
+        .where(
+          and(
+            eq(universeChatParticipantsTable.universeId, universeId),
+            eq(universeChatParticipantsTable.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (participant.length === 0) {
+        return { exists: false, isActive: false };
+      }
+
+      return {
+        exists: true,
+        isActive: participant[0].isActive,
+        joinedAt: participant[0].joinedAt,
+        lastSeenAt: participant[0].lastSeenAt,
+        leftAt: participant[0].leftAt,
+        isMuted: participant[0].isMuted
+      };
+
+    } catch (error) {
+      console.error('❌ Error getting participant status:', error);
+      return { exists: false, isActive: false, error: 'Failed to get status' };
     }
   }
 }

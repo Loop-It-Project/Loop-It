@@ -191,15 +191,8 @@ export class WebSocketService {
       socket.on('disconnect', (reason) => {
         console.log(`🔌 User ${username} disconnected: ${reason}`);
         
-        // Cleanup Typing-Timeout
-        if (typingTimeout) {
-          clearTimeout(typingTimeout);
-          typingTimeout = null;
-        }
-
-        this.removeUserSocket(userId, socket.id);
-        // Cleanup universe rooms
-        this.handleUserDisconnect(userId, socket.id);
+        // ✅ VERBESSERT: Comprehensive cleanup
+        this.handleComprehensiveDisconnect(userId, socket.id, username);
       });
 
       // Error Handler
@@ -225,7 +218,7 @@ export class WebSocketService {
             return;
           }
         
-          // Join socket room - KORRIGIERT: Verwende konsistente Naming
+          // Join socket room
           await socket.join(`universe_chat:${universeId}`);
         
           // Track user in universe room
@@ -233,6 +226,11 @@ export class WebSocketService {
             this.universeRooms.set(universeId, new Set());
           }
           this.universeRooms.get(universeId)?.add(userId);
+
+          console.log(`👋 User ${userId} joined universe chat ${universeId}`);
+          
+          // BESTÄTIGUNG an Client senden
+          socket.emit('universe_chat_joined', { universeId });
         
           // Get user info
           const user = await this.getUserInfo(userId);
@@ -257,11 +255,16 @@ export class WebSocketService {
         
           if (!userId || !universeId) return;
         
-          // Leave socket room - KORRIGIERT: Verwende konsistente Naming
+          // Leave socket room 
           await socket.leave(`universe_chat:${universeId}`);
         
           // Remove user from universe room tracking
           this.universeRooms.get(universeId)?.delete(userId);
+
+          console.log(`👋 User ${userId} left universe chat ${universeId}`);
+          
+          // BESTÄTIGUNG an Client senden
+          socket.emit('universe_chat_left', { universeId });
         
           // Notify others about user leaving
           socket.to(`universe_chat:${universeId}`).emit('universe_user_left', {
@@ -628,6 +631,42 @@ export class WebSocketService {
       console.error('Error checking moderator status:', error);
       return false;
     }
+  }
+
+  // Comprehensive Disconnect Handler
+  private handleComprehensiveDisconnect(userId: string, socketId: string, username: string) {
+    // Regular user socket cleanup
+    this.removeUserSocket(userId, socketId);
+
+    // Universe chat cleanup mit Notifications
+    for (const [universeId, users] of this.universeRooms.entries()) {
+      if (users.has(userId)) {
+        users.delete(userId);
+        
+        // Konsistente Room-Namen
+        this.io.to(`universe_chat:${universeId}`).emit('universe_user_left', {
+          universeId,
+          userId,
+          username
+        });
+
+        console.log(`👋 User ${userId} auto-left universe chat ${universeId} on disconnect`);
+      }
+    }
+
+    // Database cleanup für langfristige Disconnects
+    setTimeout(async () => {
+      try {
+        // Check ob User noch andere aktive Verbindungen hat
+        if (!this.userSockets.has(userId)) {
+          // User ist komplett offline - markiere als inactive in DB
+          console.log(`🧹 User ${userId} completely offline - cleaning up database`);
+          // Hier könntest du UniverseChatService.markUserInactive(userId) aufrufen
+        }
+      } catch (error) {
+        console.error('Error in delayed disconnect cleanup:', error);
+      }
+    }, 30000); // 30 Sekunden delay
   }
 }
 
