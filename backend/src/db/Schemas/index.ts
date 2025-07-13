@@ -24,6 +24,9 @@ export * from './analytics';
 // Legacy (to be migrated)
 export * from './legacy';
 
+// Bug Reports
+export * from './bugReports';
+
 // Re-export common types aus den Modulen
 export type {
   User,

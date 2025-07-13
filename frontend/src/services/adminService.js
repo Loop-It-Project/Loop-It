@@ -433,6 +433,68 @@ class AdminService {
       return { success: false, error: 'Network error' };
     }
   }
+
+  // Bug Report Methods
+  static async getAllBugReports(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+
+      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports?${params}`);
+
+      const result = await response.json();
+      return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
+    } catch (error) {
+      console.error('Get all bug reports error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async updateBugReportStatus(id, updates) {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+
+      const result = await response.json();
+      return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
+    } catch (error) {
+      console.error('Update bug report error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async deleteBugReport(id) {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/${id}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+      return response.ok ? { success: true } : { success: false, error: result.error };
+    } catch (error) {
+      console.error('Delete bug report error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
+
+  static async getBugReportStats() {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/admin/stats`);
+
+      const result = await response.json();
+      return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
+    } catch (error) {
+      console.error('Get bug report stats error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default AdminService;

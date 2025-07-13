@@ -18,6 +18,7 @@ import reportRoutes from './routes/reportRoutes';
 import friendshipRoutes from './routes/friendshipRoutes';
 import chatRoutes from './routes/chatRoutes';
 import universeChatRoutes from './routes/universeChatRoutes';
+import bugReportRoutes from './routes/bugReportRoutes';
 
 // Services
 import { initializeWebSocketService } from './services/websocketService';
@@ -161,6 +162,10 @@ try {
   console.log('  - Universe Chat routes at /api/universe-chat');
   app.use('/api/universe-chat', universeChatRoutes);
   console.log('  ✅ Universe Chat routes loaded successfully');
+
+  console.log('  - Bug Report routes at /api/bug-reports');
+  app.use('/api/bug-reports', bugReportRoutes);
+  console.log('  ✅ Bug Report routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {
