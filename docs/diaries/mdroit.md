@@ -1,3 +1,47 @@
+# Projekttagebuch Marc Droit - 14.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+DiscoverUniversesPage/ChoseUniverses-PopUp
+
+## *Fortschritte & Ergebnisse:*
+
+ChoseUniverses und AbfrageLogik für frontend erstellt
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+Was ein Paginator/Paginierung ist
+
+## *Plan für morgen:*
+
+ChoseUniversesPopUp vollständig ans backend anbinden/DiscoverUniversesPage erstellen
+
+# Projekttagebuch Marc Droit - 08.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+Frontend debuggen, Styling überarbeiten
+
+## *Fortschritte & Ergebnisse:*
+
+frontend debugged -> checks bestanden
+
+## *Herausforderungen & Blockaden:*
+
+Drizzle nicht funktionsfähig
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+Drizzle debuggen, Hobbies/LandingPage fertigstellen
+
 # Projekttagebuch Marc Droit - 07.07.2025
 
 ## *Heutige Hauptaufgabe(n):*
