@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Heart, MapPin, MessageCircle } from 'lucide-react';
 
@@ -24,13 +23,6 @@ const LandingPage = () => {
               className="bg-card text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-hover hover:cursor-pointer transition hover:scale-105"
             >
               Registrieren
-            </Link>
-
-            {/* Hobbies Link */}
-            <Link
-              to="/hobbies"
-            >
-              hobbys
             </Link>
           </div>
         </nav>
