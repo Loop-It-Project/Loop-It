@@ -68,11 +68,7 @@ export const createBugReport = async (req: AuthRequest, res: Response): Promise<
 // ✅ Get All Bug Reports (Admin only)
 export const getAllBugReports = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'developer') {
-      res.status(403).json({ success: false, error: 'Admin access required' });
-      return;
-    }
+    console.log('📋 Getting all bug reports for admin:', req.user?.username);
 
     const {
       page = 1,
@@ -118,7 +114,7 @@ export const getBugReportById = async (req: AuthRequest, res: Response): Promise
 
     const result = await BugReportService.getBugReportById(id);
 
-    if (result.success) {
+    if (result.success && result.data) {
       // Check if user can view this bug report
       if (req.user?.role !== 'admin' && req.user?.role !== 'developer' && 
           result.data.reporter.id !== req.user?.id) {
@@ -143,11 +139,7 @@ export const getBugReportById = async (req: AuthRequest, res: Response): Promise
 // ✅ Update Bug Report Status (Admin only)
 export const updateBugReportStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'developer') {
-      res.status(403).json({ success: false, error: 'Admin access required' });
-      return;
-    }
+    console.log('📝 Updating bug report status for admin:', req.user?.username);
 
     const { id } = req.params;
     const { status, priority, category, assignedTo, adminNotes } = req.body;
@@ -181,11 +173,7 @@ export const updateBugReportStatus = async (req: AuthRequest, res: Response): Pr
 // ✅ Delete Bug Report (Admin only)
 export const deleteBugReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'developer') {
-      res.status(403).json({ success: false, error: 'Admin access required' });
-      return;
-    }
+    console.log('🗑️ Deleting bug report for admin:', req.user?.username);
 
     const { id } = req.params;
 
@@ -209,11 +197,7 @@ export const deleteBugReport = async (req: AuthRequest, res: Response): Promise<
 // ✅ Get Bug Report Statistics (Admin only)
 export const getBugReportStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'developer') {
-      res.status(403).json({ success: false, error: 'Admin access required' });
-      return;
-    }
+    console.log('📊 Getting bug report stats for admin:', req.user?.username);
 
     const result = await BugReportService.getBugReportStats();
 

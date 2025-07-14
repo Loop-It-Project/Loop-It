@@ -96,14 +96,12 @@ export class BugReportService {
       if (assignedTo) {
         whereConditions.push(eq(bugReportsTable.assignedTo, assignedTo));
       }
-
+      
       if (search) {
-        whereConditions.push(
-          or(
-            sql`${bugReportsTable.title} ILIKE ${`%${search}%`}`,
-            sql`${bugReportsTable.description} ILIKE ${`%${search}%`}`
-          )
-        );
+        const titleCondition = sql`${bugReportsTable.title} ILIKE ${`%${search}%`}`;
+        const descriptionCondition = sql`${bugReportsTable.description} ILIKE ${`%${search}%`}`;
+        
+        whereConditions.push(or(titleCondition, descriptionCondition) as any);
       }
 
       // Get bug reports with reporter and assignee info
@@ -128,14 +126,14 @@ export class BugReportService {
             id: reporter.id,
             username: reporter.username,
             email: reporter.email,
-            displayName: reporterProfile.displayName
+            displayName: reporterProfile.id
           },
           // Assignee info
           assignee: {
             id: assignee.id,
             username: assignee.username,
             email: assignee.email,
-            displayName: assigneeProfile.displayName
+            displayName: assigneeProfile.id
           }
         })
         .from(bugReportsTable)
@@ -201,14 +199,14 @@ export class BugReportService {
             id: reporter.id,
             username: reporter.username,
             email: reporter.email,
-            displayName: reporterProfile.displayName
+            displayName: reporterProfile.id
           },
           // Assignee info
           assignee: {
             id: assignee.id,
             username: assignee.username,
             email: assignee.email,
-            displayName: assigneeProfile.displayName
+            displayName: assigneeProfile.id
           }
         })
         .from(bugReportsTable)
@@ -332,10 +330,17 @@ export class BugReportService {
       };
 
       stats.forEach(stat => {
+        // FIX: Index nur setzen, wenn Wert nicht null ist
+        if (stat.status) {
+          processedStats.byStatus[stat.status] = (processedStats.byStatus[stat.status] || 0) + stat.count;
+        }
+        if (stat.priority) {
+          processedStats.byPriority[stat.priority] = (processedStats.byPriority[stat.priority] || 0) + stat.count;
+        }
+        if (stat.category) {
+          processedStats.byCategory[stat.category] = (processedStats.byCategory[stat.category] || 0) + stat.count;
+        }
         processedStats.total += stat.count;
-        processedStats.byStatus[stat.status] = (processedStats.byStatus[stat.status] || 0) + stat.count;
-        processedStats.byPriority[stat.priority] = (processedStats.byPriority[stat.priority] || 0) + stat.count;
-        processedStats.byCategory[stat.category] = (processedStats.byCategory[stat.category] || 0) + stat.count;
       });
 
       return { success: true, data: processedStats };

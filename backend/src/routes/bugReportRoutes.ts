@@ -1,6 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { auth } from '../middleware/auth';
+import { requireAdmin } from '../middleware/adminAuth';
 import {
   createBugReport,
   getAllBugReports,
@@ -56,15 +57,15 @@ const updateBugReportValidation = [
     .withMessage('Admin notes cannot exceed 2000 characters')
 ];
 
-// ✅ Public/User Routes
-router.post('/', authMiddleware, createBugReportValidation, createBugReport);
-router.get('/my-reports', authMiddleware, getUserBugReports);
-router.get('/:id', authMiddleware, getBugReportById);
+// ✅ ADMIN ROUTES - Verwende auth + requireAdmin Middleware Chain
+router.get('/admin/stats', auth, requireAdmin, getBugReportStats);
+router.get('/', auth, requireAdmin, getAllBugReports);
+router.put('/:id', auth, requireAdmin, updateBugReportValidation, updateBugReportStatus);
+router.delete('/:id', auth, requireAdmin, deleteBugReport);
 
-// ✅ Admin Routes
-router.get('/', authMiddleware, getAllBugReports);
-router.put('/:id', authMiddleware, updateBugReportValidation, updateBugReportStatus);
-router.delete('/:id', authMiddleware, deleteBugReport);
-router.get('/admin/stats', authMiddleware, getBugReportStats);
+// ✅ USER ROUTES
+router.post('/', auth, createBugReportValidation, createBugReport);
+router.get('/my-reports', auth, getUserBugReports);
+router.get('/:id', auth, getBugReportById);
 
 export default router;

@@ -8,6 +8,7 @@ import LocationTab from '../components/settings/LocationTab';
 import AppearanceTab from '../components/settings/AppearanceTab';
 import SecurityTab from '../components/settings/SecurityTab';
 import PrivacyTab from '../components/settings/PrivacyTab';
+import BugReportSection from '../components/settings/bugReportTab';
 
 const Settings = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
@@ -359,6 +360,10 @@ const Settings = ({ user, onLogout }) => {
           saving={saving}
           onSubmit={handlePasswordSubmit}
         />
+      )}
+
+      {activeTab === 'bug-reports' && (
+        <BugReportSection user={user} />
       )}
     </SettingsLayout>
   );

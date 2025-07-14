@@ -29,6 +29,13 @@
       "when": 1752326818577,
       "tag": "0003_heavy_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1752482166513,
+      "tag": "0004_brown_bloodstrike",
+      "breakpoints": true
     }
   ]
 }
