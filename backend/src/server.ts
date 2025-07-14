@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -19,6 +20,35 @@ import chatRoutes from "./routes/chatRoutes";
 import { TokenService } from "./services/tokenService";
 import { metricsMiddleware, getMetrics } from "./middleware/metrics";
 import { seedAdminData } from "./db/seeds/seedAdminData";
+=======
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import { createServer } from 'http';
+
+// Routes
+import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
+import feedRoutes from './routes/feedRoutes';
+import universeRoutes from './routes/universeRoutes';
+import hashtagRoutes from './routes/hashtagRoutes';
+import searchRoutes from './routes/searchRoutes';
+import postRoutes from './routes/postRoutes';
+import adminRoutes from './routes/adminRoutes';
+import reportRoutes from './routes/reportRoutes';
+import friendshipRoutes from './routes/friendshipRoutes';
+import chatRoutes from './routes/chatRoutes';
+import universeChatRoutes from './routes/universeChatRoutes';
+import bugReportRoutes from './routes/bugReportRoutes';
+
+// Services
+import { initializeWebSocketService } from './services/websocketService';
+import { TokenService } from './services/tokenService';
+import { metricsMiddleware, getMetrics } from './middleware/metrics';
+import { seedAdminData } from './db/seeds/seedAdminData';
+>>>>>>> origin/main
 
 // Environment variables laden
 dotenv.config();
@@ -148,6 +178,7 @@ try {
   app.use("/api/universes", universeRoutes);
   console.log("  ✅ Universe routes loaded successfully");
 
+<<<<<<< HEAD
   console.log("  - Report routes at /api/reports");
   app.use("/api/reports", reportRoutes);
   console.log("  ✅ Report routes loaded successfully");
@@ -161,6 +192,21 @@ try {
   console.log("  ✅ Chat routes loaded successfully");
 
   console.log("✅ All routes registered successfully");
+=======
+  console.log('  - Chat routes at /api/chats');
+  app.use('/api/chats', chatRoutes);
+  console.log('  ✅ Chat routes loaded successfully');
+
+  console.log('  - Universe Chat routes at /api/universe-chat');
+  app.use('/api/universe-chat', universeChatRoutes);
+  console.log('  ✅ Universe Chat routes loaded successfully');
+
+  console.log('  - Bug Report routes at /api/bug-reports');
+  app.use('/api/bug-reports', bugReportRoutes);
+  console.log('  ✅ Bug Report routes loaded successfully');
+  
+  console.log('✅ All routes registered successfully');
+>>>>>>> origin/main
 } catch (error) {
   console.error("❌ Error registering routes:", getErrorMessage(error));
   const errorStack = getErrorStack(error);
