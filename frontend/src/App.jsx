@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from './contexts/ThemeContext';
 import AuthInterceptor from './utils/authInterceptor';
-import UserService from './services/userService';
 import WebSocketService from './services/websocketService';
 
 import Settings from './pages/Settings';
@@ -14,7 +12,6 @@ import UniversePage from './pages/UniversePage';
 import AdminPanel from './pages/AdminPanelDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
-import Hobbies from './pages/Hobbies';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -260,14 +257,6 @@ function App() {
                 <Register onLogin={handleLogin} />
               </PublicRoute>
             } 
-          />
-          <Route 
-            path="/hobbies"
-            element={
-              <PublicRoute user={user}>
-                <Hobbies />
-              </PublicRoute>
-            }
           />
           <Route 
             path="/privacypolicy"

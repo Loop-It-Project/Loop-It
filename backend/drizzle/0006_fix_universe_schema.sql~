@@ -1,8 +1,0 @@
--- Fix universes schema - ensure isClosed column exists
--- This ensures compatibility after fresh rebuilds
-
-ALTER TABLE "universes" ADD COLUMN IF NOT EXISTS "isClosed" BOOLEAN DEFAULT false;
---> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "universes_is_closed_idx" ON "universes" USING btree ("isClosed");
---> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "universes_is_active_idx" ON "universes" USING btree ("isActive");

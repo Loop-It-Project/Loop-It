@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1752055311979,
-      "tag": "0000_colorful_husk",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1752059139863,
-      "tag": "0001_violet_nico_minoru",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1752131939106,
-      "tag": "0002_vengeful_lockheed",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1752234149281,
-      "tag": "0003_groovy_nomad",
+      "when": 1752486057919,
+      "tag": "0000_unknown_fabian_cortez",
       "breakpoints": true
     }
   ]

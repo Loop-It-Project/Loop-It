@@ -19,40 +19,35 @@ class BaseService {
   }
 
   static async fetchWithAuth(url, options = {}) {
-    try {
-      let token = localStorage.getItem('token');
+    let token = localStorage.getItem('token');
 
-      // ERWEITERTE DEBUG-INFO
-      console.log('🔍 BaseService.fetchWithAuth called:', {
-        url,
-        method: options.method || 'GET',
-        hasToken: !!token,
-        tokenExpired: AuthInterceptor.isTokenExpired(token)
-      });
-      
-      if (AuthInterceptor.isTokenExpired(token)) {
-        console.log('🔄 Token läuft bald ab - erneuere präventiv...');
-        try {
-          token = await AuthInterceptor.refreshTokens();
-        } catch (refreshError) {
-          console.error('Preventive token refresh failed:', refreshError);
-        }
+    // ERWEITERTE DEBUG-INFO
+    console.log('🔍 BaseService.fetchWithAuth called:', {
+      url,
+      method: options.method || 'GET',
+      hasToken: !!token,
+      tokenExpired: AuthInterceptor.isTokenExpired(token)
+    });
+    
+    if (AuthInterceptor.isTokenExpired(token)) {
+      console.log('🔄 Token läuft bald ab - erneuere präventiv...');
+      try {
+        token = await AuthInterceptor.refreshTokens();
+      } catch (refreshError) {
+        console.error('Preventive token refresh failed:', refreshError);
       }
-
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-          ...options.headers
-        }
-      });
-
-      return await AuthInterceptor.handleResponse(response, { url, options });
-      
-    } catch (error) {
-      throw error;
     }
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+        ...options.headers
+      }
+    });
+
+    return await AuthInterceptor.handleResponse(response, { url, options });
   }
 
   static getApiUrl() {

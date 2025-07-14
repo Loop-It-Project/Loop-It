@@ -1,31 +1,64 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import BackButton from '../components/Backbutton';
+import UniverseService from '../services/universeService';
+import FeedService from '../services/feedServices';
 
-const Hobbies = ({ onNavigate }) => {
+
+const Hobbies = ({ user, onLogin }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // Query Parameter aus Router
+  const fromHashtag = searchParams.get('hashtag'); // Optional: Hashtag aus URL
+  const [universe, setUniverse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isJoined, setIsJoined] = useState(false);
+  const { universeSlug } = useParams();
     const [formData, setFormData] = useState({
-      email: '',
-      password: ''
+      id: user?.id || '',
+      universeId: universeSlug || '',
+
     });
-    const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
-  
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-      // Clear error when user starts typing
-      if (errors[name]) {
-        setErrors(prev => ({
-          ...prev,
-          [name]: ''
-        }));
+
+      // Load Universe details on mount
+  // and whenever universeSlug or user changes
+  // Added user?.id to dependencies to ensure it reloads when user changes
+  useEffect(() => {
+    const loadUniverse = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        console.log('🔍 Loading universe:', universeSlug);
+
+        const response = await FeedService.getUniverseDetails(universeSlug);
+        
+        console.log('🔍 API Response:', response);
+
+        if (response.success) {
+          console.log('✅ Universe Details loaded:', response.data);
+          setUniverse(response.data);
+          
+          // Set membership status from API response
+          setIsJoined(response.data.isMember || response.data.membershipStatus === 'member');
+        } else {
+          console.error('❌ API Error:', response.error);
+          throw new Error(response.error || 'Universe not found');
+        }
+      } catch (err) {
+        console.error('❌ Error loading universe:', err);
+        setError(err.message || 'Failed to load universe');
+      } finally {
+        setLoading(false);
       }
     };
+
+    if (universeSlug) {
+      loadUniverse();
+    }
+  }, [universeSlug, user?.id]);
   
     const handleSubmit = async (e) => {
       e.preventDefault();
@@ -76,7 +109,7 @@ const Hobbies = ({ onNavigate }) => {
         {/* Back Button */}
         < BackButton />
 
-        {/* Hobbies Form */}
+        {/* Universes Form */}
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Teile deine Hoobbys mit uns!</h1>
@@ -91,7 +124,23 @@ const Hobbies = ({ onNavigate }) => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/*Dropdowns for Hobbies*/}
+            {/*Dropdowns for Universes*/}
+            <div className="space-y-4">
+              {loading ? (
+                <p className="text-gray-500">Lade Universen...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : (
+                universe && (
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-semibold text-gray-800 mb-2">Universum: {universe.name}</h2>
+                    <p className="text-gray-600 mb-4">{universe.description}</p>
+                    <p className="text-gray-500">Mitglieder: {universe.membersCount}</p>
+                  </div>
+                )
+              )}
+            </div>
+
 
             {/* Submit Button */}
             <button

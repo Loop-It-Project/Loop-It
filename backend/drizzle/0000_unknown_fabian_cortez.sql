@@ -329,39 +329,65 @@ CREATE TABLE "universes" (
 	CONSTRAINT "universes_hashtag_unique" UNIQUE("hashtag")
 );
 --> statement-breakpoint
-CREATE TABLE "conversation_participants" (
+CREATE TABLE "chat_participants" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"conversationId" uuid NOT NULL,
 	"userId" uuid NOT NULL,
 	"role" varchar(20) DEFAULT 'member' NOT NULL,
-	"joinedAt" timestamp DEFAULT now() NOT NULL,
-	"lastReadAt" timestamp,
+	"canWrite" boolean DEFAULT true NOT NULL,
+	"muteUntil" timestamp,
+	"emailNotifications" boolean DEFAULT true NOT NULL,
+	"pushNotifications" boolean DEFAULT true NOT NULL,
 	"isActive" boolean DEFAULT true NOT NULL,
-	CONSTRAINT "conversation_participants_conversationId_userId_unique" UNIQUE("conversationId","userId")
+	"lastSeenAt" timestamp,
+	"joinedAt" timestamp DEFAULT now() NOT NULL,
+	"leftAt" timestamp,
+	CONSTRAINT "chat_participants_conversationId_userId_unique" UNIQUE("conversationId","userId")
 );
 --> statement-breakpoint
 CREATE TABLE "conversations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"type" varchar(20) NOT NULL,
-	"name" varchar(255),
-	"universeId" uuid,
-	"createdBy" uuid NOT NULL,
+	"type" varchar(20) DEFAULT 'direct' NOT NULL,
+	"title" varchar(255),
+	"participant1Id" uuid NOT NULL,
+	"participant2Id" uuid NOT NULL,
+	"isActive" boolean DEFAULT true NOT NULL,
+	"isBlocked" boolean DEFAULT false NOT NULL,
+	"blockedBy" uuid,
+	"lastMessageId" uuid,
+	"lastMessageAt" timestamp,
+	"requiresMatch" boolean DEFAULT true NOT NULL,
+	"matchId" uuid,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
-	"isActive" boolean DEFAULT true NOT NULL
+	CONSTRAINT "conversations_participant1Id_participant2Id_unique" UNIQUE("participant1Id","participant2Id")
 );
 --> statement-breakpoint
 CREATE TABLE "messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"conversationId" uuid NOT NULL,
-	"userId" uuid NOT NULL,
-	"content" text,
-	"mediaId" uuid,
+	"senderId" uuid NOT NULL,
+	"content" text NOT NULL,
 	"messageType" varchar(20) DEFAULT 'text' NOT NULL,
-	"replyToId" uuid,
+	"attachments" json,
+	"isEdited" boolean DEFAULT false NOT NULL,
 	"editedAt" timestamp,
+	"isDeleted" boolean DEFAULT false NOT NULL,
+	"deletedAt" timestamp,
+	"isRead" boolean DEFAULT false NOT NULL,
+	"readAt" timestamp,
+	"replyToId" uuid,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"isDeleted" boolean DEFAULT false NOT NULL
+	"updatedAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "typing_indicators" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"conversationId" uuid NOT NULL,
+	"userId" uuid NOT NULL,
+	"startedAt" timestamp DEFAULT now() NOT NULL,
+	"expiresAt" timestamp NOT NULL,
+	CONSTRAINT "typing_indicators_conversationId_userId_unique" UNIQUE("conversationId","userId")
 );
 --> statement-breakpoint
 CREATE TABLE "banned_patterns" (
@@ -880,6 +906,7 @@ ALTER TABLE "profiles" ADD CONSTRAINT "profiles_userId_users_id_fk" FOREIGN KEY 
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_roleId_roles_id_fk" FOREIGN KEY ("roleId") REFERENCES "public"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_assignedBy_users_id_fk" FOREIGN KEY ("assignedBy") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "universes" ADD CONSTRAINT "universes_creatorId_users_id_fk" FOREIGN KEY ("creatorId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_search_preferences" ADD CONSTRAINT "user_search_preferences_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "search_clicks" ADD CONSTRAINT "search_clicks_searchHistoryId_search_history_id_fk" FOREIGN KEY ("searchHistoryId") REFERENCES "public"."search_history"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens" USING btree ("user_id");--> statement-breakpoint
@@ -937,13 +964,17 @@ CREATE INDEX "universes_slug_idx" ON "universes" USING btree ("slug");--> statem
 CREATE INDEX "universes_creator_idx" ON "universes" USING btree ("creatorId");--> statement-breakpoint
 CREATE INDEX "universes_category_idx" ON "universes" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "universes_member_count_idx" ON "universes" USING btree ("memberCount");--> statement-breakpoint
-CREATE INDEX "conv_participants_conv_id_idx" ON "conversation_participants" USING btree ("conversationId");--> statement-breakpoint
-CREATE INDEX "conv_participants_user_id_idx" ON "conversation_participants" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "conversations_type_idx" ON "conversations" USING btree ("type");--> statement-breakpoint
-CREATE INDEX "conversations_universe_id_idx" ON "conversations" USING btree ("universeId");--> statement-breakpoint
-CREATE INDEX "messages_conversation_id_idx" ON "messages" USING btree ("conversationId");--> statement-breakpoint
-CREATE INDEX "messages_user_id_idx" ON "messages" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "chat_participants_conversation_idx" ON "chat_participants" USING btree ("conversationId");--> statement-breakpoint
+CREATE INDEX "chat_participants_user_idx" ON "chat_participants" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "conversations_participant1_idx" ON "conversations" USING btree ("participant1Id");--> statement-breakpoint
+CREATE INDEX "conversations_participant2_idx" ON "conversations" USING btree ("participant2Id");--> statement-breakpoint
+CREATE INDEX "conversations_last_message_at_idx" ON "conversations" USING btree ("lastMessageAt");--> statement-breakpoint
+CREATE INDEX "messages_conversation_idx" ON "messages" USING btree ("conversationId");--> statement-breakpoint
+CREATE INDEX "messages_sender_idx" ON "messages" USING btree ("senderId");--> statement-breakpoint
 CREATE INDEX "messages_created_at_idx" ON "messages" USING btree ("createdAt");--> statement-breakpoint
+CREATE INDEX "messages_conversation_created_at_idx" ON "messages" USING btree ("conversationId","createdAt");--> statement-breakpoint
+CREATE INDEX "typing_indicators_conversation_idx" ON "typing_indicators" USING btree ("conversationId");--> statement-breakpoint
+CREATE INDEX "typing_indicators_expires_at_idx" ON "typing_indicators" USING btree ("expiresAt");--> statement-breakpoint
 CREATE INDEX "banned_patterns_pattern_type_idx" ON "banned_patterns" USING btree ("patternType");--> statement-breakpoint
 CREATE INDEX "banned_patterns_category_idx" ON "banned_patterns" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "banned_patterns_is_active_idx" ON "banned_patterns" USING btree ("isActive");--> statement-breakpoint
