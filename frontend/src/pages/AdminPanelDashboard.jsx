@@ -11,6 +11,7 @@ import ModerationTab from '../components/admin/ModerationTab';
 import ApprovalsTab from '../components/admin/ApprovalsTab';
 import UniversesTab from '../components/admin/UniversesTab';
 import ReportsTab from '../components/admin/ReportsTab';
+import BugReportsTab from '../components/admin/BugReportsTab';
 
 const AdminPanel = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -264,6 +265,10 @@ const AdminPanel = ({ user, onLogout }) => {
 
       {activeTab === 'universes' && (
         <UniversesTab />
+      )}
+
+      {activeTab === 'bug-reports' && (
+        <BugReportsTab />
       )}
     </AdminLayout>
   );

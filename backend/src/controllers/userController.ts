@@ -9,6 +9,7 @@ import {
   profilesTable 
 } from '../db/Schemas';
 import { eq, desc, asc, and } from 'drizzle-orm';
+import { ChatPermissionService } from '../services/chatPermissionService';
 
 interface AuthRequest extends Request {
   user?: { id: string; email: string; username: string };
@@ -445,6 +446,68 @@ export const updateUserLocation = async (req: AuthRequest, res: Response): Promi
   }
 };
 
+// Message Settings abrufen
+export const getMessageSettings = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    const result = await ChatPermissionService.getUserMessageSettings(req.user.id);
+    
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.settings
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Get message settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get message settings'
+    });
+  }
+};
+
+// Message Settings aktualisieren
+export const updateMessageSettings = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    const { allowMessagesFrom } = req.body;
+    
+    const result = await ChatPermissionService.updateUserMessageSettings(req.user.id, allowMessagesFrom);
+    
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: 'Message settings updated successfully'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Update message settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update message settings'
+    });
+  }
+};
+
 // Helper-Funktionen für Array-Validation
 const validateStringArray = (items: unknown[], fieldName: string, maxLength: number = 50): boolean => {
   if (!Array.isArray(items)) {
@@ -536,6 +599,7 @@ export const updateProfileValidation = [
     }),
 ];
 
+// Profil-Einstellungen Validation
 export const updateSettingsValidation = [
   body('emailNotifications').optional().isBoolean().withMessage('Email notifications must be boolean'),
   body('pushNotifications').optional().isBoolean().withMessage('Push notifications must be boolean'),
@@ -544,7 +608,15 @@ export const updateSettingsValidation = [
   body('searchRadius').optional().isInt({ min: 1, max: 500 }).withMessage('Search radius must be between 1 and 500 km'),
 ];
 
+// Password Validation
 export const changePasswordValidation = [
   body('currentPassword').notEmpty().withMessage('Current password is required'),
   body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+];
+
+// Validation Rules
+export const updateMessageSettingsValidation = [
+  body('allowMessagesFrom')
+    .isIn(['everyone', 'universe_members', 'friends', 'none'])
+    .withMessage('Invalid message setting. Must be one of: everyone, universe_members, friends, none')
 ];

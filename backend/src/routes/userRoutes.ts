@@ -16,6 +16,9 @@ import {
   getUserPosts,
   getUserStats,
   getFriendsWithCommonInterests,
+  getMessageSettings,
+  updateMessageSettings,
+  updateMessageSettingsValidation
 } from '../controllers/userController';
 
 const router = Router();
@@ -39,5 +42,9 @@ router.put('/change-password', auth, changePasswordValidation, changePassword);
 router.get('/geo-settings', auth, getGeoTrackingSettings);
 router.put('/geo-settings', auth, updateGeoTrackingSettings);
 router.put('/location', auth, updateUserLocation);
+
+// MESSAGE SETTINGS Routes
+router.get('/message-settings', auth, getMessageSettings);
+router.put('/message-settings', auth, updateMessageSettingsValidation, updateMessageSettings);
 
 export default router;

@@ -48,5 +48,4 @@ router.delete('/conversations/:conversationId/typing', auth, stopTyping);
 router.get('/conversations/:conversationId/stats', auth, getConversationStats); 
 router.put('/conversations/:conversationId/block', auth, blockConversation);
 
-
 export default router;
