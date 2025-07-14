@@ -9,6 +9,7 @@ import { eq, and, or, desc, sql, lt } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { v4 as uuidv4 } from 'uuid';
 import { getWebSocketService } from './websocketService';
+import { ChatPermissionService } from './chatPermissionService';
 
 // Aliases für bessere Lesbarkeit
 const p1 = alias(usersTable, 'p1');
@@ -23,6 +24,16 @@ export class ChatService {
   static async getOrCreateConversation(user1Id: string, user2Id: string) {
     try {
       console.log(`🔍 Getting/Creating conversation between ${user1Id} and ${user2Id}`);
+
+      // Chat-Berechtigung
+      const permissionCheck = await ChatPermissionService.canUserSendMessage(user1Id, user2Id);
+      if (!permissionCheck.canMessage) {
+        return { 
+          success: false, 
+          error: permissionCheck.reason || 'You are not allowed to message this user',
+          errorCode: 'PERMISSION_DENIED'
+        };
+      }
 
       // Prüfe ob Conversation bereits existiert (beide Richtungen)
       const existingConversation = await db
@@ -135,6 +146,19 @@ export class ChatService {
       }
 
       const conv = conversation[0];
+
+      // Finde Empfänger
+      const recipientId = conv.participant1Id === senderId ? conv.participant2Id : conv.participant1Id;
+
+      // Prüfe Chat-Berechtigung bei jeder Nachricht
+      const permissionCheck = await ChatPermissionService.canUserSendMessage(senderId, recipientId);
+      if (!permissionCheck.canMessage) {
+        return { 
+          success: false, 
+          error: permissionCheck.reason || 'You are not allowed to message this user',
+          errorCode: 'PERMISSION_DENIED'
+        };
+      }
       
       // Prüfe Berechtigung
       if (conv.participant1Id !== senderId && conv.participant2Id !== senderId) {

@@ -21,6 +21,7 @@ import EditProfileModal from '../components/EditProfileModal';
 import FriendsList from '../components/FriendsList';
 import FriendshipButton from '../components/FriendshipButton';
 import FriendsModal from '../components/FriendsModal';
+import ChatButton from '../components/ChatButton';
 
 const UserProfile = ({ currentUser }) => {
   const { username } = useParams();
@@ -246,6 +247,14 @@ const UserProfile = ({ currentUser }) => {
 
               {/* Action Buttons */}
               <div className="flex items-center space-x-3">
+                {/* Chat Button - nur für fremde Profile */}
+                {!isOwnProfile && (
+                  <ChatButton 
+                    targetUser={profile}
+                    currentUser={currentUser}
+                  />
+                )}
+
                 {/* Friendship Button (nur für andere Profile) */}
                 {!isOwnProfile && (
                   <FriendshipButton

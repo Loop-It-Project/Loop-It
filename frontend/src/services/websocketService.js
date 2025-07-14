@@ -229,6 +229,10 @@ class WebSocketService {
   disconnect() {
     if (this.socket) {
       console.log('🔌 Disconnecting WebSocket...');
+      
+      // Cleanup für alle aktiven Universe Chats
+      this.emit('before_disconnect'); // Ermögliche Components cleanup
+      
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
@@ -245,6 +249,42 @@ class WebSocketService {
         this.connect(token, this.currentUser);
       }
     }
+  }
+
+  // Universe Chat spezifische Disconnect-Methoden
+  joinUniverseChat(universeId) {
+    if (!this.socket?.connected) {
+      console.log('❌ Cannot join universe chat: not connected');
+      return;
+    }
+
+    console.log('🏠 Joining universe chat:', universeId);
+    this.socket.emit('join_universe_chat', { universeId });
+  }
+
+  leaveUniverseChat(universeId) {
+    if (!this.socket?.connected) {
+      console.log('❌ Cannot leave universe chat: not connected');
+      return;
+    }
+
+    console.log('🚪 Leaving universe chat:', universeId);
+    this.socket.emit('leave_universe_chat', { universeId });
+  }
+
+  // Universe Chat Typing Events
+  startUniverseChatTyping(universeId) {
+    if (!this.socket?.connected) return;
+    
+    console.log(`✏️ Started typing in universe chat ${universeId}`);
+    this.socket.emit('universe_chat_typing_start', universeId);
+  }
+
+  stopUniverseChatTyping(universeId) {
+    if (!this.socket?.connected) return;
+    
+    console.log(`✏️ Stopped typing in universe chat ${universeId}`);
+    this.socket.emit('universe_chat_typing_stop', universeId);
   }
 }
 

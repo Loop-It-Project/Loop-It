@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Bug } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsLayout = ({ 
@@ -14,9 +14,11 @@ const SettingsLayout = ({
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: '👤' },
+    { id: 'privacy', name: 'Privacy', icon: '🔒' },
     { id: 'location', name: 'Location', icon: '📍' },
     { id: 'appearance', name: 'Appearance', icon: '🎨' },
-    { id: 'security', name: 'Security', icon: '🔒' }
+    { id: 'security', name: 'Security', icon: '🔒' },
+    { id: 'bug-reports', name: 'Bug Reports', icon: <Bug size={18} className="text-red-500" /> }
   ];
 
   return (

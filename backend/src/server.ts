@@ -4,7 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import { initializeWebSocketService } from './services/websocketService';
+
+// Routes
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import feedRoutes from './routes/feedRoutes';
@@ -16,6 +17,11 @@ import adminRoutes from './routes/adminRoutes';
 import reportRoutes from './routes/reportRoutes';
 import friendshipRoutes from './routes/friendshipRoutes';
 import chatRoutes from './routes/chatRoutes';
+import universeChatRoutes from './routes/universeChatRoutes';
+import bugReportRoutes from './routes/bugReportRoutes';
+
+// Services
+import { initializeWebSocketService } from './services/websocketService';
 import { TokenService } from './services/tokenService';
 import { metricsMiddleware, getMetrics } from './middleware/metrics';
 import { seedAdminData } from './db/seeds/seedAdminData';
@@ -152,6 +158,14 @@ try {
   console.log('  - Chat routes at /api/chats');
   app.use('/api/chats', chatRoutes);
   console.log('  ✅ Chat routes loaded successfully');
+
+  console.log('  - Universe Chat routes at /api/universe-chat');
+  app.use('/api/universe-chat', universeChatRoutes);
+  console.log('  ✅ Universe Chat routes loaded successfully');
+
+  console.log('  - Bug Report routes at /api/bug-reports');
+  app.use('/api/bug-reports', bugReportRoutes);
+  console.log('  ✅ Bug Report routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {

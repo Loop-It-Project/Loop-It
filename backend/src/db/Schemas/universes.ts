@@ -67,8 +67,24 @@ export const universeMembersTable = pgTable("universe_members", {
   id: uuid().primaryKey().defaultRandom(),
   universeId: uuid().notNull(),
   userId: uuid().notNull(),
+
+  // Member Status
   role: varchar({ length: 20 }).default('member').notNull(),
+  isActive: boolean().default(true).notNull(),
+  isBanned: boolean().default(false).notNull(),
+  isMuted: boolean().default(false).notNull(),
+
+  // Approval System
+  status: varchar({ length: 20 }).default('pending').notNull(), // 'pending', 'approved', 'rejected'
+  approvalNotes: text(),
+  approvalBy: uuid(), // Moderator who approved/rejected
+  approvalAt: timestamp(),
+  requestMessage: text(),
+
+  // Member Permissions
   permissions: json(),
+
+  // Timestamps
   joinedAt: timestamp().defaultNow().notNull(),
   lastActivityAt: timestamp(),
   invitedBy: uuid(),
@@ -84,6 +100,8 @@ export const universeMembersTable = pgTable("universe_members", {
   universeIdx: index("universe_members_universe_idx").on(table.universeId),
   userIdx: index("universe_members_user_idx").on(table.userId),
   roleIdx: index("universe_members_role_idx").on(table.role),
+  statusIdx: index("universe_members_status_idx").on(table.status),
+  isActiveIdx: index("universe_members_active_idx").on(table.isActive),
 }));
 
 // Universe Join Requests
