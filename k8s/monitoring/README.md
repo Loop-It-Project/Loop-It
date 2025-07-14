@@ -1,6 +1,6 @@
 # Loop-It Kubernetes Monitoring Stack
 
-Ein vollständiger Observability-Stack für Loop-It auf Kubernetes mit Prometheus, Grafana, Loki und Promtail.
+Ein vollständiger production-ready Observability-Stack für Loop-It auf Kubernetes mit Prometheus, Grafana, Loki und Promtail.
 
 ## 🚀 Quick Start
 
@@ -11,9 +11,15 @@ Ein vollständiger Observability-Stack für Loop-It auf Kubernetes mit Prometheu
 # 2. Deploye Monitoring-Stack
 ./k8s/monitoring/deploy-monitoring.sh
 
-# 3. Öffne Grafana
-open http://localhost/monitoring/
-# Login: admin / admin
+# 3. Konfiguriere Hosts-Datei (einmalig)
+echo "127.0.0.1 monitoring.localhost" >> /etc/hosts
+echo "127.0.0.1 prometheus.localhost" >> /etc/hosts
+echo "127.0.0.1 loki.localhost" >> /etc/hosts
+
+# 4. Öffne Monitoring URLs
+open http://monitoring.localhost/          # Grafana
+open http://prometheus.localhost/          # Prometheus
+open http://loki.localhost/                # Loki
 ```
 
 ## 📋 Architektur
@@ -38,191 +44,140 @@ open http://localhost/monitoring/
                         └─────────────────┘
 ```
 
+## 🌐 Zugriff (Production-Ready URLs)
+
+### Primäre URLs (ohne Port-Forwarding)
+| Service | URL | Login |
+|---------|-----|-------|
+| Grafana | http://monitoring.localhost/ | admin / *aus .env* |
+| Prometheus | http://prometheus.localhost/ | - |
+| Loki | http://loki.localhost/ | - |
+
+### Fallback URLs
+| Service | URL | Beschreibung |
+|---------|-----|--------------|
+| Grafana | http://localhost/monitoring/ | Fallback wenn .localhost nicht funktioniert |
+| Prometheus | http://localhost/prometheus/ | Fallback URL |
+| Backend Metrics | http://localhost/api/metrics | Backend Prometheus Metriken |
+
 ## 🏗️ Komponenten
 
 ### Prometheus (Metriken-Sammlung)
-- **Port**: 9090
+- **URL**: prometheus.localhost
 - **Namespace**: monitoring
-- **Storage**: 10Gi PVC
-- **Retention**: 7 Tage
-- **Scraping**: Kubernetes Service Discovery
+- **Storage**: 10Gi PVC, 7 Tage Retention
+- **Backend Scraping**: Automatisch über Service Discovery
+- **RBAC**: Vollständige Kubernetes API Berechtigung
 
 ### Grafana (Visualisierung)
-- **Port**: 3000 (über Ingress)
-- **URL**: http://localhost/monitoring/
-- **Login**: admin / admin
-- **Storage**: 2Gi PVC
-- **Data Sources**: Prometheus + Loki
+- **URL**: monitoring.localhost
+- **Login**: admin / *aus k8s/monitoring/.env.monitoring*
+- **Data Sources**: Prometheus + Loki (automatisch konfiguriert)
+- **Domain**: monitoring.localhost (clean URLs)
 
 ### Loki (Log-Aggregation)
-- **Port**: 3100
-- **Storage**: 5Gi PVC
-- **Retention**: 7 Tage
+- **URL**: loki.localhost
+- **Storage**: 5Gi PVC, 7 Tage Retention
 - **Schema**: v13 mit TSDB
 
 ### Promtail (Log-Sammlung)
-- **Deployment**: DaemonSet
-- **Sources**: Kubernetes Pod Logs
-- **Processing**: CRI + JSON parsing
+- **Deployment**: DaemonSet auf allen Nodes
+- **Sources**: Kubernetes Pod Logs + Backend JSON-Parsing
+- **Processing**: CRI + erweiterte Backend-Log-Strukturierung
 
 ## 🛠️ Deployment
 
 ### Voraussetzungen
 - Kubernetes Cluster (Docker Desktop)
-- NGINX Ingress Controller
+- NGINX Ingress Controller (wird automatisch installiert)
 - Loop-It Backend läuft
 
 ### Installation
 ```bash
-# 1. Loop-It deployen (falls noch nicht geschehen)
-./k8s/deploy.sh
+# 1. Environment-Datei erstellen (optional)
+cp k8s/monitoring/.env.monitoring.example k8s/monitoring/.env.monitoring
+# Passwörter anpassen
 
 # 2. Monitoring-Stack deployen
-cd k8s/monitoring
-./deploy-monitoring.sh
+./k8s/monitoring/deploy-monitoring.sh
+
+# 3. Hosts-Datei konfigurieren (Windows als Administrator)
+echo "127.0.0.1 monitoring.localhost" >> /c/Windows/System32/drivers/etc/hosts
+echo "127.0.0.1 prometheus.localhost" >> /c/Windows/System32/drivers/etc/hosts
+echo "127.0.0.1 loki.localhost" >> /c/Windows/System32/drivers/etc/hosts
 ```
 
-### Manuelle Installation
+### Automatische Features
+- **Backend Service Discovery**: Findet automatisch backend/backend-service in default/loopit-dev
+- **RBAC Setup**: ServiceAccount, ClusterRole, ClusterRoleBinding werden automatisch erstellt
+- **Secret Management**: Grafana-Secrets aus .env.monitoring
+- **Health Checks**: Liveness/Readiness Probes für alle Services
+- **Ingress Configuration**: Saubere URLs ohne Redirect-Loops
+
+## 🔧 Backend-Integration
+
+### Metriken-Endpoint (bereits implementiert)
+Das Backend stellt bereits einen `/metrics` Endpoint bereit:
+
 ```bash
-# Namespace
-kubectl apply -f k8s/monitoring/namespace.yaml
+# Test Backend-Metriken
+curl http://localhost/api/metrics
 
-# Prometheus
-kubectl apply -f k8s/monitoring/prometheus.yaml
-
-# Loki
-kubectl apply -f k8s/monitoring/loki.yaml
-
-# Grafana
-kubectl apply -f k8s/monitoring/grafana.yaml
-
-# Promtail
-kubectl apply -f k8s/monitoring/promtail.yaml
-
-# Ingress
-kubectl apply -f k8s/monitoring/ingress.yaml
+# Erwartete Metriken:
+# - http_requests_total
+# - process_resident_memory_bytes  
+# - nodejs_heap_size_used_bytes
+# - http_request_duration_seconds
 ```
 
-## 🔧 Konfiguration
-
-### Backend-Metrics aktivieren
-
-Das Backend muss einen `/metrics` Endpoint implementieren:
-
-```typescript
-// src/middleware/metrics.ts
-import promClient from 'prom-client';
-
-const register = new promClient.Registry();
-promClient.collectDefaultMetrics({ register });
-
-const httpRequestsTotal = new promClient.Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status_code'],
-});
-
-const httpRequestDuration = new promClient.Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route'],
-  buckets: [0.1, 0.5, 1, 2, 5]
-});
-
-export const metricsMiddleware = (req, res, next) => {
-  const startTime = Date.now();
-  
-  res.on('finish', () => {
-    const duration = (Date.now() - startTime) / 1000;
-    const route = req.route?.path || req.path || 'unknown';
-    
-    httpRequestsTotal.inc({
-      method: req.method,
-      route: route,
-      status_code: res.statusCode.toString()
-    });
-    
-    httpRequestDuration.observe({
-      method: req.method,
-      route: route
-    }, duration);
-  });
-  
-  next();
-};
-
-export const getMetrics = async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-};
-```
-
-```typescript
-// src/server.ts
-import { metricsMiddleware, getMetrics } from './middleware/metrics';
-
-app.use(metricsMiddleware);
-app.get('/metrics', getMetrics);
-app.get('/api/ready', (req, res) => res.status(200).json({ status: 'ready' }));
-```
-
-### Erweiterte Backend-Konfiguration
-```bash
-# Backend mit Monitoring-Support aktualisieren
-kubectl apply -f k8s/backend-monitoring-update.yaml
-```
-
-## 🌐 Zugriff
-
-### URLs
-| Service | URL | Beschreibung |
-|---------|-----|--------------|
-| Grafana | http://localhost/monitoring/ | Dashboards und Visualisierung |
-| Prometheus | http://localhost/prometheus/ | Metriken und Alerting |
-| Loki | http://localhost/loki/ | Log-Aggregation API |
-| Backend Metrics | http://localhost/api/metrics | Backend Prometheus Metriken |
-
-### Alternative URLs (mit monitoring.localhost)
-```bash
-# /etc/hosts hinzufügen:
-127.0.0.1 monitoring.localhost
-
-# URLs:
-http://monitoring.localhost/          # Grafana
-http://monitoring.localhost/prometheus/  # Prometheus
+### Service-Annotation (automatisch)
+Das Deploy-Script annotiert automatisch den Backend-Service:
+```yaml
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000" 
+  prometheus.io/path: "/metrics"
 ```
 
 ## 📊 Verfügbare Metriken
 
-### System-Metriken (automatisch)
-- `process_cpu_user_seconds_total` - CPU-Zeit (User)
-- `process_resident_memory_bytes` - RAM-Verbrauch
-- `nodejs_heap_size_used_bytes` - Node.js Heap
-- `nodejs_eventloop_lag_seconds` - Event Loop Latenz
-
-### HTTP-Metriken (Backend)
-- `http_requests_total` - Anzahl HTTP-Requests
+### Backend-Metriken (bereits verfügbar)
+- `http_requests_total{method,route,status_code}` - HTTP-Request-Counter
 - `http_request_duration_seconds` - Response-Zeit-Histogramm
+- `process_resident_memory_bytes` - Memory-Verbrauch
+- `nodejs_heap_size_used_bytes` - Node.js Heap-Größe
 
-### Kubernetes-Metriken
-- API Server Metriken
-- Node Metriken
-- Pod Metriken
+### Prometheus-Queries (Ready-to-Use)
+```promql
+# Request Rate (letzte 5 Minuten)
+rate(http_requests_total[5m])
+
+# Error Rate
+rate(http_requests_total{status_code=~"4..|5.."}[5m])
+
+# Memory Usage in MB
+process_resident_memory_bytes / 1024 / 1024
+
+# 95th Percentile Response Time
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+```
+
+## 🎯 Prometheus Targets
+
+Das Setup scrapt automatisch:
+- **Backend Direct**: `backend-service.default.svc.cluster.local:3000/metrics`
+- **Backend Discovery**: Alle Services mit `prometheus.io/scrape=true`
+- **Kubernetes Pods**: Pods mit Scraping-Annotations
+- **Prometheus Self**: Prometheus eigene Metriken
+
+Status prüfen: http://prometheus.localhost/ → Status → Targets
 
 ## 📝 Log-Management
 
-### Log-Streams
-- **Backend**: HTTP-Requests, Anwendungs-Logs
-- **Kubernetes**: Pod-Events, System-Logs
-- **Prometheus**: Scraping-Aktivität
-- **Grafana**: User-Sessions, Plugin-Updates
-
-### Log-Labels
-- `namespace` - Kubernetes Namespace
-- `pod` - Pod-Name
-- `container` - Container-Name
-- `app` - App-Label
-- `level` - Log-Level (info, warn, error)
+### Log-Streams (automatisch konfiguriert)
+- **Backend Logs**: JSON-strukturiert mit level, method, status
+- **Monitoring Stack**: Prometheus, Grafana, Loki Logs
+- **Kubernetes**: System-Events und Pod-Logs
 
 ### Loki-Queries (Beispiele)
 ```bash
@@ -230,205 +185,113 @@ http://monitoring.localhost/prometheus/  # Prometheus
 {namespace="loopit-dev", app="backend"}
 
 # Error-Logs
-{namespace="loopit-dev"} |= "error" or |= "ERROR"
+{namespace="loopit-dev"} |= "error"
 
-# JSON-Parsing
+# Backend JSON-Logs mit Level-Filtering
 {app="backend"} | json | level="error"
-
-# Zeitbereich
-{app="backend"}[1h]
-```
-
-## 🎯 Prometheus-Queries
-
-### Performance-Monitoring
-```promql
-# Request Rate
-rate(http_requests_total[5m])
-
-# Error Rate
-rate(http_requests_total{status_code=~"4..|5.."}[5m])
-
-# Response Time (95th percentile)
-histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
-
-# Memory Usage
-process_resident_memory_bytes / 1024 / 1024
-
-# CPU Usage
-rate(process_cpu_user_seconds_total[5m]) * 100
-```
-
-### Kubernetes-Monitoring
-```promql
-# Pod Restart Count
-increase(kube_pod_container_status_restarts_total[1h])
-
-# Node CPU Usage
-100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
-
-# Node Memory Usage
-(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
-```
-
-## 📈 Grafana Dashboards
-
-### Standard-Dashboards
-1. **HTTP Overview** - Request Rate, Errors, Latenz
-2. **System Resources** - CPU, Memory, Storage
-3. **Kubernetes Overview** - Pods, Services, Ingress
-4. **Logs Dashboard** - Live-Logs mit Filtering
-
-### Dashboard-Import
-```bash
-# Kubernetes Dashboards (empfohlen)
-# Dashboard ID 315 - Kubernetes cluster monitoring (via Prometheus)
-# Dashboard ID 6417 - Kubernetes cluster monitoring (via Prometheus)
-# Dashboard ID 1860 - Node Exporter Full
-```
-
-### Custom Dashboard Beispiel
-```json
-{
-  "dashboard": {
-    "title": "Loop-It Backend Monitoring",
-    "panels": [
-      {
-        "title": "HTTP Request Rate",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "sum(rate(http_requests_total[5m])) by (method)"
-          }
-        ]
-      }
-    ]
-  }
-}
 ```
 
 ## 🔍 Troubleshooting
 
 ### Status prüfen
 ```bash
-# Alle Monitoring-Services
-kubectl get all -n monitoring
+# Monitoring-Stack Status
+kubectl get pods -n monitoring
 
-# Pod-Logs anzeigen
-kubectl logs -l app=prometheus -n monitoring
-kubectl logs -l app=grafana -n monitoring
-kubectl logs -l app=loki -n monitoring
-kubectl logs -l app=promtail -n monitoring
-
-# Ingress-Status
-kubectl describe ingress monitoring-ingress -n monitoring
+# Alle sollten "Running" sein:
+# prometheus-xxx  1/1 Running
+# grafana-xxx     1/1 Running  
+# loki-xxx        1/1 Running
 ```
 
-### Prometheus-Debugging
+### URLs testen
 ```bash
-# Targets prüfen
-kubectl port-forward service/prometheus 9090:9090 -n monitoring
-curl http://localhost:9090/api/v1/targets
+# Teste alle URLs
+curl -I http://monitoring.localhost/
+curl -I http://prometheus.localhost/
+curl -I http://loki.localhost/
 
-# Config reload
-kubectl exec -it deployment/prometheus -n monitoring -- curl -X POST http://localhost:9090/-/reload
+# Backend-Metriken
+curl http://localhost/api/metrics | head -20
 ```
 
-### Backend-Metrics prüfen
-```bash
-# Direkt vom Backend
-kubectl port-forward service/backend 3000:3000 -n loopit-dev
-curl http://localhost:3000/metrics
-
-# Health Check
-curl http://localhost:3000/api/health
-curl http://localhost:3000/api/ready
-```
+### Prometheus Targets prüfen
+1. Öffne http://prometheus.localhost/
+2. Gehe zu Status → Targets
+3. Alle Targets sollten "UP" sein:
+   - prometheus (localhost:9090)
+   - loop-it-backend-direct (backend-service.default:3000)
 
 ### Häufige Probleme
 
-**Prometheus kann Backend nicht scrapen:**
+**URLs nicht erreichbar:**
 ```bash
-# Backend Service Annotations prüfen
-kubectl get service backend -n loopit-dev -o yaml
+# Hosts-Datei prüfen
+cat /etc/hosts | grep localhost
 
-# Backend /metrics Endpoint testen
-kubectl exec -it deployment/backend -n loopit-dev -- curl http://localhost:3000/metrics
+# Ingress Status prüfen  
+kubectl get ingress -n monitoring
 ```
 
-**Grafana zeigt keine Daten:**
+**Backend nicht gescrapt:**
 ```bash
-# Prometheus Data Source testen
-kubectl port-forward service/grafana 3001:3000 -n monitoring
-# In Grafana: Configuration → Data Sources → Prometheus → Test
-```
+# Service-Annotations prüfen
+kubectl get service backend -n loopit-dev -o yaml | grep prometheus
 
-**Loki erhält keine Logs:**
-```bash
-# Promtail Status prüfen
-kubectl logs -l app=promtail -n monitoring
-
-# Loki API testen
-kubectl port-forward service/loki 3100:3100 -n monitoring
-curl http://localhost:3100/ready
+# Backend /metrics direkt testen
+kubectl port-forward service/backend 3000:3000 -n loopit-dev
+curl http://localhost:3000/metrics
 ```
 
 ## 🧹 Cleanup
 
 ```bash
-# Vollständiger Cleanup
+# Vollständiger sauberer Cleanup
 ./k8s/monitoring/cleanup-monitoring.sh
 
-# Oder manuell
-kubectl delete namespace monitoring
-kubectl delete clusterrole prometheus promtail
-kubectl delete clusterrolebinding prometheus promtail
+# Features:
+# - Stoppt Port-Forwards
+# - Löscht Namespace und alle Resources  
+# - Entfernt RBAC (ClusterRole, ClusterRoleBinding)
+# - Optional: Docker Images cleanup
+# - Backend Service Annotations cleanup
 ```
 
-## 🔒 Sicherheit
+## 🔒 Sicherheit & Best Practices
 
-### Best Practices
-- **RBAC**: Minimale Permissions für Services
-- **Network Policies**: Eingeschränkte Netzwerk-Kommunikation
-- **Security Contexts**: Non-root User, Read-only Filesystems
-- **Secrets Management**: Sichere Passwort-Verwaltung
+### Implementierte Sicherheitsfeatures
+- **RBAC**: Minimale Kubernetes API Permissions
+- **Security Contexts**: Non-root User, Read-only Filesystems  
+- **Secret Management**: Passwörter in Kubernetes Secrets
+- **Resource Limits**: CPU/Memory Limits für alle Pods
+- **Health Checks**: Liveness/Readiness Probes
 
-### Produktions-Härtung
+### Secret Management
 ```bash
-# Basic Auth für Monitoring (optional)
-kubectl create secret generic monitoring-basic-auth \
-  --from-literal=auth=$(htpasswd -nb monitoring secure_password) \
-  -n monitoring
-
-# TLS-Zertifikate für HTTPS
-kubectl create secret tls monitoring-tls \
-  --cert=monitoring.crt \
-  --key=monitoring.key \
-  -n monitoring
+# Passwörter in .env.monitoring konfigurieren
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=your-secure-password
+GRAFANA_SECRET_KEY=your-secret-key
 ```
 
-## 📚 Weiterführende Ressourcen
+## 📈 Nächste Schritte
 
-- [Prometheus Documentation](https://prometheus.io/docs/)
-- [Grafana Documentation](https://grafana.com/docs/)
-- [Loki Documentation](https://grafana.com/docs/loki/)
-- [Kubernetes Monitoring Guide](https://kubernetes.io/docs/tasks/debug-application-cluster/resource-monitoring/)
-- [PromQL Query Language](https://prometheus.io/docs/prometheus/latest/querying/basics/)
+1. **Grafana Dashboards erstellen**
+   - HTTP Request Rate Dashboard
+   - Backend Performance Monitoring
+   - Error Rate Tracking
 
-## 🎯 Nächste Schritte
+2. **Alerting konfigurieren**
+   - High Error Rate Alerts
+   - Memory/CPU Threshold Alerts
+   - Backend Downtime Alerts
 
-1. **Backend /metrics implementieren** - Prometheus-Metriken
-2. **Custom Dashboards erstellen** - Business-spezifische Visualisierungen
-3. **Alerting konfigurieren** - Kritische Schwellwerte definieren
-4. **Log-Strukturierung** - JSON-Logging für bessere Auswertung
-5. **Performance-Optimierung** - Resource-Limits anpassen
-6. **Backup-Strategie** - Persistent Volume Backup
-7. **Multi-Environment Setup** - Development/Staging/Production
+3. **Log-Strukturierung verbessern**
+   - Erweiterte JSON-Logging im Backend
+   - Request ID Tracking
+   - Performance-Logging
 
-## 💡 Tipps
-
-- **Retention anpassen**: Verlängere Speicher-Dauer für Produktionsumgebung
-- **Dashboard-Templates**: Nutze Community-Dashboards als Ausgangspunkt
-- **Alerting-Regeln**: Starte mit einfachen Regeln und verfeinere sukzessive
-- **Log-Aggregation**: Strukturiere Logs für bessere Suchbarkeit
-- **Resource-Monitoring**: Überwache CPU/Memory-Verbrauch regelmäßig
+4. **Production-Optimierung**
+   - Retention-Zeiten für Prod-Umgebung verlängern
+   - Backup-Strategie für Persistent Volumes
+   - Multi-Environment Setup (Dev/Staging/Prod)
