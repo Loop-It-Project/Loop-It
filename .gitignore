@@ -53,3 +53,6 @@ k8s/secrets-generated.yaml
 # Backup/temp files
 k8s/*.bak
 k8s/*.tmp
+# Monitoring Environment
+k8s/monitoring/.env.monitoring
+*.env.monitoring
