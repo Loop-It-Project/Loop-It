@@ -1,5 +1,5 @@
-import { db } from '../db/index';
-import { universesTable } from '../db/schema';
+import { db } from '../db/connection';
+import { universesTable } from '../db/Schemas';
 import { eq } from 'drizzle-orm';
 
 export class HashtagService {

@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { db } from '../db';
-import { refreshTokensTable, usersTable } from '../db/schema';
+import { db } from '../db/connection';
+import { refreshTokensTable, usersTable } from '../db/Schemas';
 import { eq, and, lt } from 'drizzle-orm';
 
 export interface TokenPayload {
@@ -84,13 +84,25 @@ export class TokenService {
     }
 
     try {
-      const decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       
-      return {
-        id: decoded.id,
-        email: decoded.email,
-        username: decoded.username
-      };
+      // console.log('🔍 JWT decoded payload:', {
+      //   fullPayload: JSON.stringify(decoded, null, 2),
+      //   id: decoded.id,
+      //   userId: decoded.userId,
+      //   email: decoded.email,
+      //   username: decoded.username,
+      //   iat: decoded.iat,
+      //   exp: decoded.exp
+      // });
+
+      // Prüfe ob es id oder userId ist
+      if (!decoded.id && decoded.userId) {
+        // console.log('🔍 Converting userId to id');
+        decoded.id = decoded.userId;
+      }
+
+      return decoded;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new Error('Token expired');

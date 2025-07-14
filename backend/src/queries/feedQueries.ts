@@ -1,4 +1,4 @@
-import { db } from '../db/index';
+import { db } from '../db/connection';
 import { 
   postsTable, 
   usersTable, 
@@ -7,7 +7,7 @@ import {
   profilesTable,
   mediaTable,
   postReactionsTable
-} from '../db/schema';
+} from '../db/Schemas';
 import { eq, desc, asc, and, inArray, sql, isNull, gte } from 'drizzle-orm';
 
 export interface FeedPost {
@@ -70,7 +70,11 @@ export const getPersonalFeed = async (
   offset = 0,
   sortBy: string = 'newest'
 ): Promise<FeedPost[]> => {
-  const query = db
+
+  console.log('🔍 ==========FEED QUERY DEBUG==========');
+  console.log('🔍 Loading personal feed for userId:', userId);
+
+  const results = await db
     .select({
       // Post data
       id: postsTable.id,
@@ -90,8 +94,10 @@ export const getPersonalFeed = async (
       universeName: universesTable.name,
       universeSlug: universesTable.slug,
       
-      // Author data
-      authorId: usersTable.id,
+      // ERWEITERTE AUTHOR DEBUG-DATEN
+      postAuthorId: postsTable.authorId,     // ← ORIGINAL aus posts table
+      joinedUserId: usersTable.id,          // ← Was durch JOIN kommt
+      authorId: usersTable.id,              // ← Das wird als authorId verwendet
       authorName: sql<string>`COALESCE(${usersTable.displayName}, CONCAT(${usersTable.firstName}, ' ', ${usersTable.lastName}))`,
       authorUsername: usersTable.username,
       authorAvatar: profilesTable.avatarId,
@@ -99,7 +105,7 @@ export const getPersonalFeed = async (
     .from(postsTable)
     .innerJoin(universeMembersTable, eq(postsTable.universeId, universeMembersTable.universeId))
     .innerJoin(universesTable, eq(postsTable.universeId, universesTable.id))
-    .innerJoin(usersTable, eq(postsTable.authorId, usersTable.id))
+    .innerJoin(usersTable, eq(postsTable.authorId, usersTable.id))  // ← KRITISCHER JOIN!
     .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
     .where(
       and(
@@ -113,7 +119,30 @@ export const getPersonalFeed = async (
     .limit(limit)
     .offset(offset);
 
-  return await query;
+  console.log('🔍 Feed query results count:', results.length);
+  
+  if (results.length > 0) {
+    console.log('🔍 First post debug info:');
+    console.log('🔍 - Post ID:', results[0].id);
+    console.log('🔍 - Original authorId from posts table:', results[0].postAuthorId);
+    console.log('🔍 - Joined user ID from users table:', results[0].joinedUserId);
+    console.log('🔍 - Final authorId (used in response):', results[0].authorId);
+    console.log('🔍 - Author username:', results[0].authorUsername);
+    console.log('🔍 - Author name:', results[0].authorName);
+    
+    // VERGLEICH: Sind die IDs identisch?
+    const authorsMatch = results[0].postAuthorId === results[0].joinedUserId;
+    console.log('🔍 - AUTHORS MATCH:', authorsMatch);
+    
+    if (!authorsMatch) {
+      console.log('❌ CRITICAL BUG: Author IDs do not match!');
+      console.log('❌ Expected (from posts):', results[0].postAuthorId);
+      console.log('❌ Got (from join):', results[0].joinedUserId);
+    }
+  }
+  console.log('🔍 =====================================');
+
+  return results;
 };
 
 // Universe Feed - Posts eines bestimmten Universe
@@ -124,7 +153,11 @@ export const getUniverseFeed = async (
   offset = 0,
   sortBy: string = 'newest'
 ): Promise<FeedPost[]> => {
-  const query = db
+  
+  console.log('🔍 ==========UNIVERSE FEED DEBUG==========');
+  console.log('🔍 Loading universe feed for:', universeSlug);
+  
+  const results = await db
     .select({
       // Post data
       id: postsTable.id,
@@ -144,15 +177,17 @@ export const getUniverseFeed = async (
       universeName: universesTable.name,
       universeSlug: universesTable.slug,
       
-      // Author data
-      authorId: usersTable.id,
+      // ✅ ERWEITERTE AUTHOR DEBUG-DATEN
+      postAuthorId: postsTable.authorId,     // ← ORIGINAL aus posts table
+      joinedUserId: usersTable.id,          // ← Was durch JOIN kommt
+      authorId: usersTable.id,              // ← Das wird als authorId verwendet
       authorName: sql<string>`COALESCE(${usersTable.displayName}, CONCAT(${usersTable.firstName}, ' ', ${usersTable.lastName}))`,
       authorUsername: usersTable.username,
       authorAvatar: profilesTable.avatarId,
     })
     .from(postsTable)
     .innerJoin(universesTable, eq(postsTable.universeId, universesTable.id))
-    .innerJoin(usersTable, eq(postsTable.authorId, usersTable.id))
+    .innerJoin(usersTable, eq(postsTable.authorId, usersTable.id))  // ← KRITISCHER JOIN!
     .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
     .where(
       and(
@@ -166,7 +201,27 @@ export const getUniverseFeed = async (
     .limit(limit)
     .offset(offset);
 
-  return await query;
+  // ✅ DEBUG OUTPUT
+  console.log('🔍 Universe feed results count:', results.length);
+  
+  if (results.length > 0) {
+    console.log('🔍 First post debug info:');
+    console.log('🔍 - Post ID:', results[0].id);
+    console.log('🔍 - Original authorId from posts table:', results[0].postAuthorId);
+    console.log('🔍 - Joined user ID from users table:', results[0].joinedUserId);
+    console.log('🔍 - Final authorId (used in response):', results[0].authorId);
+    console.log('🔍 - Author username:', results[0].authorUsername);
+    
+    const authorsMatch = results[0].postAuthorId === results[0].joinedUserId;
+    console.log('🔍 - AUTHORS MATCH:', authorsMatch);
+    
+    if (!authorsMatch) {
+      console.log('❌ UNIVERSE FEED BUG: Author IDs do not match!');
+    }
+  }
+  console.log('🔍 ========================================');
+
+  return results;
 };
 
 // Trending Posts

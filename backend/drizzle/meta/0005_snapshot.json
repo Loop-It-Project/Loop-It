@@ -1,6 +1,6 @@
 {
-  "id": "b95d8338-901f-4f1e-9217-01b91acce7fb",
-  "prevId": "04efe697-d3f4-48b3-a891-fbec331824fb",
+  "id": "6c60490e-e6d3-4ac0-882c-762b58793166",
+  "prevId": "e91f43c3-a5f7-4bd9-b001-9b3c902c55df",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3926,6 +3926,13 @@
         },
         "isDeleted": {
           "name": "isDeleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "isClosed": {
+          "name": "isClosed",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

@@ -1,14 +1,26 @@
 import bcrypt from 'bcryptjs';
-import { db } from '../db';
-import { usersTable, profilesTable, rolesTable, userRolesTable  } from '../db/schema';
-import { eq, and, or, sql } from 'drizzle-orm';
+import { db } from '../db/connection';
+import { 
+  usersTable, 
+  rolesTable,
+  userRolesTable,
+  profilesTable, 
+  postsTable,
+  postReactionsTable,
+  universesTable,
+  friendshipsTable,
+  universeMembersTable
+} from '../db/Schemas';
+import { eq, and, desc, asc, count, sql, or } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
+import { FriendshipService } from './friendshipService';
 
 export class UserService {
   
-  // USER PROFILE abrufen
+  // User Profile abrufen (eigenes)
   static async getUserProfile(userId: string) {
     try {
-      const user = await db
+      const [user] = await db
         .select({
           id: usersTable.id,
           email: usersTable.email,
@@ -16,69 +28,364 @@ export class UserService {
           displayName: usersTable.displayName,
           firstName: usersTable.firstName,
           lastName: usersTable.lastName,
-          accountStatus: usersTable.accountStatus,
-          emailVerifiedAt: usersTable.emailVerifiedAt,
           createdAt: usersTable.createdAt,
-          lastLoginAt: usersTable.lastLoginAt
+          // Profile Daten
+          bio: profilesTable.bio,
+          website: profilesTable.website,
+          socialLinks: profilesTable.socialLinks,
+          interests: profilesTable.interests,
+          hobbies: profilesTable.hobbies,
+          avatarId: profilesTable.avatarId
         })
         .from(usersTable)
+        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
         .where(eq(usersTable.id, userId))
         .limit(1);
 
-      if (user.length === 0) {
-        throw new Error('User not found');
-      }
-
-      // Optional: Profile-Daten laden
-      const profile = await db
-        .select()
-        .from(profilesTable)
-        .where(eq(profilesTable.userId, userId))
-        .limit(1);
-
-      return {
-        ...user[0],
-        profile: profile.length > 0 ? profile[0] : null
-      };
+      if (!user) throw new Error('User not found');
+      return user;
     } catch (error) {
       console.error('Error getting user profile:', error);
       throw error;
     }
   }
 
-  // USER PROFILE aktualisieren
-  static async updateUserProfile(userId: string, updateData: any) {
+  // User's eigene Posts abrufen
+  static async getUserPosts(userId: string, page: number = 1, limit: number = 20, sortBy: string = 'newest') {
     try {
-      const { displayName, firstName, lastName, bio } = updateData;
+      const offset = (page - 1) * limit;
+      
+      const posts = await db
+        .select({
+          id: postsTable.id,
+          title: postsTable.title,
+          content: postsTable.content,
+          contentType: postsTable.contentType,
+          mediaIds: postsTable.mediaIds,
+          hashtags: postsTable.hashtags,
+          likeCount: postsTable.likeCount,
+          commentCount: postsTable.commentCount,
+          shareCount: postsTable.shareCount,
+          createdAt: postsTable.createdAt,
+          universe: {
+            id: universesTable.id,
+            name: universesTable.name,
+            slug: universesTable.slug
+          }
+        })
+        .from(postsTable)
+        .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id))
+        .where(
+          and(
+            eq(postsTable.authorId, userId),
+            eq(postsTable.isDeleted, false)
+          )
+        )
+        .orderBy(
+          sortBy === 'newest' ? desc(postsTable.createdAt) :
+          sortBy === 'oldest' ? asc(postsTable.createdAt) :
+          sortBy === 'likes' ? desc(postsTable.likeCount) :
+          desc(postsTable.createdAt)
+        )
+        .offset(offset)
+        .limit(limit);
+
+      return {
+        posts,
+        pagination: {
+          page,
+          limit,
+          hasMore: posts.length === limit
+        }
+      };
+    } catch (error) {
+      console.error('Error getting user posts:', error);
+      throw error;
+    }
+  }
+
+  // Profile aktualisieren
+  static async updateProfile(userId: string, updateData: {
+    displayName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    bio?: string | null;
+    website?: string | null;
+    socialLinks?: object | null;
+    interests?: string[];
+    hobbies?: string[];
+  }) {
+    try {
+      console.log('🔧 UserService.updateProfile called with:', {
+        userId,
+        updateData: {
+          ...updateData,
+          socialLinksType: typeof updateData.socialLinks,
+          interestsLength: updateData.interests?.length,
+          hobbiesLength: updateData.hobbies?.length
+        }
+      });
+    
+      // User-Daten aktualisieren (nur wenn Werte gesetzt sind)
+      const userUpdateData: any = {};
+      if (updateData.displayName !== undefined) userUpdateData.displayName = updateData.displayName;
+      if (updateData.firstName !== undefined) userUpdateData.firstName = updateData.firstName;
+      if (updateData.lastName !== undefined) userUpdateData.lastName = updateData.lastName;
+    
+      if (Object.keys(userUpdateData).length > 0) {
+        userUpdateData.updatedAt = new Date();
+        
+        console.log('📝 Updating users table with:', userUpdateData);
+        
+        await db
+          .update(usersTable)
+          .set(userUpdateData)
+          .where(eq(usersTable.id, userId));
+      }
+    
+      // Profile-Daten aktualisieren
+      const profileData: any = {};
+      if (updateData.bio !== undefined) profileData.bio = updateData.bio;
+      if (updateData.website !== undefined) profileData.website = updateData.website;
+      if (updateData.socialLinks !== undefined) profileData.socialLinks = updateData.socialLinks;
+      if (updateData.interests !== undefined) profileData.interests = updateData.interests;
+      if (updateData.hobbies !== undefined) profileData.hobbies = updateData.hobbies;
+    
+      if (Object.keys(profileData).length > 0) {
+        profileData.updatedAt = new Date();
+        
+        console.log('📝 Updating profiles table with:', profileData);
+      
+        // Prüfe ob Profile existiert
+        const [existingProfile] = await db
+          .select()
+          .from(profilesTable)
+          .where(eq(profilesTable.userId, userId))
+          .limit(1);
+      
+        if (existingProfile) {
+          // Profile existiert - aktualisieren
+          await db
+            .update(profilesTable)
+            .set(profileData)
+            .where(eq(profilesTable.userId, userId));
+          
+          console.log('✅ Profile updated successfully');
+        } else {
+          // Profile existiert nicht - erstellen
+          await db
+            .insert(profilesTable)
+            .values({
+              userId,
+              ...profileData,
+              createdAt: new Date()
+            });
+          
+          console.log('✅ Profile created successfully');
+        }
+      }
+    
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error updating profile:', error);
+      throw error;
+    }
+  }
+
+  // User-Statistiken
+  static async getUserStats(userId: string) {
+    try {
+      const [stats] = await db
+        .select({
+          totalPosts: sql<number>`COUNT(DISTINCT ${postsTable.id})`,
+          totalUniverses: sql<number>`COUNT(DISTINCT ${universeMembersTable.universeId})`,
+          totalFriends: sql<number>`COUNT(DISTINCT ${friendshipsTable.id})`
+        })
+        .from(usersTable)
+        .leftJoin(postsTable, 
+          and(
+            eq(postsTable.authorId, usersTable.id),
+            eq(postsTable.isDeleted, false)
+          )
+        )
+        .leftJoin(universeMembersTable, eq(universeMembersTable.userId, usersTable.id))
+        .leftJoin(friendshipsTable, 
+          and(
+            eq(friendshipsTable.requesterId, usersTable.id),
+            eq(friendshipsTable.status, 'accepted')
+          )
+        )
+        .where(eq(usersTable.id, userId));
+
+      const [likeStats] = await db
+        .select({
+          totalLikes: sql<number>`COUNT(*)`
+        })
+        .from(postReactionsTable)
+        .where(
+          and(
+            eq(postReactionsTable.userId, userId),
+            eq(postReactionsTable.reactionType, 'like')
+          )
+        );
+
+      return {
+        totalPosts: stats.totalPosts || 0,
+        totalLikes: likeStats?.totalLikes || 0,
+        totalUniverses: stats.totalUniverses || 0,
+        totalFriends: stats.totalFriends || 0
+      };
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      throw error;
+    }
+  }
+
+  // Profile aktualisieren mit Social Links
+  static async updateUserProfileExtended(userId: string, updateData: any) {
+    try {
+      const { 
+        displayName, 
+        firstName, 
+        lastName, 
+        bio, 
+        website, 
+        socialLinks, 
+        interests, 
+        hobbies 
+      } = updateData;
 
       // User-Tabelle aktualisieren
-      const updatedUser = await db
-        .update(usersTable)
-        .set({
-          displayName,
-          firstName,
-          lastName,
-          updatedAt: new Date()
-        })
-        .where(eq(usersTable.id, userId))
-        .returning();
+      const userUpdateData: any = {};
+      if (displayName !== undefined) userUpdateData.displayName = displayName;
+      if (firstName !== undefined) userUpdateData.firstName = firstName;
+      if (lastName !== undefined) userUpdateData.lastName = lastName;
 
-      // Profile-Tabelle aktualisieren (falls bio vorhanden)
-      if (bio !== undefined) {
+      if (Object.keys(userUpdateData).length > 0) {
+        userUpdateData.updatedAt = new Date();
+        await db
+          .update(usersTable)
+          .set(userUpdateData)
+          .where(eq(usersTable.id, userId));
+      }
+
+      // Profile-Tabelle aktualisieren
+      const profileUpdateData: any = {};
+      if (bio !== undefined) profileUpdateData.bio = bio;
+      if (website !== undefined) profileUpdateData.website = website;
+      if (socialLinks !== undefined) profileUpdateData.socialLinks = socialLinks;
+      if (interests !== undefined) profileUpdateData.interests = interests;
+      if (hobbies !== undefined) profileUpdateData.hobbies = hobbies;
+
+      if (Object.keys(profileUpdateData).length > 0) {
+        profileUpdateData.updatedAt = new Date();
+        
+        // Stelle sicher dass Profile existiert
+        await this.ensureUserProfile(userId);
+        
         await db
           .update(profilesTable)
-          .set({
-            bio,
-            updatedAt: new Date()
-          })
+          .set(profileUpdateData)
           .where(eq(profilesTable.userId, userId));
       }
 
-      return updatedUser[0];
+      return { success: true, message: 'Profile updated successfully' };
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      console.error('Error updating extended user profile:', error);
       throw error;
     }
+  }
+
+  // // Freunde mit gemeinsamen Interessen finden
+  // static async getFriendsWithCommonInterests(userId: string, limit: number = 10) {
+  //   try {
+  //     // Hole User's Interessen
+  //     const [userProfile] = await db
+  //       .select({ 
+  //         interests: profilesTable.interests, 
+  //         hobbies: profilesTable.hobbies 
+  //       })
+  //       .from(profilesTable)
+  //       .where(eq(profilesTable.userId, userId))
+  //       .limit(1);
+
+  //     if (!userProfile) return [];
+
+  //     // Type Safety für Arrays
+  //     const userInterests = Array.isArray(userProfile.interests) 
+  //       ? userProfile.interests 
+  //       : [];
+  //     const userHobbies = Array.isArray(userProfile.hobbies) 
+  //       ? userProfile.hobbies 
+  //       : [];
+      
+  //     if (userInterests.length === 0 && userHobbies.length === 0) return [];
+
+  //     // Finde Freunde
+  //     const friends = await db
+  //       .select({
+  //         id: usersTable.id,
+  //         username: usersTable.username,
+  //         displayName: usersTable.displayName,
+  //         bio: profilesTable.bio,
+  //         interests: profilesTable.interests,
+  //         hobbies: profilesTable.hobbies,
+  //         avatarId: profilesTable.avatarId
+  //       })
+  //       .from(friendshipsTable)
+  //       .innerJoin(usersTable, eq(friendshipsTable.addresseeId, usersTable.id))
+  //       .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
+  //       .where(
+  //         and(
+  //           eq(friendshipsTable.requesterId, userId),
+  //           eq(friendshipsTable.status, 'accepted')
+  //         )
+  //       )
+  //       .limit(limit);
+
+  //     // Filter für gemeinsame Interessen mit Type Safety
+  //     return friends
+  //       .filter(friend => {
+  //         const friendInterests = Array.isArray(friend.interests) 
+  //           ? friend.interests 
+  //           : [];
+  //         const friendHobbies = Array.isArray(friend.hobbies) 
+  //           ? friend.hobbies 
+  //           : [];
+
+  //         const commonInterests = userInterests.filter((interest: string) => 
+  //           friendInterests.includes(interest)
+  //         );
+  //         const commonHobbies = userHobbies.filter((hobby: string) => 
+  //           friendHobbies.includes(hobby)
+  //         );
+
+  //         return commonInterests.length > 0 || commonHobbies.length > 0;
+  //       })
+  //       .map(friend => ({
+  //         ...friend,
+  //         commonInterests: userInterests.filter((interest: string) => {
+  //           const friendInterests = Array.isArray(friend.interests) 
+  //             ? friend.interests 
+  //             : [];
+  //           return friendInterests.includes(interest);
+  //         }),
+  //         commonHobbies: userHobbies.filter((hobby: string) => {
+  //           const friendHobbies = Array.isArray(friend.hobbies) 
+  //             ? friend.hobbies 
+  //             : [];
+  //           return friendHobbies.includes(hobby);
+  //         })
+  //       }));
+  //   } catch (error) {
+  //     console.error('Error getting friends with common interests:', error);
+  //     return [];
+  //   }
+  // }
+
+  // Methode für Freunde mit gemeinsamen Interessen 
+  static async getFriendsWithCommonInterests(userId: string, limit: number = 10) {
+    return FriendshipService.getFriendsWithCommonInterests(userId, limit);
   }
 
   // PASSWORD ändern
@@ -132,10 +439,10 @@ export class UserService {
     }
   }
 
-  // PUBLIC USER PROFILE abrufen
+  // Public User Profile abrufen (für andere User)
   static async getPublicUserProfile(username: string) {
     try {
-      const user = await db
+      const [user] = await db
         .select({
           id: usersTable.id,
           username: usersTable.username,
@@ -143,34 +450,21 @@ export class UserService {
           firstName: usersTable.firstName,
           lastName: usersTable.lastName,
           createdAt: usersTable.createdAt,
-          // Keine sensiblen Daten wie email, passwordHash etc.
+          // Profile Daten (öffentlich)
+          bio: profilesTable.bio,
+          website: profilesTable.website,
+          socialLinks: profilesTable.socialLinks,
+          interests: profilesTable.interests,
+          hobbies: profilesTable.hobbies,
+          avatarId: profilesTable.avatarId
         })
         .from(usersTable)
+        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
         .where(eq(usersTable.username, username))
         .limit(1);
 
-      if (user.length === 0) {
-        throw new Error('User not found');
-      }
-
-      // Profile-Daten laden (nur öffentliche)
-      const profile = await db
-        .select({
-          bio: profilesTable.bio,
-          website: profilesTable.website,
-          interests: profilesTable.interests,
-          hobbies: profilesTable.hobbies,
-          profileViews: profilesTable.profileViews,
-          postsCount: profilesTable.postsCount,
-        })
-        .from(profilesTable)
-        .where(eq(profilesTable.userId, user[0].id))
-        .limit(1);
-
-      return {
-        ...user[0],
-        profile: profile.length > 0 ? profile[0] : null
-      };
+      if (!user) throw new Error('User not found');
+      return user;
     } catch (error) {
       console.error('Error getting public user profile:', error);
       throw error;

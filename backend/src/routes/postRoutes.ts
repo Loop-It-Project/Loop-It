@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { 
   createPost, 
   deletePost, 
-  toggleLikePost,
+  togglePostLike,
   addComment,
   getPostComments,
   getPostLikeStatus,
@@ -30,7 +30,7 @@ const createPostValidation = [
 // Post routes
 router.post('/', authenticateToken, createPostValidation, createPost);
 router.delete('/:postId', authenticateToken, deletePost);
-router.post('/:postId/like', authenticateToken, toggleLikePost);
+router.post('/:postId/like', authenticateToken, togglePostLike);
 router.get('/:postId/like-status', authenticateToken, getPostLikeStatus);
 
 // ✅ Comment-spezifische Routes

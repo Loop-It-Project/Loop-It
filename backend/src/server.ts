@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { initializeWebSocketService } from './services/websocketService';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import feedRoutes from './routes/feedRoutes';
@@ -12,8 +14,11 @@ import searchRoutes from './routes/searchRoutes';
 import postRoutes from './routes/postRoutes';
 import adminRoutes from './routes/adminRoutes';
 import reportRoutes from './routes/reportRoutes';
+import friendshipRoutes from './routes/friendshipRoutes';
+import chatRoutes from './routes/chatRoutes';
 import { TokenService } from './services/tokenService';
-import { seedAdminData } from './db/seedAdminData';
+import { metricsMiddleware, getMetrics } from './middleware/metrics';
+import { seedAdminData } from './db/seeds/seedAdminData';
 
 // Environment variables laden
 dotenv.config();
@@ -64,7 +69,13 @@ function validateEnvironment() {
 validateEnvironment();
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3000;
+
+// WebSocket Service initialisieren
+console.log('🔌 Initializing WebSocket service...');
+const websocketService = initializeWebSocketService(httpServer);
+console.log('✅ WebSocket service initialized');
 
 // Middleware
 app.use(helmet());
@@ -81,6 +92,7 @@ app.use(cors({
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(metricsMiddleware);
 
 // Debug Middleware
 app.use((req, res, next) => {
@@ -132,6 +144,14 @@ try {
   console.log('  - Report routes at /api/reports');
   app.use('/api/reports', reportRoutes);
   console.log('  ✅ Report routes loaded successfully');
+
+  console.log('  - Friendship routes at /api/friendships');
+  app.use('/api/friendships', friendshipRoutes);
+  console.log('  ✅ Friendship routes loaded successfully');
+
+  console.log('  - Chat routes at /api/chats');
+  app.use('/api/chats', chatRoutes);
+  console.log('  ✅ Chat routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {
@@ -192,6 +212,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/metrics', getMetrics);
+
 console.log('✅ Health route registered');
 console.log('✅ API Health route registered');
 
@@ -216,8 +238,9 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 console.log('✅ Error handler registered');
 
 // Start server
-app.listen(PORT, async () => {
+httpServer.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🔌 WebSocket server running on ws://localhost:${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`🔑 JWT_SECRET loaded: ${!!process.env.JWT_SECRET ? 'YES' : 'NO'}`);
   console.log('🔧 Server setup complete');
