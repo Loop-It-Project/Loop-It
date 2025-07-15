@@ -9,6 +9,7 @@ import AppearanceTab from '../components/settings/AppearanceTab';
 import SecurityTab from '../components/settings/SecurityTab';
 import PrivacyTab from '../components/settings/PrivacyTab';
 import BugReportSection from '../components/settings/bugReportTab';
+import AccountManagementTab from '../components/settings/AccountManagementTab';
 
 const Settings = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
@@ -360,6 +361,10 @@ const Settings = ({ user, onLogout }) => {
           saving={saving}
           onSubmit={handlePasswordSubmit}
         />
+      )}
+
+      {activeTab === 'account' && (
+        <AccountManagementTab user={user} onLogout={onLogout} />
       )}
 
       {activeTab === 'bug-reports' && (
