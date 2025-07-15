@@ -1,3 +1,49 @@
+# Projekttagebuch – 15.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Account Deactivation und Deletion einbauen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Niergends
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Programmieren ist toll, Teamarbeit bei Leuten die Abwesend sind, sehr frustrierend
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Media Upload als Komponente final integrieren, Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken
+
+___
+# Projekttagebuch – 14.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Bug Report Feature einbauen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Beim Bug Fixen hing ich länger fest da ich einen falschen Import hatte den ich viel zu spät erst gesehen hatte
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Websockets!
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Media Upload als Komponente final integrieren, Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken
+
+___
 # Projekttagebuch – 11.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)
