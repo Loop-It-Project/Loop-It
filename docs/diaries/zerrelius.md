@@ -2,7 +2,7 @@
 
 ## Heutige Hauptaufgabe(n)
 Was war das Ziel heute?
-Account Deactivation und Deletion einbauen
+Account Deactivation und Deletion einbauen und Bilder Upload
 
 ## Fortschritt & Ergebnisse
 Was habe ich konkret geschafft?
@@ -10,7 +10,7 @@ Alles erfolgreich geschafft.
 
 ## Herausforderungen & Blockaden
 Wo hing ich fest?
-Niergends
+Ewig beim Debuggen von Problemen für den Feed Service. Die Bilder wurden nicht angezeigt und ich habe ewig nicht gecheckt das der Router einen vollkommen falschen Service im Controller benutzt.
 
 ## Was ich heute gelernt habe
 Eine kleine, konkrete Erkenntnis oder neues Wissen:
@@ -18,7 +18,7 @@ Programmieren ist toll, Teamarbeit bei Leuten die Abwesend sind, sehr frustriere
 
 ## Plan für morgen
 Was ist der nächste logische Schritt?
-Media Upload als Komponente final integrieren, Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken
 
 ___
 # Projekttagebuch – 14.07.2025 – Zerrelius aka JD
