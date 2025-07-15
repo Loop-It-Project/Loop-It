@@ -1,4 +1,10 @@
-import { getPersonalFeed, getUniverseFeed, getTrendingPosts, getTrendingPostsOptimized, FeedPost } from '../queries/feedQueries';
+import { 
+  getPersonalFeed, 
+  getUniverseFeed, 
+  getTrendingPosts, 
+  getTrendingPostsOptimized, 
+  FeedPost 
+} from '../queries/feedQueries';
 import { db } from '../db/connection';
 import { 
   postsTable,
@@ -7,8 +13,21 @@ import {
   profilesTable,
   universesTable, 
   universeMembersTable, 
+  mediaTable
 } from '../db/Schemas';
 import { eq, and, sql, desc, asc, inArray } from 'drizzle-orm';
+import fs from 'fs';
+
+interface MediaData {
+  id: string;
+  url: string;
+  thumbnailUrl: string | null;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  dimensions: any;
+}
 
 export class FeedService {
   
@@ -79,9 +98,66 @@ export class FeedService {
 
       // console.log('✅ Personal Feed Service - Posts geladen:', posts.length);
 
+      // Media-Daten für alle Posts laden
+      const postsWithMedia = await Promise.all(
+        posts.map(async (post) => {
+          let mediaDataForFeed: MediaData[] = [];
+          
+          if (post.mediaIds && Array.isArray(post.mediaIds) && post.mediaIds.length > 0) {
+            console.log('📸 FeedService: Loading media for personal post:', post.id, 'media IDs:', post.mediaIds);
+            
+            try {
+              const mediaRecords = await db
+                .select({
+                  id: mediaTable.id,
+                  url: mediaTable.url,
+                  thumbnailUrl: mediaTable.thumbnailUrl,
+                  filename: mediaTable.filename,
+                  originalName: mediaTable.originalName,
+                  mimeType: mediaTable.mimeType,
+                  fileSize: mediaTable.fileSize,
+                  dimensions: mediaTable.dimensions,
+                  storagePath: mediaTable.storagePath
+                })
+                .from(mediaTable)
+                .where(inArray(mediaTable.id, post.mediaIds));
+
+              console.log('📸 FeedService: Media records for personal post', post.id, ':', mediaRecords.map(r => ({
+                id: r.id,
+                filename: r.filename,
+                url: r.url,
+                thumbnailUrl: r.thumbnailUrl,
+                fileExists: r.storagePath ? fs.existsSync(r.storagePath) : false
+              })));
+
+              mediaDataForFeed = mediaRecords.map(record => ({
+                id: record.id,
+                url: record.url,
+                thumbnailUrl: record.thumbnailUrl,
+                filename: record.filename,
+                originalName: record.originalName,
+                mimeType: record.mimeType,
+                fileSize: record.fileSize,
+                dimensions: record.dimensions
+              }));
+              
+              console.log('📸 FeedService: Processed media for personal post', post.id, ':', mediaDataForFeed.length, 'items');
+              
+            } catch (mediaError) {
+              console.error('❌ FeedService: Error loading media for personal post', post.id, ':', mediaError);
+            }
+          }
+
+          return {
+            ...post,
+            media: mediaDataForFeed
+          };
+        })
+      );
+
       return {
         success: true,
-        posts,
+        posts: postsWithMedia,
         pagination: {
           page,
           limit,
@@ -166,9 +242,65 @@ export class FeedService {
 
       // console.log('✅ Universe Feed Service - Posts geladen:', posts.length);
 
+      const postsWithMedia = await Promise.all(
+        posts.map(async (post) => {
+          let mediaDataForFeed: MediaData[] = [];
+          
+          if (post.mediaIds && Array.isArray(post.mediaIds) && post.mediaIds.length > 0) {
+            console.log('📸 FeedService: Loading media for universe post:', post.id, 'media IDs:', post.mediaIds);
+            
+            try {
+              const mediaRecords = await db
+                .select({
+                  id: mediaTable.id,
+                  url: mediaTable.url,
+                  thumbnailUrl: mediaTable.thumbnailUrl,
+                  filename: mediaTable.filename,
+                  originalName: mediaTable.originalName,
+                  mimeType: mediaTable.mimeType,
+                  fileSize: mediaTable.fileSize,
+                  dimensions: mediaTable.dimensions,
+                  storagePath: mediaTable.storagePath
+                })
+                .from(mediaTable)
+                .where(inArray(mediaTable.id, post.mediaIds));
+
+              console.log('📸 FeedService: Media records for universe post', post.id, ':', mediaRecords.map(r => ({
+                id: r.id,
+                filename: r.filename,
+                url: r.url,
+                thumbnailUrl: r.thumbnailUrl,
+                fileExists: r.storagePath ? fs.existsSync(r.storagePath) : false
+              })));
+
+              mediaDataForFeed = mediaRecords.map(record => ({
+                id: record.id,
+                url: record.url,
+                thumbnailUrl: record.thumbnailUrl,
+                filename: record.filename,
+                originalName: record.originalName,
+                mimeType: record.mimeType,
+                fileSize: record.fileSize,
+                dimensions: record.dimensions
+              }));
+              
+              console.log('📸 FeedService: Processed media for universe post', post.id, ':', mediaDataForFeed.length, 'items');
+              
+            } catch (mediaError) {
+              console.error('❌ FeedService: Error loading media for universe post', post.id, ':', mediaError);
+            }
+          }
+
+          return {
+            ...post,
+            media: mediaDataForFeed
+          };
+        })
+      );
+
       return {
         success: true,
-        posts,
+        posts: postsWithMedia,
         pagination: {
           page,
           limit,
@@ -207,9 +339,66 @@ export class FeedService {
         } : null
       });
 
+      // ✅ ERWEITERT: Media-Daten für alle Posts laden
+      const postsWithMedia = await Promise.all(
+        posts.map(async (post) => {
+          let mediaDataForFeed: MediaData[] = [];
+          
+          if (post.mediaIds && Array.isArray(post.mediaIds) && post.mediaIds.length > 0) {
+            console.log('📸 FeedService: Loading media for trending post:', post.id, 'media IDs:', post.mediaIds);
+            
+            try {
+              const mediaRecords = await db
+                .select({
+                  id: mediaTable.id,
+                  url: mediaTable.url,
+                  thumbnailUrl: mediaTable.thumbnailUrl,
+                  filename: mediaTable.filename,
+                  originalName: mediaTable.originalName,
+                  mimeType: mediaTable.mimeType,
+                  fileSize: mediaTable.fileSize,
+                  dimensions: mediaTable.dimensions,
+                  storagePath: mediaTable.storagePath
+                })
+                .from(mediaTable)
+                .where(inArray(mediaTable.id, post.mediaIds));
+
+              console.log('📸 FeedService: Media records for trending post', post.id, ':', mediaRecords.map(r => ({
+                id: r.id,
+                filename: r.filename,
+                url: r.url,
+                thumbnailUrl: r.thumbnailUrl,
+                fileExists: r.storagePath ? fs.existsSync(r.storagePath) : false
+              })));
+
+              mediaDataForFeed = mediaRecords.map(record => ({
+                id: record.id,
+                url: record.url,
+                thumbnailUrl: record.thumbnailUrl,
+                filename: record.filename,
+                originalName: record.originalName,
+                mimeType: record.mimeType,
+                fileSize: record.fileSize,
+                dimensions: record.dimensions
+              }));
+              
+              console.log('📸 FeedService: Processed media for trending post', post.id, ':', mediaDataForFeed.length, 'items');
+              
+            } catch (mediaError) {
+              console.error('❌ FeedService: Error loading media for trending post', post.id, ':', mediaError);
+            }
+          }
+
+          return {
+            ...post,
+            media: mediaDataForFeed
+          };
+        })
+      );
+
       return {
         success: true,
-        posts,
+        posts: postsWithMedia,
         pagination: {
           page,
           limit,

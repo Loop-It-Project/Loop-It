@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 class BaseService {
   static getAuthHeaders() {
-    const token = localStorage.getItem('token');
+    const token = BaseService.getToken();
     
     if (AuthInterceptor.isTokenExpired(token)) {
       console.warn('🔒 Token ist abgelaufen - initiiere Logout');
@@ -19,7 +19,8 @@ class BaseService {
   }
 
   static async fetchWithAuth(url, options = {}) {
-    let token = localStorage.getItem('token');
+    try {
+      let token = BaseService.getToken();
 
     // ERWEITERTE DEBUG-INFO
     console.log('🔍 BaseService.fetchWithAuth called:', {
@@ -38,20 +39,30 @@ class BaseService {
       }
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
-        ...options.headers
-      }
-    });
+      const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
 
-    return await AuthInterceptor.handleResponse(response, { url, options });
+      const response = await fetch(fullUrl, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+          ...options.headers
+        }
+      });
+
+      return await AuthInterceptor.handleResponse(response, { url: fullUrl, options });
+    } catch (error) {
+      console.error('BaseService request error:', error);
+      throw error;
+    }
   }
 
   static getApiUrl() {
     return API_URL;
+  }
+
+  static getToken() {
+    return localStorage.getItem('token');
   }
 }
 

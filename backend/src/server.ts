@@ -19,6 +19,8 @@ import friendshipRoutes from './routes/friendshipRoutes';
 import chatRoutes from './routes/chatRoutes';
 import universeChatRoutes from './routes/universeChatRoutes';
 import bugReportRoutes from './routes/bugReportRoutes';
+import accountRoutes from './routes/accountRoutes';
+import mediaRoutes from './routes/mediaRoutes';
 
 // Services
 import { initializeWebSocketService } from './services/websocketService';
@@ -84,7 +86,6 @@ const websocketService = initializeWebSocketService(httpServer);
 console.log('✅ WebSocket service initialized');
 
 // Middleware
-app.use(helmet());
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -93,9 +94,30 @@ app.use(cors({
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Content-Length', 'Content-Disposition']
 }));
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Erlaubt Cross-Origin-Zugriff auf Media
+  contentSecurityPolicy: {
+    directives: {
+      imgSrc: ["'self'", "data:", "http://localhost:*", "https://localhost:*"],
+      mediaSrc: ["'self'", "http://localhost:*", "https://localhost:*"],
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      connectSrc: ["'self'", "ws://localhost:*", "wss://localhost:*"]
+    }
+  }
+}));
+
 app.use(morgan('combined'));
+// Media Routes VOR JSON-Parser registrieren
+console.log('📝 Registering media routes BEFORE JSON parsing...');
+console.log('  - Media routes at /api/media');
+app.use('/api/media', mediaRoutes);
+console.log('  ✅ Media routes loaded successfully');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(metricsMiddleware);
@@ -105,7 +127,8 @@ app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.path}`, {
     body: req.method === 'POST' ? Object.keys(req.body) : undefined,
     contentType: req.headers['content-type'],
-    hasAuth: !!req.headers.authorization
+    hasAuth: !!req.headers.authorization,
+    isUpload: req.path.includes('/upload')
   });
   next();
 });
@@ -166,6 +189,10 @@ try {
   console.log('  - Bug Report routes at /api/bug-reports');
   app.use('/api/bug-reports', bugReportRoutes);
   console.log('  ✅ Bug Report routes loaded successfully');
+
+  console.log('  - Account routes at /api/account');
+  app.use('/api/account', accountRoutes);
+  console.log('  ✅ Account routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {
