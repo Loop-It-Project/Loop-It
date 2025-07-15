@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import HashtagService from '../../services/hashtagService';
 import PostService from '../../services/postService';
 import ShareButton from './ShareButton';
+import MediaGallery from '../MediaGallery';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import ReportModal from '../ReportModal';
 
@@ -39,34 +40,11 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
 
   // Check if current user is post author
   const isAuthor = useMemo(() => {
-    const result = currentUser?.id === post.author?.id || currentUser?.id === post.authorId;
-    
-    console.log('🔍 PostCard isAuthor check:', {
-      postId: post.id,
-      currentUserId: currentUser?.id,
-      postAuthorId: post.author?.id,
-      postAuthorIdFallback: post.authorId,
-      isAuthor: result,
-      postAuthor: post.author,
-      currentUser: currentUser
-    });
-    
-    return result;
+    return currentUser?.id === post.author?.id || currentUser?.id === post.authorId;
   }, [currentUser?.id, post.author?.id, post.authorId]);
-
 
   // Escape Key Handler:
   useEscapeKey(() => setShowMoreMenu(false), showMoreMenu);
-
-  // Debug: Schaue was im Post-Objekt steht
-  console.log('PostCard rendered:', {
-    postId: post.id,
-    localLikeCount: likeCount,
-    postLikeCount: post.likeCount,
-    localIsLiked: isLiked,
-    postIsLiked: post.isLikedByUser,
-    onLikeAvailable: !!onLike
-  });
 
   // Like Handler:
   // Hier wird der Like-Status geändert und die Anzahl aktualisiert
@@ -452,6 +430,13 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
           </p>
         )}
 
+        {/* Media Gallery */}
+        {post.media && post.media.length > 0 && (
+          <div className="mb-3">
+            <MediaGallery media={post.media} />
+          </div>
+        )}
+
         {/* Expand/Collapse Button */}
         {shouldTruncate && (
           <button
@@ -461,16 +446,6 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
             {isExpanded ? <EyeOff size={14} /> : <Eye size={14} />}
             <span>{isExpanded ? 'Weniger anzeigen' : 'Mehr anzeigen'}</span>
           </button>
-        )}
-
-        {/* Media */}
-        {post.mediaIds && post.mediaIds.length > 0 && (
-          <div className="mt-3 rounded-lg overflow-hidden">
-            {/* Placeholder für Media - später implementieren */}
-            <div className="bg-hover h-48 flex items-center justify-center text-tertiary">
-              Media wird bald unterstützt
-            </div>
-          </div>
         )}
 
       {/* Hashtags mit Loading-State */}

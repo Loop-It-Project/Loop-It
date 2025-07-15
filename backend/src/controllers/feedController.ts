@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { FeedService } from '../services/feedService';
+import { PostService } from '../services/postService';
 import { query, param, validationResult } from 'express-validator';
 
 interface AuthRequest extends Request {
