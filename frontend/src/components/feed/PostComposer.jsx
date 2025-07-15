@@ -3,6 +3,7 @@ import { Image, Hash, Globe, Lock, Send, X } from 'lucide-react';
 import FeedService from '../../services/feedServices';
 import UniverseService from '../../services/universeService';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import MediaUpload from '../MediaUpload';
 
 const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
   const [formData, setFormData] = useState({
@@ -10,7 +11,8 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
     content: '',
     universeId: '',
     hashtags: '',
-    isPublic: true
+    isPublic: true,
+    mediaIds: []
   });
   
   const [loading, setLoading] = useState(false);
@@ -20,10 +22,9 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [allUserUniverses, setAllUserUniverses] = useState([]);
+  const [uploadedMedia, setUploadedMedia] = useState([]); // ← Korrekte Variable
 
   // Close modal on Escape key press
-  // This effect listens for the Escape key and closes the composer when pressed
-  // It cleans up the event listener on component unmount
   useEscapeKey(() => {
     if (isExpanded) {
       setIsExpanded(false);
@@ -31,13 +32,12 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
     }
   }, isExpanded);
 
-  // Lade User's Universes (sowohl erstellte als auch beigetretene)
+  // Lade User's Universes
   useEffect(() => {
     const loadUserUniverses = async () => {
       try {
-        // Sowohl eigene als auch beigetretene Universes laden
         const [ownedResponse, memberResponse] = await Promise.all([
-          UniverseService.getOwnedUniverses(), // Neue Methode
+          UniverseService.getOwnedUniverses(),
           UniverseService.getUserUniverses(1, 50)
         ]);
 
@@ -48,16 +48,13 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
         }
         
         if (memberResponse.success) {
-          // Nur hinzufügen wenn nicht schon in owned enthalten
           const ownedIds = new Set(allUniverses.map(u => u.id));
           const memberUniverses = memberResponse.data.universes.filter(u => !ownedIds.has(u.id));
           allUniverses.push(...memberUniverses);
         }
 
-        // Speichere alle Universes (für Statistik)
         setAllUserUniverses(allUniverses);
 
-        // Filtere nur aktive, offene und nicht gelöschte Universes für die Anzeige
         const availableUniverses = allUniverses.filter(universe => {
           return universe.isActive !== false && 
                  universe.isClosed !== true && 
@@ -75,6 +72,53 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
     loadUserUniverses();
   }, []);
 
+  // Handle media upload
+  const handleMediaUploaded = (newMedia) => {
+    try {
+      console.log('📸 PostComposer: Media uploaded:', newMedia);
+      
+      const mediaIds = Array.isArray(newMedia) ? newMedia.map(media => media.id) : [newMedia.id];
+      
+      // DEBUGGING: Erweiterte Logs
+      console.log('📸 PostComposer: Processing media IDs:', mediaIds);
+      console.log('📸 PostComposer: Current form mediaIds:', formData.mediaIds);
+      console.log('📸 PostComposer: Current uploaded media:', uploadedMedia);
+      
+      // State aktualisieren
+      setFormData(prev => ({
+        ...prev,
+        mediaIds: [...prev.mediaIds, ...mediaIds]
+      }));
+      
+      // Uploaded media für UI tracking
+      setUploadedMedia(prev => [...prev, ...(Array.isArray(newMedia) ? newMedia : [newMedia])]);
+      
+      console.log('✅ PostComposer: Media IDs updated:', mediaIds);
+      console.log('✅ PostComposer: New form data will be:', {
+        ...formData,
+        mediaIds: [...formData.mediaIds, ...mediaIds]
+      });
+      
+    } catch (error) {
+      console.error('❌ PostComposer: Error handling media upload:', error);
+      setErrors(prev => ({ ...prev, media: 'Error uploading media' }));
+    }
+  };
+
+  // Handle media removal
+  const handleMediaRemoved = (mediaId) => {
+    console.log('🗑️ PostComposer: Removing media:', mediaId);
+    
+    setFormData(prev => ({
+      ...prev,
+      mediaIds: prev.mediaIds.filter(id => id !== mediaId)
+    }));
+    
+    setUploadedMedia(prev => prev.filter(media => media.id !== mediaId));
+    
+    console.log('✅ PostComposer: Media removed, new mediaIds:', formData.mediaIds.filter(id => id !== mediaId));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -91,27 +135,44 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
     setLoading(true);
     setIsCreatingPost(true);
 
-
     try {
       const postData = {
         ...formData,
         hashtags: formData.hashtags.split(',').map(tag => tag.trim()).filter(tag => tag)
       };
       
+      // DEBUGGING: Erweiterte Logs für Post-Creation
+      console.log('📸 PostComposer: Submitting post with data:', {
+        ...postData,
+        mediaIdsCount: postData.mediaIds.length,
+        uploadedMediaCount: uploadedMedia.length,
+        mediaIds: postData.mediaIds,
+        uploadedMedia: uploadedMedia
+      });
+      
       const response = await FeedService.createPost(postData);
       
+      // DEBUGGING: Response analysieren
+      console.log('📸 PostComposer: Post creation response:', {
+        success: response.success,
+        hasData: !!response.data,
+        postId: response.data?.id,
+        mediaInResponse: response.data?.media,
+        mediaCount: response.data?.media?.length || 0,
+        error: response.error
+      });
+      
       if (response.success) {
-        // console.log('✅ Post erfolgreich erstellt:', response.data);
-        
-
         // Form zurücksetzen
         setFormData({
           title: '',
           content: '',
           universeId: '',
           hashtags: '',
-          isPublic: true
+          isPublic: true,
+          mediaIds: []
         });
+        setUploadedMedia([]);
         setIsExpanded(false);
         setErrors({});
 
@@ -123,23 +184,23 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
 
         // Feed-Reload (empfohlen)
         if (onFeedReload) {
-          console.log('🔄 Starte Feed-Reload...');
+          console.log('🔄 PostComposer: Starting feed reload...');
           await onFeedReload();
-          console.log('✅ Feed-Reload abgeschlossen');
+          console.log('✅ PostComposer: Feed reload completed');
         }
         // Fallback - Post manuell hinzufügen
         else if (onPostCreated) {
-          console.log('⚠️ Fallback: Füge Post manuell hinzu');
+          console.log('⚠️ PostComposer: Fallback - manually adding post');
           onPostCreated(response.data);
         } else {
-          console.error('❌ Keine Handler verfügbar!');
+          console.error('❌ PostComposer: No handlers available!');
         }
 
       } else {
         setErrors({ submit: response.error || 'Fehler beim Erstellen des Posts' });
       }
     } catch (error) {
-      console.error('Create post error:', error);
+      console.error('❌ PostComposer: Create post error:', error);
       setErrors({ submit: 'Fehler beim Erstellen des Posts' });
     } finally {
       setLoading(false);
@@ -170,6 +231,7 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
               onClick={() => {
                 setIsExpanded(false);
                 setErrors({});
+                setUploadedMedia([]); // ← Korrekte Variable
               }}
               className="text-muted hover:text-secondary hover:cursor-pointer transition-colors"
             >
@@ -236,6 +298,20 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
             />
           </div>
 
+          {/* Media Upload */}
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-2">
+              Bilder hinzufügen (optional)
+            </label>
+            <MediaUpload
+              onMediaUploaded={handleMediaUploaded}
+              onMediaRemoved={handleMediaRemoved}
+              maxFiles={5}
+              type="post"
+            />
+            {errors.media && <p className="text-red-500 text-sm mt-1">{errors.media}</p>}
+          </div>
+
           {/* Privacy & Actions */}
           <div className="flex items-center justify-between pt-3 border-t border-primary">
             <div className="flex items-center space-x-4">
@@ -251,21 +327,23 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
                 <span className="text-secondary">Öffentlich</span>
               </label>
 
-              {/* Future: Media Upload */}
-              <button
-                type="button"
-                className="text-muted hover:text-purple-600 hover:cursor-pointer transition-colors"
-                title="Bilder (bald verfügbar)"
-              >
-                <Image size={16} />
-              </button>
+              {/* Media Count Display */}
+              {uploadedMedia.length > 0 && (
+                <div className="flex items-center space-x-2 text-sm text-secondary">
+                  <Image size={16} />
+                  <span>{uploadedMedia.length} Bild{uploadedMedia.length > 1 ? 'er' : ''}</span>
+                </div>
+              )}
             </div>
 
             {/* Submit */}
             <div className="flex items-center space-x-2">
               <button
                 type="button"
-                onClick={() => setIsExpanded(false)}
+                onClick={() => {
+                  setIsExpanded(false);
+                  setUploadedMedia([]); // ← Korrekte Variable
+                }}
                 className="px-4 py-2 text-secondary hover:text-primary hover:cursor-pointer transition-colors"
               >
                 Abbrechen
@@ -275,10 +353,10 @@ const PostComposer = ({ onPostCreated, onFeedReload, onClose }) => {
                 disabled={loading || isCreatingPost || !formData.content.trim() || !formData.universeId}
                 className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-              <Send size={16} className={isCreatingPost ? 'animate-pulse' : ''} />
-              <span>
-                {isCreatingPost ? 'Wird gepostet...' : loading ? 'Erstelle...' : 'Posten'}
-              </span>
+                <Send size={16} className={isCreatingPost ? 'animate-pulse' : ''} />
+                <span>
+                  {isCreatingPost ? 'Wird gepostet...' : loading ? 'Erstelle...' : 'Posten'}
+                </span>
               </button>
             </div>
           </div>

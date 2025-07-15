@@ -130,18 +130,21 @@ function App() {
         const savedUser = localStorage.getItem('user');
 
         if (token && refreshToken && savedUser) {
+          // savedUser parsen bevor es verwendet wird
+          const parsedUser = JSON.parse(savedUser);
+          
           // Prüfe Token-Gültigkeit
           if (AuthInterceptor.isTokenExpired(token)) {
             console.log('🔄 Gespeicherter Token ist abgelaufen - versuche Refresh...');
             try {
               await AuthInterceptor.refreshTokens();
-              setUser(JSON.parse(savedUser));
+              setUser(parsedUser);
               console.log('✅ Session wiederhergestellt');
 
-              // WebSocket nach Token-Refresh verbinden
+              // WebSocket nach Token-Refresh mit parsedUser verbinden
               const newToken = localStorage.getItem('token');
               if (newToken) {
-                WebSocketService.connect(newToken, userData);
+                WebSocketService.connect(newToken, parsedUser);
               }
 
             } catch (refreshError) {
@@ -149,11 +152,11 @@ function App() {
               handleLogout('tokenExpired');
             }
           } else {
-            setUser(JSON.parse(savedUser));
+            setUser(parsedUser);
             console.log('✅ Session wiederhergestellt');
 
-            // WebSocket mit existierendem Token verbinden
-            WebSocketService.connect(token, userData);
+            // WebSocket mit existierendem Token und parsedUser verbinden
+            WebSocketService.connect(token, parsedUser);
           }
         }
       } catch (error) {

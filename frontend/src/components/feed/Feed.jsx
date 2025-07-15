@@ -120,7 +120,18 @@ const Feed = ({
       }
 
       if (response.success) {
-        const newPosts = response.data.posts || [];
+        const newPosts = response.posts || response.data?.posts || [];
+        
+        console.log('📸 Feed: Processing posts:', {
+          newPostsCount: newPosts.length,
+          postsWithMedia: newPosts.filter(p => p.media && p.media.length > 0).length,
+          samplePostMedia: newPosts[0] ? {
+            id: newPosts[0].id,
+            hasMedia: !!newPosts[0].media,
+            mediaCount: newPosts[0].media?.length || 0,
+            mediaPreview: newPosts[0].media?.slice(0, 1).map(m => ({ id: m.id, url: m.url })) || []
+          } : null
+        });
         
         if (pageNum === 1 || isRefresh) {
           setPosts(newPosts);
@@ -128,7 +139,7 @@ const Feed = ({
           setPosts(prev => [...prev, ...newPosts]);
         }
         
-        setHasMore(response.data.pagination?.hasMore || false);
+        setHasMore(response.pagination?.hasMore || response.data?.pagination?.hasMore || false);
         setPage(pageNum);
 
         console.log(`✅ Feed loaded (${type}):`, {
@@ -420,7 +431,7 @@ const Feed = ({
         </div>
       ) : (
         <>
-          {posts.map((post) => (
+          {posts.map((post, index) => (
             <PostCard
               key={post.id}
               post={post}
