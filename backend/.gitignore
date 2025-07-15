@@ -33,3 +33,7 @@ dist-ssr
 # Database files
 *.db
 *.sqlite
+
+# Uploads
+uploads/
+!uploads/.gitkeep

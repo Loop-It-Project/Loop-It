@@ -8,133 +8,197 @@ import {
   universesTable, 
   universeMembersTable, 
   usersTable, 
-  profilesTable 
+  profilesTable,
+  mediaTable
 } from '../db/Schemas';
-import { eq, and, asc, sql, desc, isNull } from 'drizzle-orm';
+import { eq, and, asc, sql, desc, isNull, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+
+interface MediaData {
+        id: string;
+        url: string;
+        thumbnailUrl: string | null;
+        filename: string;
+        originalName: string;
+        mimeType: string;
+        fileSize: number;
+        dimensions: any;
+}
 
 export class PostService {
 
   static async createPost(postData: any) {
-      try {
-        const { 
-          title, 
-          content, 
-          universeId, 
-          hashtags, 
-          isPublic = true,
-          authorId 
-        } = postData;
+    try {
+      const { 
+        title, 
+        content, 
+        universeId, 
+        hashtags, 
+        isPublic = true,
+        authorId,
+        mediaIds = []
+      } = postData;
 
-        // Validiere universeId
-        if (!universeId) {
-          throw new Error('Universe ID is required');
-        }
+      // ✅ DEBUGGING: Eingangsdaten prüfen
+      console.log('📸 PostService.createPost: Input data:', {
+        title,
+        content: content ? content.substring(0, 100) + '...' : null,
+        universeId,
+        authorId,
+        mediaIds,
+        mediaIdsType: typeof mediaIds,
+        mediaIdsLength: mediaIds?.length || 0
+      });
 
-        // Universe, User UND Profile-Daten laden
-        const [universe, author, profile] = await Promise.all([
-          db
-            .select({
-              id: universesTable.id,
-              name: universesTable.name,
-              slug: universesTable.slug,
-              creatorId: universesTable.creatorId,
-              postCount: universesTable.postCount,
-              isActive: universesTable.isActive
-            })
-            .from(universesTable)
-            .where(eq(universesTable.id, universeId))
-            .limit(1),
+      // Validiere universeId
+      if (!universeId) {
+        throw new Error('Universe ID is required');
+      }
+
+      // Universe, User UND Profile-Daten laden
+      const [universe, author, profile] = await Promise.all([
+        db
+          .select({
+            id: universesTable.id,
+            name: universesTable.name,
+            slug: universesTable.slug,
+            creatorId: universesTable.creatorId,
+            postCount: universesTable.postCount,
+            isActive: universesTable.isActive
+          })
+          .from(universesTable)
+          .where(eq(universesTable.id, universeId))
+          .limit(1),
+      
+        db
+          .select({
+            id: usersTable.id,
+            username: usersTable.username,
+            displayName: usersTable.displayName
+          })
+          .from(usersTable)
+          .where(eq(usersTable.id, authorId))
+          .limit(1),
+      
+        db
+          .select({
+            userId: profilesTable.userId,
+            avatarId: profilesTable.avatarId
+          })
+          .from(profilesTable)
+          .where(eq(profilesTable.userId, authorId))
+          .limit(1)
+      ]);
+
+      if (universe.length === 0) {
+        throw new Error('Universe not found');
+      }
+
+      if (author.length === 0) {
+        throw new Error('Author not found');
+      }
+
+      if (!universe[0].isActive) {
+        throw new Error('Universe is not active');
+      }
+
+      // Prüfen ob User Mitglied des Universe ist oder Creator
+      const isCreator = universe[0].creatorId === authorId;
+      let isMember = false;
+
+      if (!isCreator) {
+        const membership = await db
+          .select()
+          .from(universeMembersTable)
+          .where(
+            and(
+              eq(universeMembersTable.universeId, universeId),
+              eq(universeMembersTable.userId, authorId)
+            )
+          )
+          .limit(1);
+      
+        isMember = membership.length > 0;
+      }
+
+      if (!isCreator && !isMember) {
+        throw new Error('You must be a member of this universe to post');
+      }
+
+      // ✅ ERWEITERT: Media-Daten laden falls vorhanden
+      let mediaDataForPost: MediaData[] = [];
+      
+      if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
+        console.log('📸 PostService: Loading media data for IDs:', mediaIds);
         
-          db
+        try {
+          const mediaRecords = await db
             .select({
-              id: usersTable.id,
-              username: usersTable.username,
-              displayName: usersTable.displayName
+              id: mediaTable.id,
+              url: mediaTable.url,
+              thumbnailUrl: mediaTable.thumbnailUrl,
+              filename: mediaTable.filename,
+              originalName: mediaTable.originalName,
+              mimeType: mediaTable.mimeType,
+              fileSize: mediaTable.fileSize,
+              dimensions: mediaTable.dimensions,
+              storagePath: mediaTable.storagePath // ✅ Für Debug
             })
-            .from(usersTable)
-            .where(eq(usersTable.id, authorId))
-            .limit(1),
-        
-          db
-            .select({
-              userId: profilesTable.userId,
-              avatarId: profilesTable.avatarId
-            })
-            .from(profilesTable)
-            .where(eq(profilesTable.userId, authorId))
-            .limit(1)
-        ]);
-
-        if (universe.length === 0) {
-          throw new Error('Universe not found');
-        }
-
-        if (author.length === 0) {
-          throw new Error('Author not found');
-        }
-
-        if (!universe[0].isActive) {
-          throw new Error('Universe is not active');
-        }
-
-        // Prüfen ob User Mitglied des Universe ist oder Creator
-        const isCreator = universe[0].creatorId === authorId;
-        let isMember = false;
-
-        if (!isCreator) {
-          const membership = await db
-            .select()
-            .from(universeMembersTable)
+            .from(mediaTable)
             .where(
               and(
-                eq(universeMembersTable.universeId, universeId),
-                eq(universeMembersTable.userId, authorId)
+                eq(mediaTable.uploaderId, authorId),
+                inArray(mediaTable.id, mediaIds)
               )
-            )
-            .limit(1);
-        
-          isMember = membership.length > 0;
-        }
+            );
 
-        if (!isCreator && !isMember) {
-          throw new Error('You must be a member of this universe to post');
-        }
+          console.log('📸 PostService: Raw media records from DB:', mediaRecords.map(r => ({
+            id: r.id,
+            filename: r.filename,
+            url: r.url,
+            thumbnailUrl: r.thumbnailUrl,
+            storagePath: r.storagePath,
+            fileExists: r.storagePath ? fs.existsSync(r.storagePath) : false
+          })));
 
-        // Post erstellen
-        const postId = uuidv4();
-        const now = new Date();
+          mediaDataForPost = mediaRecords.map(record => ({
+            id: record.id,
+            url: record.url,
+            thumbnailUrl: record.thumbnailUrl,
+            filename: record.filename,
+            originalName: record.originalName,
+            mimeType: record.mimeType,
+            fileSize: record.fileSize,
+            dimensions: record.dimensions
+          }));
 
-        await db
-          .insert(postsTable)
-          .values({
-            id: postId,
-            title: title || null,
-            content,
-            contentType: 'text',
-            universeId,
-            authorId,
-            hashtags: hashtags || [],
-            isPublic,
-            isDeleted: false,
-            likeCount: 0,
-            commentCount: 0,
-            shareCount: 0,
-            createdAt: now,
-            updatedAt: now
+          console.log('📸 PostService: Processed media data:', mediaDataForPost);
+          
+          // ✅ URL-Validation
+          mediaDataForPost.forEach((media, index) => {
+            console.log(`📸 PostService: Media ${index + 1} URLs:`, {
+              id: media.id,
+              url: media.url,
+              urlValid: media.url && media.url.startsWith('http'),
+              thumbnailUrl: media.thumbnailUrl,
+              thumbnailValid: media.thumbnailUrl && media.thumbnailUrl.startsWith('http')
+            });
           });
 
-        // Post-Count im Universe erhöhen
-        await db
-          .update(universesTable)
-          .set({
-            postCount: universe[0].postCount + 1,
-            updatedAt: now
-          })
-          .where(eq(universesTable.id, universeId));
+        } catch (mediaError) {
+          console.error('❌ PostService: Error loading media data:', mediaError);
+          // Continue without media data
+        }
+      }
 
-        // Vollständige Post-Daten für Frontend zurückgeben
-        const newPost = {
+      // ✅ KORRIGIERT: Post erstellen (ohne media property)
+      const postId = uuidv4();
+      const now = new Date();
+
+      await db
+        .insert(postsTable)
+        .values({
           id: postId,
           title: title || null,
           content,
@@ -142,43 +206,72 @@ export class PostService {
           universeId,
           authorId,
           hashtags: hashtags || [],
+          mediaIds: mediaIds || [], // ✅ Nur mediaIds, nicht media
           isPublic,
           isDeleted: false,
           likeCount: 0,
           commentCount: 0,
           shareCount: 0,
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
-          author: {
-            id: author[0].id,
-            username: author[0].username,
-            displayName: author[0].displayName,
-            profileImage: profile.length > 0 ? profile[0].avatarId : null
-          },
-          // Universe-Daten hinzufügen
-          universe: {
-            id: universe[0].id,
-            name: universe[0].name,
-            slug: universe[0].slug
-          },
-          // Legacy-Felder für Rückwärtskompatibilität
-          authorName: author[0].displayName || author[0].username,
-          authorUsername: author[0].username,
-          authorDisplayName: author[0].displayName,
-          authorAvatar: profile.length > 0 ? profile[0].avatarId : null,
-          universeName: universe[0].name,
-          universeSlug: universe[0].slug,
-          // Frontend-spezifische Felder
-          isLikedByUser: false,
-          timeAgo: 'Gerade eben'
-        };
+          createdAt: now,
+          updatedAt: now
+        });
 
-        return newPost;
-      } catch (error) {
-        console.error('Error creating post:', error);
-        throw error;
-      }
+      // ✅ ERWEITERT: Vollständige Post-Daten für Frontend zurückgeben
+      const newPost = {
+        id: postId,
+        title: title || null,
+        content,
+        contentType: 'text',
+        universeId,
+        authorId,
+        hashtags: hashtags || [],
+        mediaIds: mediaIds || [],
+        media: mediaDataForPost, // ✅ Hier sind die Media-Daten für Frontend
+        isPublic,
+        isDeleted: false,
+        likeCount: 0,
+        commentCount: 0,
+        shareCount: 0,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        author: {
+          id: author[0].id,
+          username: author[0].username,
+          displayName: author[0].displayName,
+          profileImage: profile.length > 0 ? profile[0].avatarId : null
+        },
+        universe: {
+          id: universe[0].id,
+          name: universe[0].name,
+          slug: universe[0].slug
+        },
+        // Legacy fields
+        authorName: author[0].displayName || author[0].username,
+        authorUsername: author[0].username,
+        authorDisplayName: author[0].displayName,
+        authorAvatar: profile.length > 0 ? profile[0].avatarId : null,
+        universeName: universe[0].name,
+        universeSlug: universe[0].slug,
+        isLikedByUser: false,
+        timeAgo: 'Gerade eben'
+      };
+
+      console.log('✅ PostService: Created post response:', {
+        postId,
+        hasMedia: mediaDataForPost.length > 0,
+        mediaCount: mediaDataForPost.length,
+        mediaIds: mediaIds,
+        responseMediaField: !!newPost.media,
+        responseMediaCount: newPost.media?.length || 0
+      });
+
+      return newPost;
+
+    } catch (error) {
+      console.error('❌ PostService: Create post error:', error);
+      throw error;
     }
+  }
 
   static async deletePost(postId: string, userId: string) {
       try {
@@ -568,77 +661,6 @@ export class PostService {
         success: false,
         isLiked: false
       };
-    }
-  }
-
-  // Erweitere bestehende getFeed-Methoden um Like-Status
-  static async getPersonalFeedWithLikes(userId: string, page: number = 1, limit: number = 20, sortBy: string = 'newest') {
-    try {
-      const offset = (page - 1) * limit;
-
-      const posts = await db
-        .select({
-          id: postsTable.id,
-          title: postsTable.title,
-          content: postsTable.content,
-          contentType: postsTable.contentType,
-          mediaIds: postsTable.mediaIds,
-          hashtags: postsTable.hashtags,
-          isPublic: postsTable.isPublic,
-          likeCount: postsTable.likeCount,
-          commentCount: postsTable.commentCount,
-          shareCount: postsTable.shareCount,
-          createdAt: postsTable.createdAt,
-          updatedAt: postsTable.updatedAt,
-          author: {
-            id: usersTable.id,
-            username: usersTable.username,
-            displayName: usersTable.displayName,
-            profileImage: profilesTable.avatarId
-          },
-          universe: {
-            id: universesTable.id,
-            name: universesTable.name,
-            slug: universesTable.slug
-          },
-          isLikedByUser: sql<boolean>`CASE WHEN ${postReactionsTable.id} IS NOT NULL THEN true ELSE false END`
-        })
-        .from(postsTable)
-        .leftJoin(usersTable, eq(postsTable.authorId, usersTable.id))
-        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
-        .leftJoin(universesTable, eq(postsTable.universeId, universesTable.id))
-        .leftJoin(universeMembersTable, eq(universesTable.id, universeMembersTable.universeId))
-        .leftJoin(
-          postReactionsTable,
-          and(
-            eq(postReactionsTable.postId, postsTable.id),
-            eq(postReactionsTable.userId, userId),
-            eq(postReactionsTable.reactionType, 'like')
-          )
-        )
-        .where(
-          and(
-            eq(postsTable.isDeleted, false),
-            eq(universeMembersTable.userId, userId)
-          )
-        )
-        .orderBy(sortBy === 'newest' ? desc(postsTable.createdAt) : postsTable.createdAt)
-        .offset(offset)
-        .limit(limit);
-
-      return {
-        success: true,
-        posts,
-        pagination: {
-          page,
-          limit,
-          hasMore: posts.length === limit
-        }
-      };
-
-    } catch (error) {
-      console.error('Get personal feed with likes error:', error);
-      throw new Error('Failed to get personal feed');
     }
   }
 
