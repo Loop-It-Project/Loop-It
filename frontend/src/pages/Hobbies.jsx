@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/Backbutton';
 import UniverseService from '../services/universeService';
 
-const FirstUniverses = ({ user }) => {
+const Hobbies = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,12 +15,17 @@ const FirstUniverses = ({ user }) => {
   const categories = [
     { value: 'technology', label: 'Technologie' },
     { value: 'sports', label: 'Sport' },
-    { value: 'gaming', label: 'Gaming' },
-    { value: 'art', label: 'Kunst' },
     { value: 'music', label: 'Musik' },
+    { value: 'art', label: 'Kunst' },
+    { value: 'gaming', label: 'Gaming' },
     { value: 'cooking', label: 'Kochen' },
     { value: 'travel', label: 'Reisen' },
-    { value: 'literature', label: 'Literatur' }
+    { value: 'fitness', label: 'Fitness' },
+    { value: 'photography', label: 'Fotografie' },
+    { value: 'books', label: 'Bücher' },
+    { value: 'movies', label: 'Filme' },
+    { value: 'science', label: 'Wissenschaft' },
+    { value: 'other', label: 'Andere' }
   ];
 
   // Load universes when categories change
@@ -203,4 +208,4 @@ const FirstUniverses = ({ user }) => {
   );
 };
 
-export default FirstUniverses;
+export default Hobbies;

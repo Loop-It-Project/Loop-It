@@ -7,7 +7,7 @@ import AdminService from '../services/adminService';
 import useEscapeKey from '../hooks/useEscapeKey';
 import PendingFriendRequests from './PendingFriendRequests';
 import FriendshipService from '../services/friendshipService';
-import FirstUniverses from '../pages/FirstUniverses';
+import FirstUniverses from '../pages/Hobbies';
 
 // Header-Komponente für die Navigation und Aktionen im Dashboard
 // Importiere die benötigten Icons von Lucide
@@ -276,12 +276,12 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
                 <span>Universe</span>
               </button>
 
-              {/* DiscoverUniverse */}
+              {/* HobbiesPage */}
               <button
                 onClick={() => {
-                  navigate('/FirstUniverses')
+                  navigate('/Hobbies')
                 }}              >
-                Discover
+                Hobbys
               </button>
 
               {/* Admin Panel Button - NUR für Admins sichtbar */}

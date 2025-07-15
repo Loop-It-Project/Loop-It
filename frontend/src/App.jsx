@@ -16,7 +16,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Imprint from './pages/Imprint';
-import FirstUniverses from './pages/FirstUniverses';
+import Hobbies from './pages/Hobbies';
 import UserProfile from './pages/UserProfile';
 import ChatWidget from './components/chat/ChatWidget';
 
@@ -291,10 +291,10 @@ function App() {
           />
           {/* Discover Universes */}
           <Route
-            path="/FirstUniverses"
+            path="/Hobbies"
             element={
               <ProtectedRoute user={user}>
-                <FirstUniverses user={user}/>
+                <Hobbies user={user}/>
               </ProtectedRoute>
             }
           />

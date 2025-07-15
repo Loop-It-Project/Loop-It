@@ -1,3 +1,25 @@
+# Projekttagebuch Marc Droit - 15.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+HobbiesPage/FirstUniversesPopUp
+
+## *Fortschritte & Ergebnisse:*
+
+FirstUniversePopUp erstellt und integriert
+
+## *Herausforderungen & Blockaden:*
+
+Modale/PopUp-Struktur
+
+## *Was ich heute gelernt habe:*
+
+Modale/PopUp-Struktur
+
+## *Plan für morgen:*
+
+HobbiesPage/PopUp frontend fertigstellen
+
 # Projekttagebuch Marc Droit - 14.07.2025
 
 ## *Heutige Hauptaufgabe(n):*
