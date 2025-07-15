@@ -1,4 +1,4 @@
-import { ArrowLeft, Bug } from 'lucide-react';
+import { ArrowLeft, Bug, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsLayout = ({ 
@@ -18,6 +18,7 @@ const SettingsLayout = ({
     { id: 'location', name: 'Location', icon: '📍' },
     { id: 'appearance', name: 'Appearance', icon: '🎨' },
     { id: 'security', name: 'Security', icon: '🔒' },
+    { id: 'account', name: 'Account', icon: <Shield size={18} className="text-red-500" /> },
     { id: 'bug-reports', name: 'Bug Reports', icon: <Bug size={18} className="text-red-500" /> }
   ];
 

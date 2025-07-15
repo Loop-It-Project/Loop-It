@@ -1,26 +1,3 @@
-<<<<<<< HEAD
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
-import dotenv from "dotenv";
-import { createServer } from "http";
-import { initializeWebSocketService } from "./services/websocketService";
-import authRoutes from "./routes/authRoutes";
-import userRoutes from "./routes/userRoutes";
-import feedRoutes from "./routes/feedRoutes";
-import universeRoutes from "./routes/universeRoutes";
-import hashtagRoutes from "./routes/hashtagRoutes";
-import searchRoutes from "./routes/searchRoutes";
-import postRoutes from "./routes/postRoutes";
-import adminRoutes from "./routes/adminRoutes";
-import reportRoutes from "./routes/reportRoutes";
-import friendshipRoutes from "./routes/friendshipRoutes";
-import chatRoutes from "./routes/chatRoutes";
-import { TokenService } from "./services/tokenService";
-import { metricsMiddleware, getMetrics } from "./middleware/metrics";
-import { seedAdminData } from "./db/seeds/seedAdminData";
-=======
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -42,13 +19,14 @@ import friendshipRoutes from './routes/friendshipRoutes';
 import chatRoutes from './routes/chatRoutes';
 import universeChatRoutes from './routes/universeChatRoutes';
 import bugReportRoutes from './routes/bugReportRoutes';
+import accountRoutes from './routes/accountRoutes';
+import mediaRoutes from './routes/mediaRoutes';
 
 // Services
 import { initializeWebSocketService } from './services/websocketService';
 import { TokenService } from './services/tokenService';
 import { metricsMiddleware, getMetrics } from './middleware/metrics';
 import { seedAdminData } from './db/seeds/seedAdminData';
->>>>>>> origin/main
 
 // Environment variables laden
 dotenv.config();
@@ -113,20 +91,40 @@ const websocketService = initializeWebSocketService(httpServer);
 console.log("✅ WebSocket service initialized");
 
 // Middleware
-app.use(helmet());
-app.use(
-  cors({
-    origin: [
-      process.env.FRONTEND_URL || "http://localhost:5173",
-      "http://localhost", // ← Für Frontend auf Port 80
-      "http://localhost:3000", // ← Für direkte Backend Calls
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-app.use(morgan("combined"));
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost',      // ← Für Frontend auf Port 80
+    'http://localhost:3000'  // ← Für direkte Backend Calls
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Content-Length', 'Content-Disposition']
+}));
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Erlaubt Cross-Origin-Zugriff auf Media
+  contentSecurityPolicy: {
+    directives: {
+      imgSrc: ["'self'", "data:", "http://localhost:*", "https://localhost:*"],
+      mediaSrc: ["'self'", "http://localhost:*", "https://localhost:*"],
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      connectSrc: ["'self'", "ws://localhost:*", "wss://localhost:*"]
+    }
+  }
+}));
+
+app.use(morgan('combined'));
+
+// Media Routes VOR JSON-Parser registrieren
+console.log('📝 Registering media routes BEFORE JSON parsing...');
+console.log('  - Media routes at /api/media');
+app.use('/api/media', mediaRoutes);
+console.log('  ✅ Media routes loaded successfully');
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(metricsMiddleware);
@@ -134,9 +132,10 @@ app.use(metricsMiddleware);
 // Debug Middleware
 app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.path}`, {
-    body: req.method === "POST" ? Object.keys(req.body) : undefined,
-    contentType: req.headers["content-type"],
+    body: req.method === 'POST' ? Object.keys(req.body) : undefined,
+    contentType: req.headers['content-type'],
     hasAuth: !!req.headers.authorization,
+    isUpload: req.path.includes('/upload')
   });
   next();
 });
@@ -178,7 +177,6 @@ try {
   app.use("/api/universes", universeRoutes);
   console.log("  ✅ Universe routes loaded successfully");
 
-<<<<<<< HEAD
   console.log("  - Report routes at /api/reports");
   app.use("/api/reports", reportRoutes);
   console.log("  ✅ Report routes loaded successfully");
@@ -187,12 +185,6 @@ try {
   app.use("/api/friendships", friendshipRoutes);
   console.log("  ✅ Friendship routes loaded successfully");
 
-  console.log("  - Chat routes at /api/chats");
-  app.use("/api/chats", chatRoutes);
-  console.log("  ✅ Chat routes loaded successfully");
-
-  console.log("✅ All routes registered successfully");
-=======
   console.log('  - Chat routes at /api/chats');
   app.use('/api/chats', chatRoutes);
   console.log('  ✅ Chat routes loaded successfully');
@@ -204,9 +196,12 @@ try {
   console.log('  - Bug Report routes at /api/bug-reports');
   app.use('/api/bug-reports', bugReportRoutes);
   console.log('  ✅ Bug Report routes loaded successfully');
+
+  console.log('  - Account routes at /api/account');
+  app.use('/api/account', accountRoutes);
+  console.log('  ✅ Account routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
->>>>>>> origin/main
 } catch (error) {
   console.error("❌ Error registering routes:", getErrorMessage(error));
   const errorStack = getErrorStack(error);

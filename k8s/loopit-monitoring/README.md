@@ -1,775 +1,295 @@
 # Loop-It Monitoring Helm Chart - Installation Guide
 
+## ⚠️ **Status: Experimentell / Nicht für Production**
+
+Dieses Helm Chart ist ein **experimentelles Setup** für das Loop-It Monitoring. Nach ausgiebigen Tests wird für Production das **bewährte Bash-Script-Setup** empfohlen.
+
+### Was funktioniert:
+- ✅ Prometheus (Metriken-Sammlung)
+- ✅ Grafana (Dashboards) 
+- ✅ Loki (Log-Storage)
+- ✅ NGINX Ingress Integration
+- ✅ Persistent Storage
+
+### Bekannte Probleme:
+- ❌ Promtail DNS-Konfiguration instabil
+- ❌ Subchart-Integration komplex
+- ❌ Template-Syntax-Fehler bei Updates
+- ❌ Namespace-Ownership-Konflikte
+
+### Empfehlung:
+Für **Production-Umgebungen** verwende das bewährte Setup:
+```bash
+cd k8s/monitoring/
+./deploy-monitoring.sh
+```
+
 ## 📁 Chart Structure
 
 ```
 loopit-monitoring/
 ├── Chart.yaml                    # Chart metadata
 ├── values.yaml                   # Default configuration
+├── charts/                       # Helm dependencies (promtail)
+│   └── promtail-6.17.0.tgz
 ├── templates/
 │   ├── _helpers.tpl              # Template helpers
-│   ├── namespace.yaml            # Namespace creation
 │   ├── rbac.yaml                 # ServiceAccounts, ClusterRoles, Bindings
 │   ├── prometheus.yaml           # Prometheus deployment, service, config
 │   ├── grafana.yaml              # Grafana deployment, service, secrets
 │   ├── loki.yaml                 # Loki deployment, service, config
-│   ├── promtail.yaml             # Promtail DaemonSet
 │   ├── ingress.yaml              # Ingress routing + backend annotation job
 │   └── NOTES.txt                 # Post-install instructions
 └── README.md                     # This guide
 ```
 
-## 🚀 Quick Start
+## 🚀 Installation (Für Testing)
 
-### 1. Setup Chart Directory
-
-```bash
-# Create chart directory structure
-mkdir -p loopit-monitoring/templates
-
-# Copy all chart files to respective locations
-# Chart.yaml → loopit-monitoring/
-# values.yaml → loopit-monitoring/
-# templates/*.yaml → loopit-monitoring/templates/
-```
-
-### 2. Basic Installation
+### 1. Voraussetzungen
 
 ```bash
-# Install with default values
-helm install monitoring ./loopit-monitoring
+# NGINX Ingress Controller installieren
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace
 
-# Install in specific namespace
-helm install monitoring ./loopit-monitoring -n monitoring --create-namespace
+# Warten bis ready
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=300s
 ```
 
-### 3. Custom Installation
+### 2. Chart Dependencies
 
 ```bash
-# Create custom values file
-cp loopit-monitoring/values.yaml my-values.yaml
+# Ins Chart-Verzeichnis wechseln
+cd k8s/loopit-monitoring
 
-# Edit passwords and settings
-nano my-values.yaml
+# Dependencies aktualisieren
+helm dependency update
 
-# Install with custom values
-helm install monitoring ./loopit-monitoring -f my-values.yaml
+# .helmignore erstellen (wichtig!)
+cat > .helmignore << 'EOF'
+*.exe
+*.dll
+node_modules/
+.git/
+.gitignore
+*.tmp
+*.log
+esbuild.exe
+EOF
 ```
 
-## 🔧 Configuration Options
-
-### Basic Configuration
-
-```yaml
-# my-values.yaml
-grafana:
-  admin:
-    password: "my-secure-password"
-  server:
-    domain: "grafana.my-domain.com"
-
-prometheus:
-  retention: "14d"
-  storageSize: "20Gi"
-
-ingress:
-  hosts:
-    grafana: "grafana.my-domain.com"
-    prometheus: "prometheus.my-domain.com"
-```
-
-### Component Enable/Disable
-
-```yaml
-# Disable specific components
-prometheus:
-  enabled: true
-grafana:
-  enabled: true
-loki:
-  enabled: false  # Disable Loki
-promtail:
-  enabled: false  # Disable Promtail
-```
-
-### Backend Integration
-
-```yaml
-# Configure your backend services
-backend:
-  autoAnnotate: true
-  services:
-    - name: my-backend-service
-      namespace: production
-      port: 8080
-      path: /metrics
-```
-
-### Storage Configuration
-
-```yaml
-persistence:
-  enabled: true
-  prometheus:
-    size: "50Gi"
-    storageClass: "fast-ssd"
-  grafana:
-    size: "5Gi"
-```
-
-## 📋 Installation Examples
-
-### Development Environment
+### 3. Installation
 
 ```bash
-# Minimal setup for development
-helm install dev-monitoring ./loopit-monitoring \
-  --set grafana.admin.password=dev123 \
-  --set prometheus.storageSize=5Gi \
-  --set loki.storageSize=2Gi
+# Chart installieren
+helm install loopit-monitoring . \
+  --namespace monitoring \
+  --create-namespace
+
+# Status prüfen
+kubectl get pods -n monitoring
+helm status loopit-monitoring -n monitoring
 ```
 
-### Production Environment
+## 🔧 Bekannte Probleme & Workarounds
 
+### Problem 1: Promtail DNS-Fehler
+
+**Symptom:** `dial tcp: lookup loki-gateway on 10.96.0.10:53: server misbehaving`
+
+**Workaround:** Promtail separat installieren:
 ```bash
-# Production-ready setup
-helm install prod-monitoring ./loopit-monitoring \
-  -f prod-values.yaml \
-  --set grafana.admin.password="${GRAFANA_PASSWORD}" \
-  --set ingress.hosts.grafana=grafana.company.com
+helm repo add grafana https://grafana.github.io/helm-charts
+helm install promtail grafana/promtail -n monitoring
 ```
 
-### Testing/CI Environment
+### Problem 2: Template-Syntax-Fehler
 
+**Symptom:** `template: loopit-monitoring/templates/promtail.yaml:xxx: executing...`
+
+**Workaround:** Promtail-Template entfernen:
 ```bash
-# Minimal resources for testing
-helm install test-monitoring ./loopit-monitoring \
-  --set persistence.enabled=false \
-  --set prometheus.resources.limits.memory=512Mi \
-  --set grafana.resources.limits.memory=256Mi
+rm -f templates/promtail.yaml
+helm upgrade loopit-monitoring . -n monitoring
 ```
 
-## 🔄 Upgrade & Management
+### Problem 3: Namespace-Ownership
 
-### Upgrade Chart
+**Symptom:** `invalid ownership metadata; annotation validation error`
 
+**Workaround:** Komplettes Cleanup:
 ```bash
-# Upgrade with new values
-helm upgrade monitoring ./loopit-monitoring -f my-values.yaml
-
-# Upgrade specific setting
-helm upgrade monitoring ./loopit-monitoring \
-  --set grafana.admin.password=new-password
+helm uninstall loopit-monitoring -n monitoring
+kubectl delete namespace monitoring
+# Dann neu installieren
 ```
 
-### Check Status
+## 🌐 URLs & Zugriff
 
+Nach erfolgreicher Installation:
+
+| Service | URL | Login |
+|---------|-----|-------|
+| Grafana | http://monitoring.localhost/ | admin / monitoring123 |
+| Prometheus | http://prometheus.localhost/ | - |
+| Loki | http://loki.localhost/ | - |
+
+### Hosts-Datei konfigurieren:
 ```bash
-# Check deployment status
-helm status monitoring
+# Windows (als Administrator)
+echo "127.0.0.1 monitoring.localhost" >> C:\Windows\System32\drivers\etc\hosts
+echo "127.0.0.1 prometheus.localhost" >> C:\Windows\System32\drivers\etc\hosts
+echo "127.0.0.1 loki.localhost" >> C:\Windows\System32\drivers\etc\hosts
+```
 
-# List all releases
-helm list
+## 📊 Troubleshooting
 
-# Get values
-helm get values monitoring
+### Status prüfen
+```bash
+# Alle Komponenten
+kubectl get all -n monitoring
+
+# Ingress Status
+kubectl get ingress -n monitoring
+
+# Helm Release
+helm list -n monitoring
+```
+
+### Logs analysieren
+```bash
+# Prometheus
+kubectl logs -l app=prometheus -n monitoring
+
+# Grafana
+kubectl logs -l app=grafana -n monitoring
+
+# Loki
+kubectl logs -l app=loki -n monitoring
+
+# Promtail (falls vorhanden)
+kubectl logs -l app.kubernetes.io/name=promtail -n monitoring
+```
+
+### Häufige Fixes
+
+**PVC Pending:**
+```bash
+# PVC Status prüfen
+kubectl get pvc -n monitoring
+kubectl describe pvc -n monitoring
+```
+
+**Grafana 503 Error:**
+```bash
+# Grafana Pod neustarten
+kubectl rollout restart deployment/loopit-monitoring-grafana -n monitoring
+```
+
+**Loki 404 Error:**
+```bash
+# Loki direkt testen
+kubectl port-forward service/loopit-monitoring-loki 3100:3100 -n monitoring
+curl http://localhost:3100/ready
+```
+
+## 🔄 Updates & Management
+
+### Chart upgraden
+```bash
+# Mit neuen Einstellungen
+helm upgrade loopit-monitoring . -n monitoring
+
+# Spezifische Werte ändern
+helm upgrade loopit-monitoring . \
+  --set grafana.admin.password=new-password \
+  -n monitoring
 ```
 
 ### Rollback
-
 ```bash
-# Rollback to previous version
-helm rollback monitoring
+# Zur vorherigen Version
+helm rollback loopit-monitoring -n monitoring
 
-# Rollback to specific revision
-helm rollback monitoring 2
+# Zu spezifischer Revision
+helm rollback loopit-monitoring 1 -n monitoring
 ```
 
 ## 🧹 Cleanup
 
 ```bash
-# Uninstall chart
-helm uninstall monitoring
+# Helm Release entfernen
+helm uninstall loopit-monitoring -n monitoring
 
-# Uninstall with namespace cleanup
-helm uninstall monitoring -n monitoring
+# Namespace löschen
 kubectl delete namespace monitoring
+
+# NGINX Ingress (optional)
+helm uninstall ingress-nginx -n ingress-nginx
+kubectl delete namespace ingress-nginx
 ```
 
-## 🔍 Troubleshooting
+## 📚 Lessons Learned
 
-### Common Issues
+### Was wir gelernt haben:
+1. **Helm ist komplex** - Nicht immer die beste Lösung
+2. **Subcharts sind tricky** - DNS und Template-Vererbung problematisch
+3. **Bash-Scripts sind oft einfacher** - Weniger Abstraktionsschichten
+4. **"If it ain't broke, don't fix it"** - Bewährte Lösungen bevorzugen
 
-**Chart validation errors:**
-```bash
-# Validate chart before install
-helm lint ./loopit-monitoring
+### Wann Helm verwenden:
+- ✅ Komplexe, wiederverwendbare Setups
+- ✅ Multi-Environment-Deployments
+- ✅ Wenn Zeit für Debugging vorhanden ist
 
-# Dry-run installation
-helm install monitoring ./loopit-monitoring --dry-run --debug
-```
+### Wann Bash-Scripts bevorzugen:
+- ✅ Einfache, funktionierende Setups
+- ✅ Zeitkritische Deployments
+- ✅ Wenn Stabilität wichtiger als Wiederverwendbarkeit
 
-**Values not applying:**
-```bash
-# Check computed values
-helm get values monitoring --all
+## 🎯 Migration zurück zu Bash-Scripts
 
-# Template debugging
-helm template monitoring ./loopit-monitoring -f my-values.yaml
-```
-
-**Pods not starting:**
-```bash
-# Check pod status
-kubectl get pods -n monitoring
-
-# Check logs
-kubectl logs -l app=prometheus -n monitoring
-kubectl describe pod prometheus-xxx -n monitoring
-```
-
-### Debug Templates
+Falls du zurück zu den bewährten Scripts wechseln möchtest:
 
 ```bash
-# Generate manifests without installing
-helm template monitoring ./loopit-monitoring -f my-values.yaml > debug.yaml
+# Helm-Setup entfernen
+helm uninstall loopit-monitoring -n monitoring
+helm uninstall ingress-nginx -n ingress-nginx
+kubectl delete namespace monitoring ingress-nginx
 
-# Check specific template
-helm template monitoring ./loopit-monitoring -s templates/prometheus.yaml
+# Zurück zu Bash-Scripts
+cd ../monitoring/
+./deploy-monitoring.sh
 ```
 
-## 🔐 Security Best Practices
+## 🔗 Alternative: Kombinierter Ansatz
 
-### Secret Management
-
-```yaml
-# Use external secrets
-grafana:
-  admin:
-    existingSecret: "grafana-admin-secret"
-    existingSecretPasswordKey: "password"
-```
-
-### RBAC Configuration
-
-```yaml
-# Minimal RBAC permissions
-rbac:
-  create: true
-  prometheus:
-    clusterRole:
-      rules:
-        - apiGroups: [""]
-          resources: ["services", "endpoints", "pods"]
-          verbs: ["get", "list", "watch"]
-```
-
-### Network Policies
-
-```yaml
-# Add network policies (not included in chart)
-# Create separate NetworkPolicy resources
-```
-
-## 📊 Monitoring Integration
-
-### Custom Dashboards
+Du kannst auch das **Beste aus beiden Welten** nutzen:
 
 ```bash
-# Add dashboards to Grafana
-kubectl create configmap custom-dashboard \
-  --from-file=dashboard.json \
-  -n monitoring
+# NGINX Ingress via Helm (stabil)
+helm install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace
 
-# Label for auto-discovery
-kubectl label configmap custom-dashboard \
-  grafana_dashboard=1 -n monitoring
+# Monitoring via Bash (bewährt)
+cd k8s/monitoring/
+./deploy-monitoring.sh
 ```
 
-### Backend Metrics Integration
+## 📝 Fazit
 
-```yaml
-# Configure backend service for scraping
-apiVersion: v1
-kind: Service
-metadata:
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "3000"
-    prometheus.io/path: "/metrics"
-```
+Dieses Helm Chart war ein **wertvolles Lernexperiment**, zeigt aber auch, dass nicht jedes Problem mit Helm gelöst werden muss. Manchmal ist die **einfachere Lösung die bessere**.
 
-## 🌐 Advanced Configurations
+Für **Production-Umgebungen** empfehlen wir:
+- Das bewährte **Bash-Script-Setup** für Monitoring
+- **Helm nur dort verwenden**, wo es echten Mehrwert bietet
+- **Stabilität über Coolness-Faktor** priorisieren
 
-### Multi-Environment Setup
+---
 
-```bash
-# Development
-helm install dev-monitoring ./loopit-monitoring \
-  -f values-dev.yaml -n monitoring-dev
-
-# Staging  
-helm install staging-monitoring ./loopit-monitoring \
-  -f values-staging.yaml -n monitoring-staging
-
-# Production
-helm install prod-monitoring ./loopit-monitoring \
-  -f values-prod.yaml -n monitoring-prod
-```
-
-### External Data Sources
-
-```yaml
-# Connect to external Prometheus
-grafana:
-  datasources:
-    prometheus:
-      url: "https://external-prometheus.company.com"
-```
-
-### Custom Ingress
-
-```yaml
-# Use existing ingress controller
-ingress:
-  className: "nginx"
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  tls:
-    - secretName: monitoring-tls
-      hosts:
-        - grafana.company.com
-```
-
-## 📚 Migration from Bash Scripts
-
-### Convert Environment Variables
-
-```bash
-# Old .env.monitoring
-GRAFANA_ADMIN_PASSWORD=secret123
-
-# New values.yaml
-grafana:
-  admin:
-    password: "secret123"
-```
-
-### Port Forward Replacement
-
-```bash
-# Old: Manual port forwarding
-kubectl port-forward service/grafana 3000:3000
-
-# New: Ingress access
-# http://monitoring.localhost/
-```
-
-### Namespace Management
-
-```bash
-# Old: Manual namespace creation
-kubectl create namespace monitoring
-
-# New: Automatic via Helm
-# Namespace created automatically
-```
-
-## 🎯 Best Practices
-
-1. **Always use custom values files** for environment-specific configuration
-2. **Version control your values files** alongside your application code
-3. **Use secrets management** for sensitive data (passwords, tokens)
-4. **Test chart changes** with `--dry-run` before applying
-5. **Monitor resource usage** and adjust limits accordingly
-6. **Regular backups** of persistent volumes
-7. **Use specific image tags** instead of `latest` in production
-
-## 🔄 Migration Guide from Bash Scripts
-
-### Step 1: Backup Current Setup
-
-```bash
-# Export current configurations
-kubectl get all -n monitoring -o yaml > backup-monitoring.yaml
-kubectl get secrets,configmaps -n monitoring -o yaml > backup-configs.yaml
-```
-
-### Step 2: Extract Configuration
-
-```bash
-# Create values file from existing setup
-cat > migration-values.yaml << 'EOF'
-grafana:
-  admin:
-    password: "YOUR_CURRENT_PASSWORD"  # From existing secret
-prometheus:
-  retention: "7d"  # From current config
-  storageSize: "10Gi"  # From current PVC
-# ... other settings
-EOF
-```
-
-### Step 3: Deploy Helm Chart
-
-```bash
-# Install chart alongside existing (different namespace for testing)
-helm install monitoring-helm ./loopit-monitoring \
-  -f migration-values.yaml \
-  -n monitoring-helm --create-namespace
-
-# Verify everything works
-curl http://monitoring.localhost/
-```
-
-### Step 4: Data Migration (if needed)
-
-```bash
-# Backup Grafana dashboards
-kubectl exec deployment/grafana -n monitoring -- \
-  tar czf - /var/lib/grafana | kubectl exec -i deployment/monitoring-helm-grafana -n monitoring-helm -- \
-  tar xzf - -C /
-
-# Backup Prometheus data (optional - metrics will rebuild)
-# Usually not necessary as data is time-series
-```
-
-### Step 5: Switch Over
-
-```bash
-# Remove old setup
-./k8s/monitoring/cleanup-monitoring.sh
-
-# Install in original namespace
-helm install monitoring ./loopit-monitoring \
-  -f migration-values.yaml \
-  -n monitoring --create-namespace
-```
-
-## 🚨 Troubleshooting Guide
-
-### Chart Validation Issues
-
-```bash
-# Problem: Template errors
-# Solution: Validate chart structure
-helm lint ./loopit-monitoring
-
-# Problem: Values validation
-# Solution: Check required values
-helm template ./loopit-monitoring --debug
-```
-
-### Resource Issues
-
-```bash
-# Problem: Pods pending
-kubectl describe pod prometheus-xxx -n monitoring
-# Check: Resource requests, PVC availability, node capacity
-
-# Problem: Out of disk space
-kubectl get pvc -n monitoring
-# Solution: Increase storage size in values.yaml
-```
-
-### Network Issues
-
-```bash
-# Problem: Ingress not working
-kubectl get ingress -n monitoring
-kubectl describe ingress monitoring-ingress -n monitoring
-
-# Problem: Service discovery not working
-# Check: RBAC permissions, service annotations
-```
-
-### Backend Integration Issues
-
-```bash
-# Problem: Backend not scraped by Prometheus
-# Check: Service annotations
-kubectl get service backend -o yaml | grep prometheus
-
-# Problem: No metrics endpoint
-curl http://backend-service:3000/metrics
-```
-
-## 📈 Scaling Considerations
-
-### Horizontal Scaling
-
-```yaml
-# Scale Prometheus (not recommended - use federation)
-prometheus:
-  replicas: 1  # Keep at 1 for single-node
-
-# Scale Grafana (session affinity needed)
-grafana:
-  replicas: 2
-  sessionAffinity: true
-```
-
-### Vertical Scaling
-
-```yaml
-# Increase resources for large environments
-prometheus:
-  resources:
-    requests:
-      memory: "2Gi"
-      cpu: "500m"
-    limits:
-      memory: "4Gi"
-      cpu: "2000m"
-  
-  storageSize: "100Gi"
-  retention: "30d"
-```
-
-### Storage Scaling
-
-```yaml
-# Use high-performance storage
-persistence:
-  prometheus:
-    storageClass: "fast-ssd"
-    size: "500Gi"
-  
-  # Enable backup/restore
-  backup:
-    enabled: true
-    schedule: "0 2 * * *"
-```
-
-## 🎨 Customization Examples
-
-### Custom Prometheus Rules
-
-```yaml
-# values.yaml
-prometheus:
-  additionalRules:
-    - name: loop-it-alerts
-      rules:
-        - alert: HighErrorRate
-          expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
-          annotations:
-            summary: "High error rate detected"
-```
-
-### Custom Grafana Plugins
-
-```yaml
-# values.yaml
-grafana:
-  plugins:
-    install:
-      - grafana-clock-panel
-      - grafana-piechart-panel
-      - grafana-worldmap-panel
-```
-
-### Custom Log Processing
-
-```yaml
-# values.yaml
-promtail:
-  config:
-    additionalPipelines:
-      - name: custom-parsing
-        stages:
-          - regex:
-              expression: '(?P<timestamp>\d{4}-\d{2}-\d{2}.*)'
-          - timestamp:
-              source: timestamp
-              format: RFC3339
-```
-
-## 🔗 Integration Examples
-
-### CI/CD Integration
-
-```yaml
-# .github/workflows/monitoring.yml
-name: Deploy Monitoring
-on:
-  push:
-    paths: ['monitoring/**']
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Deploy Monitoring
-        run: |
-          helm upgrade --install monitoring ./loopit-monitoring \
-            -f values-prod.yaml \
-            --set grafana.admin.password="${{ secrets.GRAFANA_PASSWORD }}"
-```
-
-### GitOps Integration (ArgoCD)
-
-```yaml
-# application.yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: monitoring
-spec:
-  source:
-    repoURL: https://github.com/Loop-It-Project/Loop-It
-    path: k8s/helm-charts/loopit-monitoring
-    helm:
-      valueFiles:
-        - values-prod.yaml
-```
-
-### Backup Integration
-
-```yaml
-# values.yaml
-backup:
-  enabled: true
-  storage:
-    type: s3
-    s3:
-      bucket: monitoring-backups
-      region: us-west-2
-  schedule: "0 2 * * *"
-```
-
-## 📊 Monitoring the Monitor
-
-### Self-Monitoring
-
-```yaml
-# Monitor the monitoring stack itself
-prometheus:
-  selfMonitoring: true
-  
-grafana:
-  serviceMonitor:
-    enabled: true
-
-# Create alerts for monitoring stack health
-alerts:
-  monitoring:
-    - name: PrometheusDown
-      expr: up{job="prometheus"} == 0
-    - name: GrafanaDown  
-      expr: up{job="grafana"} == 0
-```
-
-### Health Checks
-
-```bash
-# Automated health check script
-#!/bin/bash
-# health-check.sh
-
-echo "Checking monitoring stack health..."
-
-# Check all pods
-kubectl get pods -n monitoring | grep -v Running && exit 1
-
-# Check Prometheus targets
-curl -s http://prometheus.localhost/api/v1/query?query=up | jq '.data.result[] | select(.value[1] == "0")'
-
-# Check Grafana API
-curl -s http://monitoring.localhost/api/health | jq '.database'
-
-echo "All monitoring components healthy!"
-```
-
-## 🔧 Advanced Helm Features
-
-### Hooks and Tests
-
-```yaml
-# templates/tests/
-apiVersion: v1
-kind: Pod
-metadata:
-  name: {{ include "loopit-monitoring.fullname" . }}-test
-  annotations:
-    "helm.sh/hook": test
-spec:
-  containers:
-  - name: test
-    image: curlimages/curl
-    command: ['curl']
-    args: ['http://{{ include "loopit-monitoring.fullname" . }}-grafana:3000/api/health']
-```
-
-### Conditional Resources
-
-```yaml
-# Only create ingress if enabled
-{{- if .Values.ingress.enabled }}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-# ...
-{{- end }}
-```
-
-### Subcharts
-
-```yaml
-# Chart.yaml dependencies
-dependencies:
-  - name: postgresql
-    version: "11.x.x"
-    repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
-```
-
-## 📝 Chart Documentation
-
-### Generating Documentation
-
-```bash
-# Use helm-docs to generate README
-helm-docs ./loopit-monitoring
-
-# Or create manually
-cat > loopit-monitoring/README.md << 'EOF'
-# Loop-It Monitoring Helm Chart
-[Include all important information]
-EOF
-```
-
-### Values Documentation
-
-```yaml
-# values.yaml with comments
-## @section Global parameters
-## Global Docker image parameters
-global:
-  ## @param global.imageRegistry Global Docker image registry
-  imageRegistry: ""
-  
-## @section Prometheus configuration  
-## Prometheus parameters
-prometheus:
-  ## @param prometheus.enabled Enable Prometheus
-  enabled: true
-```
-
-This completes the comprehensive Helm chart conversion! The chart provides:
-
-✅ **Full templatization** of your existing YAML files
-✅ **Configurable values** replacing environment variables  
-✅ **Proper RBAC** with service accounts and cluster roles
-✅ **Automated backend annotation** via Helm hooks
-✅ **Health checks and probes** templated from values
-✅ **Resource management** and security contexts
-✅ **Installation notes** with access URLs
-✅ **Migration guide** from bash scripts
-
-You can now deploy with:
-```bash
-helm install monitoring ./loopit-monitoring -f my-values.yaml
-```
-
-Instead of running bash scripts! 🚀
+*Dieses Chart bleibt als Referenz und für experimentelle Zwecke verfügbar.*
