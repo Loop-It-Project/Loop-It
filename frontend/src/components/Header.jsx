@@ -279,7 +279,7 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
               {/* HobbiesPage */}
               <button
                 onClick={() => {
-                  navigate('/Hobbies')
+                  navigate('/hobbies')
                 }}              >
                 Hobbys
               </button>

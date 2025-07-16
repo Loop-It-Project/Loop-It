@@ -18,6 +18,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Imprint from './pages/Imprint';
 import Hobbies from './pages/Hobbies';
 import UserProfile from './pages/UserProfile';
+import FirstUniverses from './components/FirstUniverses';
 import ChatWidget from './components/chat/ChatWidget';
 
 // API_URL für die gesamte App definieren
@@ -255,12 +256,14 @@ function App() {
             } 
           />
           <Route 
-            path="/register" 
+            path="/register"
             element={
-              <PublicRoute user={user}>
+              !user ?(
                 <Register onLogin={handleLogin} />
-              </PublicRoute>
-            } 
+              ) : (
+                <Navigate to="/firstuniverses" replace />
+              )
+            }
           />
           <Route 
             path="/privacypolicy"
@@ -289,9 +292,9 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          {/* Discover Universes */}
+          {/* Hobbies Route */}
           <Route
-            path="/Hobbies"
+            path="/hobbies"
             element={
               <ProtectedRoute user={user}>
                 <Hobbies user={user}/>
@@ -323,10 +326,18 @@ function App() {
             }
           />
           <Route 
-            path="/settings" 
+            path="/settings"
             element={
               <ProtectedRoute user={user}>
                 <Settings user={user} onLogout={() => handleLogout('manual')} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/firstuniverses"
+            element={
+              <ProtectedRoute user={user}>
+                <FirstUniverses user={user} onLogout={() => handleLogout('manual')} />
               </ProtectedRoute>
             } 
           />

@@ -1,3 +1,25 @@
+# Projekttagebuch Marc Droit - 16.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+FirstUniversePopUp frontend fertigstellen
+
+## *Fortschritte & Ergebnisse:*
+
+FirstUniversePopUp öffnet sich jetzt nach erfolgreicher Registrierung
+
+## *Herausforderungen & Blockaden:*
+
+Umgehen von PublicRoute-Bedingungen
+
+## *Was ich heute gelernt habe:*
+
+Wie man replace, eine property von Navigate aus "react-router-dom", nutzt
+
+## *Plan für morgen:*
+
+FirstUniversePopUp frontend fertigstellen und mit backend verbinden
+
 # Projekttagebuch Marc Droit - 15.07.2025
 
 ## *Heutige Hauptaufgabe(n):*
