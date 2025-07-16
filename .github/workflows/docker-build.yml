@@ -31,18 +31,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
-
-      - name: Cache Node modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-backend-
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install Backend Dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit
 
       - name: Check for Backend Vulnerabilities
         working-directory: ./backend
@@ -72,9 +66,6 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -87,7 +78,9 @@ jobs:
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/loop-it-backend:${{ github.sha }}
             ${{ vars.DOCKERHUB_USERNAME }}/loop-it-backend:latest
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -99,6 +92,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Cache Node modules
         uses: actions/cache@v4
@@ -110,7 +105,7 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit
 
       - name: Check for Frontend Vulnerabilities
         working-directory: ./frontend
@@ -155,7 +150,9 @@ jobs:
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/loop-it-frontend:${{ github.sha }}
             ${{ vars.DOCKERHUB_USERNAME }}/loop-it-frontend:latest
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   test-integration:
     runs-on: ubuntu-latest
@@ -196,15 +193,22 @@ jobs:
 
           # Rest is EXACTLY like Friday's working version
           echo "Starting services..."
-          docker compose up -d --wait
+          docker compose up -d --wait --wait-timeout 120
 
           # Debug: Show initial container status
           echo "=== Initial Container Status ==="
           docker compose ps
 
-          # Extended wait for backend warmup (entrypoint.sh needs time for migrations)
+          # Verkürzte Wartezeit
           echo "Waiting for backend warmup (migrations + startup)..."
-          sleep 90
+          sleep 60
+
+          # Parallele Health Checks
+          timeout 60s bash -c '
+            until curl -sf http://localhost:3000/health; do sleep 2; done &
+            until curl -sf http://localhost/; do sleep 2; done &
+            wait
+          ' || echo "Health check timeout - continuing with individual tests"
 
           # Debug: Show container status after warmup
           echo "=== Container Status After Warmup ==="
@@ -328,9 +332,8 @@ jobs:
             exit 0
           fi
 
-          # Update image tags with commit SHA (verbesserte Regex)
-          sed -i "s|newTag: latest|newTag: ${{ github.sha }}|g" $ENV_PATH/kustomization.yaml
-          sed -i "s|newTag: [a-f0-9]\{40\}|newTag: ${{ github.sha }}|g" $ENV_PATH/kustomization.yaml
+          # Update image tags with commit SHA (robusterer sed)
+          sed -i "s|newTag: .*|newTag: ${{ github.sha }}|g" $ENV_PATH/kustomization.yaml
 
           # Check if there are changes
           if git diff --quiet; then
