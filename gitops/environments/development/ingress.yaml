@@ -9,143 +9,52 @@ metadata:
   annotations:
     # NGINX Ingress Controller
     kubernetes.io/ingress.class: nginx
-    
+
     # CORS Headers
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-origin: "*"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization, X-Requested-With"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
-    
+
     # Weitere nützliche Annotations
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-    
+
     # SSL Redirect deaktivieren für lokale Entwicklung
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
   rules:
-  - host: localhost
-    http:
-      paths:
-      # ==============================
-      # MONITORING ROUTES (höchste Priorität durch längere Pfade)
-      # ==============================
-      
-      # Grafana auf /monitoring/ (ExternalName Service)
-      - path: /monitoring
-        pathType: Prefix
-        backend:
-          service:
-            name: grafana-external
-            port:
-              number: 3000
-      
-      # Prometheus auf /prometheus/ (ExternalName Service)
-      - path: /prometheus
-        pathType: Prefix
-        backend:
-          service:
-            name: prometheus-external
-            port:
-              number: 9090
-      
-      # Loki auf /loki/ (ExternalName Service)
-      - path: /loki
-        pathType: Prefix
-        backend:
-          service:
-            name: loki-external
-            port:
-              number: 3100
-      
-      # ==============================
-      # LOOP-IT ROUTES
-      # ==============================
-      
-      # Backend API (höhere Priorität vor Frontend)
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: backend
-            port:
-              number: 3000
-      
-      # Backend Health Check
-      - path: /health
-        pathType: Prefix
-        backend:
-          service:
-            name: backend
-            port:
-              number: 3000
-      
-      # Backend Metrics (für direkten Zugriff)
-      - path: /metrics
-        pathType: Prefix
-        backend:
-          service:
-            name: backend
-            port:
-              number: 3000
-      
-      # Frontend - Alle anderen Routen (niedrigste Priorität)
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              number: 80
-
----
-# ExternalName Services für Cross-Namespace-Zugriff
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafana-external
-  namespace: loopit-dev
-  labels:
-    app: monitoring
-    component: proxy
-spec:
-  type: ExternalName
-  externalName: grafana.monitoring.svc.cluster.local
-  ports:
-  - port: 3000
-    targetPort: 3000
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: prometheus-external
-  namespace: loopit-dev
-  labels:
-    app: monitoring
-    component: proxy
-spec:
-  type: ExternalName
-  externalName: prometheus.monitoring.svc.cluster.local
-  ports:
-  - port: 9090
-    targetPort: 9090
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: loki-external
-  namespace: loopit-dev
-  labels:
-    app: monitoring
-    component: proxy
-spec:
-  type: ExternalName
-  externalName: loki.monitoring.svc.cluster.local
-  ports:
-  - port: 3100
-    targetPort: 3100
+    - host: localhost
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
+          - path: /metrics
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
