@@ -11,7 +11,7 @@ import ModerationTab from '../components/admin/ModerationTab';
 import ApprovalsTab from '../components/admin/ApprovalsTab';
 import UniversesTab from '../components/admin/UniversesTab';
 import ReportsTab from '../components/admin/ReportsTab';
-import BugReportsTab from '../components/admin/BugReportsTab';
+import BugReportsTab from '../components/admin/bugReportsTab';
 
 const AdminPanel = ({ user, onLogout }) => {
   const navigate = useNavigate();
