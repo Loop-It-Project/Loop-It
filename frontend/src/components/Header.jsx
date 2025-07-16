@@ -1,8 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, User, Users, Settings, Plus, Hash, Search, Shield, Bell } from 'lucide-react';
+import { 
+  LogOut, 
+  User, 
+  Users, 
+  Settings, 
+  Plus, 
+  Hash, 
+  Search, 
+  Shield, 
+  Bell,
+  Clock,
+  X,
+  Trash2
+} from 'lucide-react';
 import CreateUniverse from './CreateUniverse'; 
 import FeedService from '../services/feedServices';
+import SearchService from '../services/searchService';
 import AdminService from '../services/adminService';
 import useEscapeKey from '../hooks/useEscapeKey';
 import PendingFriendRequests from './PendingFriendRequests';
@@ -20,10 +34,20 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Search History States
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const [searchHistoryLoading, setSearchHistoryLoading] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+
   // States für Friendship Requests
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [friendRequestsLoading, setFriendRequestsLoading] = useState(false);
+
+  // Refs für Search Dropdown
+  const searchRef = useRef(null);
+  const searchDropdownRef = useRef(null);
 
   // Enhanced Admin Check mit Debug-Logs
   useEffect(() => {
@@ -58,6 +82,93 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
 
     checkAdminAccess();
   }, [user]);
+
+  // Search History laden
+  useEffect(() => {
+    if (user && searchFocused) {
+      loadSearchHistory();
+    }
+  }, [user, searchFocused]);
+
+  // Search History laden
+  const loadSearchHistory = async () => {
+    try {
+      setSearchHistoryLoading(true);
+      console.log('🔍 Loading search history for user:', user.id);
+      
+      const response = await SearchService.getSearchHistory(10);
+      console.log('🔍 Search history response:', response);
+      
+      if (response.success) {
+        setSearchHistory(response.data.history);
+        console.log('✅ Search history loaded:', response.data.history.length, 'items');
+      } else {
+        console.error('❌ Failed to load search history:', response.error);
+      }
+    } catch (error) {
+      console.error('❌ Error loading search history:', error);
+    } finally {
+      setSearchHistoryLoading(false);
+    }
+  };
+
+  // Search History Item löschen
+  const handleDeleteHistoryItem = async (historyId, event) => {
+    event.stopPropagation();
+    
+    try {
+      console.log('🗑️ Deleting search history item:', historyId);
+      const response = await SearchService.deleteSearchHistoryItem(historyId);
+      
+      if (response.success) {
+        setSearchHistory(prev => prev.filter(item => item.id !== historyId));
+        console.log('✅ Search history item deleted');
+      } else {
+        console.error('❌ Failed to delete search history item:', response.error);
+      }
+    } catch (error) {
+      console.error('❌ Error deleting search history item:', error);
+    }
+  };
+
+  // Komplette Search History löschen
+  const handleClearSearchHistory = async () => {
+    try {
+      console.log('🗑️ Clearing complete search history');
+      const response = await SearchService.clearSearchHistory();
+      
+      if (response.success) {
+        setSearchHistory([]);
+        console.log('✅ Search history cleared');
+      } else {
+        console.error('❌ Failed to clear search history:', response.error);
+      }
+    } catch (error) {
+      console.error('❌ Error clearing search history:', error);
+    }
+  };
+
+  // Search History Item auswählen
+  const handleSelectHistoryItem = (historyItem) => {
+    setSearchQuery(historyItem.query);
+    setShowSearchHistory(false);
+    setShowSearchResults(false);
+    handleSearch(historyItem.query);
+  };
+
+  // Click Outside Handler
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearchResults(false);
+        setShowSearchHistory(false);
+        setSearchFocused(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Pending Friend Requests laden
   useEffect(() => {
@@ -152,17 +263,58 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
   const handleSearch = async (query) => {
     if (!query.trim()) {
       setShowSearchResults(false);
+      setShowSearchHistory(false);
       return;
     }
 
     try {
-      const response = await FeedService.searchUniversesAndHashtags(query);
+      console.log('🔍 Searching for:', query);
+      
+      // Verwende SearchService statt FeedService für History-Logging
+      const response = await SearchService.searchWithHistory(query);
+      console.log('🔍 Search response:', response);
+      
       if (response.success) {
         setSearchResults(response.data);
         setShowSearchResults(true);
+        setShowSearchHistory(false);
+        
+        // Search History neu laden nach erfolgreicher Suche
+        if (user) {
+          console.log('🔍 Refreshing search history after search');
+          setTimeout(() => loadSearchHistory(), 1000);
+        }
+      } else {
+        console.error('❌ Search failed:', response.error);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('❌ Search error:', error);
+    }
+  };
+
+  // Search Input Focus Handler
+  const handleSearchFocus = () => {
+    console.log('🔍 Search input focused');
+    setSearchFocused(true);
+    if (user && searchQuery.trim() === '') {
+      setShowSearchHistory(true);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Search Input Change Handler
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    
+    if (value.trim() === '') {
+      setShowSearchResults(false);
+      if (user && searchFocused) {
+        setShowSearchHistory(true);
+      }
+    } else {
+      setShowSearchHistory(false);
+      handleSearch(value);
     }
   };
 
@@ -197,20 +349,91 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
             </div>
             
             {/* Search Bar */}
-            <div className="flex-1 max-w-md mx-8 relative">
+            <div className="flex-1 max-w-md mx-8 relative" ref={searchRef}>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={20} />
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
+                  onChange={handleSearchChange}
+                  onFocus={handleSearchFocus}
                   className="w-full pl-10 pr-4 py-2 border border-secondary bg-input text-primary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Universes oder Hashtags suchen..."
                 />
               </div>
+
+              {/* Search History Dropdown */}
+              {showSearchHistory && user && (
+                <div 
+                  ref={searchDropdownRef}
+                  className="absolute top-full left-0 right-0 bg-card border border-primary rounded-lg shadow-lg mt-1 max-h-80 overflow-y-auto z-50"
+                >
+                  <div className="p-3 border-b border-primary bg-card">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Clock size={16} className="text-tertiary" />
+                        <h3 className="font-medium text-secondary text-sm">Letzte Suchen</h3>
+                      </div>
+                      {searchHistory.length > 0 && (
+                        <button
+                          onClick={handleClearSearchHistory}
+                          className="text-red-500 cursor-pointer hover:text-red-600 text-sm flex items-center space-x-1 transition-colors"
+                          title="Alle löschen"
+                        >
+                          <Trash2 size={14} />
+                          <span>Alle löschen</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {searchHistoryLoading ? (
+                    <div className="p-4 text-center text-tertiary">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                      <p className="text-sm">Lade Suchverlauf...</p>
+                    </div>
+                  ) : searchHistory.length > 0 ? (
+                    <div className="max-h-64 overflow-y-auto">
+                      {searchHistory.map((historyItem) => (
+                        <button
+                          key={historyItem.id}
+                          onClick={() => handleSelectHistoryItem(historyItem)}
+                          className="w-full px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer flex items-center justify-between group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2">
+                              {historyItem.queryType === 'hashtag' ? (
+                                <Hash className="text-purple-500" size={16} />
+                              ) : (
+                                <Search className="text-tertiary" size={16} />
+                              )}
+                              <span className="font-medium text-primary">
+                                {historyItem.query}
+                              </span>
+                            </div>
+                            <span className="text-xs text-tertiary">
+                              {historyItem.resultCount} Ergebnisse
+                            </span>
+                          </div>
+                          
+                          <button
+                            onClick={(e) => handleDeleteHistoryItem(historyItem.id, e)}
+                            className="opacity-0 group-hover:opacity-100 text-red-500 cursor-pointer hover:text-red-600 p-1 transition-opacity"
+                            title="Aus Verlauf entfernen"
+                          >
+                            <X size={14} />
+                          </button>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center text-tertiary">
+                      <Clock size={32} className="mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Noch keine Suchen vorhanden</p>
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Search Results Dropdown */}
               {showSearchResults && searchResults.length > 0 && (
@@ -225,6 +448,7 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
                           handleHashtagClick(result.universeSlug, result.hashtag);
                         }
                         setShowSearchResults(false);
+                        setShowSearchHistory(false);
                         setSearchQuery('');
                       }}
                       className="w-full px-4 py-3 text-left hover:bg-secondary hover:cursor-pointer flex items-center space-x-3"

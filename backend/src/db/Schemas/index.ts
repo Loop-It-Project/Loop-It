@@ -93,13 +93,21 @@ export type {
   NewModerationQueue
 } from './moderation';
 
-export type {
-  SearchIndex,
-  NewSearchIndex,
-  TrendingTopic, 
-  NewTrendingTopic, 
-  SearchSuggestion, 
-  NewSearchSuggestion
+export { 
+  searchIndexTable,
+  searchHistoryTable,
+  searchSuggestionsTable,
+  searchFiltersTable,
+  userSearchPreferencesTable,
+  trendingTopicsTable,
+  type SearchIndex,
+  type NewSearchIndex,
+  type SearchHistory,
+  type NewSearchHistory,
+  type TrendingTopic,
+  type NewTrendingTopic,
+  type SearchSuggestion,
+  type NewSearchSuggestion
 } from './search';
 
 export type {
