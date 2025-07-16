@@ -318,6 +318,6 @@ Die GitHub Actions Pipeline in `.github/workflows/docker-build.yml`:
 - [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
 - [Kustomize Documentation](https://kustomize.io/)
 - [GitOps Best Practices](https://www.gitops.tech/)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/) 
 
 ---
