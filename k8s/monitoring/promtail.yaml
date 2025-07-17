@@ -1,0 +1,415 @@
+# Promtail ConfigMap (OPTIMIZED)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: monitoring
+  labels:
+    app: promtail
+    component: monitoring
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+      log_level: info
+
+    positions:
+      filename: /tmp/positions.yaml
+
+    clients:
+      - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+        tenant_id: ""
+        backoff_config:
+          min_period: 500ms
+          max_period: 5m
+          max_retries: 10
+        batchsize: 1048576
+        batchwait: 1s
+        timeout: 10s
+
+    scrape_configs:
+      # Kubernetes Pod Logs (Optimized)
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          - cri: {}
+          # Parse JSON logs if possible
+          - match:
+              selector: '{app="backend"} |= "level"'
+              stages:
+                - json:
+                    expressions:
+                      level: level
+                      timestamp: timestamp
+                      message: msg
+                      request_id: request_id
+                      method: method
+                      url: url
+                      status: status
+                      duration: duration
+                - labels:
+                    level:
+                    method:
+                    status:
+                - timestamp:
+                    source: timestamp
+                    format: RFC3339Nano
+                    fallback_formats:
+                      - RFC3339
+                      - "2006-01-02T15:04:05.000Z"
+        relabel_configs:
+          # Namespace filter - nur relevante Namespaces
+          - source_labels:
+              - __meta_kubernetes_namespace
+            action: keep
+            regex: (default|loopit-dev|monitoring|kube-system)
+          
+          # Skip bestimmte System-Pods
+          - source_labels:
+              - __meta_kubernetes_pod_name
+            action: drop
+            regex: (coredns|kube-proxy|.*-operator|.*-controller).*
+          
+          # Container-Name
+          - source_labels:
+              - __meta_kubernetes_pod_container_name
+            action: replace
+            target_label: container
+          
+          # Namespace
+          - source_labels:
+              - __meta_kubernetes_namespace
+            action: replace
+            target_label: namespace
+          
+          # Pod-Name
+          - source_labels:
+              - __meta_kubernetes_pod_name
+            action: replace
+            target_label: pod
+          
+          # App-Label
+          - source_labels:
+              - __meta_kubernetes_pod_label_app
+            action: replace
+            target_label: app
+          
+          # Component-Label
+          - source_labels:
+              - __meta_kubernetes_pod_label_component
+            action: replace
+            target_label: component
+          
+          # Service-Label
+          - source_labels:
+              - __meta_kubernetes_pod_label_service
+            action: replace
+            target_label: service
+          
+          # Node-Name
+          - source_labels:
+              - __meta_kubernetes_pod_node_name
+            action: replace
+            target_label: node
+          
+          # Log-Pfad konfigurieren
+          - source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            action: replace
+            separator: /
+            target_label: __path__
+            replacement: /var/log/pods/*$1/*.log
+
+      # Loop-It Backend spezielle Behandlung
+      - job_name: loop-it-backend-logs
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - default
+                - loopit-dev
+        pipeline_stages:
+          - cri: {}
+          # Erweiterte JSON-Parsing für Backend-Logs
+          - match:
+              selector: '{app="backend"}'
+              stages:
+                - json:
+                    expressions:
+                      level: level
+                      timestamp: timestamp
+                      message: msg
+                      request_id: request_id
+                      method: method
+                      url: url
+                      status: status
+                      duration: duration
+                      user_id: user_id
+                      error: error
+                - labels:
+                    level:
+                    method:
+                    status:
+                - output:
+                    source: message
+                - timestamp:
+                    source: timestamp
+                    format: RFC3339Nano
+        relabel_configs:
+          # Nur Backend-Pods
+          - source_labels:
+              - __meta_kubernetes_pod_label_app
+            action: keep
+            regex: (backend|loop-it-backend)
+          
+          # Standard-Labels
+          - source_labels:
+              - __meta_kubernetes_namespace
+            action: replace
+            target_label: namespace
+          
+          - source_labels:
+              - __meta_kubernetes_pod_name
+            action: replace
+            target_label: pod
+          
+          - source_labels:
+              - __meta_kubernetes_pod_container_name
+            action: replace
+            target_label: container
+          
+          - source_labels:
+              - __meta_kubernetes_pod_label_app
+            action: replace
+            target_label: app
+          
+          # Log-Pfad
+          - source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            action: replace
+            separator: /
+            target_label: __path__
+            replacement: /var/log/pods/*$1/*.log
+
+      # Monitoring Stack Logs
+      - job_name: monitoring-logs
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - monitoring
+        pipeline_stages:
+          - cri: {}
+        relabel_configs:
+          # Nur Monitoring-Pods
+          - source_labels:
+              - __meta_kubernetes_pod_label_app
+            action: keep
+            regex: (prometheus|grafana|loki|promtail)
+          
+          # Standard-Labels
+          - source_labels:
+              - __meta_kubernetes_namespace
+            action: replace
+            target_label: namespace
+          
+          - source_labels:
+              - __meta_kubernetes_pod_name
+            action: replace
+            target_label: pod
+          
+          - source_labels:
+              - __meta_kubernetes_pod_container_name
+            action: replace
+            target_label: container
+          
+          - source_labels:
+              - __meta_kubernetes_pod_label_app
+            action: replace
+            target_label: app
+          
+          # Log-Pfad
+          - source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            action: replace
+            separator: /
+            target_label: __path__
+            replacement: /var/log/pods/*$1/*.log
+
+---
+# Promtail DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: monitoring
+  labels:
+    app: promtail
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccount: promtail
+      containers:
+      - name: promtail
+        image: grafana/promtail:2.9.0
+        ports:
+        - containerPort: 9080
+          name: http
+        args:
+          - -config.file=/etc/promtail/promtail.yaml
+          - -log.level=info
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: promtail-config
+          mountPath: /etc/promtail
+        - name: varlog
+          mountPath: /var/log
+          readOnly: true
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+        - name: positions
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: 9080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 9080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - DAC_READ_SEARCH
+          readOnlyRootFilesystem: true
+      volumes:
+      - name: promtail-config
+        configMap:
+          name: promtail-config
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: positions
+        emptyDir: {}
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+---
+# Promtail ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail
+  namespace: monitoring
+  labels:
+    app: promtail
+    component: monitoring
+
+---
+# Promtail ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail
+  labels:
+    app: promtail
+    component: monitoring
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+
+---
+# Promtail ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: promtail
+  labels:
+    app: promtail
+    component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: promtail
+subjects:
+- kind: ServiceAccount
+  name: promtail
+  namespace: monitoring
+
+---
+# Promtail Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: promtail
+  namespace: monitoring
+  labels:
+    app: promtail
+    component: monitoring
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9080"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app: promtail
+  ports:
+  - port: 9080
+    targetPort: 9080
+    name: http

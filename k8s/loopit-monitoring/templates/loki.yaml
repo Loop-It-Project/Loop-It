@@ -1,0 +1,243 @@
+{{- if .Values.loki.enabled }}
+# Loki ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-loki-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.loki.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  loki.yaml: |
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+      log_level: info
+
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: {{ .Values.loki.storage.filesystem.chunksDirectory }}
+          rules_directory: {{ .Values.loki.storage.filesystem.rulesDirectory }}
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+
+    memberlist:
+      join_members: []
+
+    query_range:
+      results_cache:
+        cache:
+          embedded_cache:
+            enabled: true
+            max_size_mb: 100
+
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    storage_config:
+      tsdb_shipper:
+        active_index_directory: /loki/tsdb-index
+        cache_location: /loki/tsdb-cache
+        cache_ttl: 24h
+      filesystem:
+        directory: /loki/chunks
+
+    compactor:
+      working_directory: /loki/compactor
+      shared_store: filesystem
+      compaction_interval: 10m
+      retention_enabled: {{ .Values.loki.retention.enabled }}
+      retention_delete_delay: {{ .Values.loki.retention.deleteDelay }}
+      retention_delete_worker_count: {{ .Values.loki.retention.deleteWorkerCount }}
+
+    limits_config:
+      retention_period: {{ .Values.loki.retention.period }}
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: {{ .Values.loki.retention.period }}
+      ingestion_rate_mb: {{ .Values.loki.limits.ingestionRateMB }}
+      ingestion_burst_size_mb: {{ .Values.loki.limits.ingestionBurstSizeMB }}
+      max_label_name_length: {{ .Values.loki.limits.maxLabelNameLength }}
+      max_label_value_length: {{ .Values.loki.limits.maxLabelValueLength }}
+      max_label_names_per_series: {{ .Values.loki.limits.maxLabelNamesPerSeries }}
+      max_streams_per_user: {{ .Values.loki.limits.maxStreamsPerUser }}
+      max_line_size: {{ .Values.loki.limits.maxLineSize }}
+      max_entries_limit_per_query: {{ .Values.loki.limits.maxEntriesLimitPerQuery }}
+      max_global_streams_per_user: {{ .Values.loki.limits.maxGlobalStreamsPerUser }}
+
+    chunk_store_config:
+      max_look_back_period: 0s
+
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: {{ .Values.loki.retention.period }}
+
+    ruler:
+      storage:
+        type: local
+        local:
+          directory: /loki/rules
+      rule_path: /loki/rules
+      ring:
+        kvstore:
+          store: inmemory
+      enable_api: true
+
+    analytics:
+      reporting_enabled: false
+
+    frontend:
+      log_queries_longer_than: 5s
+      compress_responses: true
+
+    querier:
+      query_timeout: 1m
+      tail_max_duration: 1h
+
+---
+{{- if .Values.persistence.enabled }}
+# Loki PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-loki-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.loki.labels" . | nindent 4 }}
+  {{- with .Values.persistence.loki.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.loki.accessMode }}
+  {{- $storageClass := include "loopit-monitoring.storageClass" (dict "storageClass" .Values.persistence.loki.storageClass "Values" .Values) }}
+  {{- if $storageClass }}
+  storageClassName: {{ $storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.loki.size }}
+
+---
+{{- end }}
+# Loki Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.loki.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "loopit-monitoring.loki.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "loopit-monitoring.loki.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations.loki }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "loopit-monitoring.securityContext" (dict "securityContext" .Values.securityContext.loki) | nindent 6 }}
+      containers:
+      - name: loki
+        image: {{ include "loopit-monitoring.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.loki.image.repository "tag" .Values.loki.image.tag "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.loki.image.pullPolicy }}
+        ports:
+        - containerPort: 3100
+          name: http
+        - containerPort: 9096
+          name: grpc
+        args:
+          - -config.file=/etc/loki/loki.yaml
+          - -target=all
+        env:
+        - name: LOKI_AUTH_ENABLED
+          value: "false"
+        - name: LOKI_SERVER_HTTP_LISTEN_PORT
+          value: "3100"
+        volumeMounts:
+        - name: loki-config
+          mountPath: /etc/loki
+        {{- if .Values.persistence.enabled }}
+        - name: loki-storage
+          mountPath: /loki
+        {{- end }}
+        {{- include "loopit-monitoring.resources" .Values.loki | nindent 8 }}
+        {{- include "loopit-monitoring.healthCheck" (dict "healthCheck" .Values.healthChecks.loki "port" 3100) | nindent 8 }}
+        {{- include "loopit-monitoring.securityContext" (dict "securityContext" .Values.securityContext.loki) | nindent 8 }}
+      volumes:
+      - name: loki-config
+        configMap:
+          name: {{ include "loopit-monitoring.fullname" . }}-loki-config
+      {{- if .Values.persistence.enabled }}
+      - name: loki-storage
+        persistentVolumeClaim:
+          claimName: {{ include "loopit-monitoring.fullname" . }}-loki-pvc
+      {{- else }}
+      - name: loki-storage
+        emptyDir: {}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+---
+# Loki Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.loki.labels" . | nindent 4 }}
+  annotations:
+    {{- include "loopit-monitoring.serviceAnnotations" (dict "serviceAnnotations" .Values.podAnnotations.loki "Values" .Values) | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "loopit-monitoring.loki.selectorLabels" . | nindent 4 }}
+  ports:
+  - port: 3100
+    targetPort: 3100
+    name: http
+  - port: 9096
+    targetPort: 9096
+    name: grpc
+{{- end }}
