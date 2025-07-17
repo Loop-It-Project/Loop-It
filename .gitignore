@@ -30,6 +30,12 @@ secrets/
 *secrets-generated.yaml
 *secrets
 
+# Kubernetes Secrets
+k8s/secrets.yaml
+k8s/secrets-*.yaml
+k8s/*-secrets.yaml
+k8s/secrets-generated.yaml
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -43,3 +49,10 @@ secrets/
 
 # Runtime files
 *.local
+
+# Backup/temp files
+k8s/*.bak
+k8s/*.tmp
+# Monitoring Environment
+k8s/monitoring/.env.monitoring
+*.env.monitoring

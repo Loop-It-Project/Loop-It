@@ -1,29 +1,18 @@
-# --- Build Stage ---
-FROM node:22-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-# RUN npx drizzle-kit generate --config drizzle.config.ts  # ← ENTFERNT: Verwende committed migrations
-RUN npm run build
-
-# --- Runtime Stage ---
 FROM node:22-alpine
 WORKDIR /app
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/node_modules ./node_modules
+# Copy package files
 COPY package*.json ./
-COPY drizzle.config.ts ./
 
-# Robustes entrypoint.sh verwenden
-COPY entrypoint.sh ./
-RUN sed -i 's/\r$//' entrypoint.sh
-RUN chmod +x entrypoint.sh
+# Install all dependencies first (for building)
+RUN npm ci && npm cache clean --force
+
+# Copy source code and build
+COPY . .
+RUN npm run build
+
+# Setup entrypoint (keep dev dependencies for drizzle-kit)
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 3000
-
-# Entrypoint statt CMD
-ENTRYPOINT ["sh", "./entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]

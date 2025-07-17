@@ -1,0 +1,8 @@
+*.exe
+*.dll
+node_modules/
+.git/
+.gitignore
+*.tmp
+*.log
+esbuild.exe

@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-loop-it}
       POSTGRES_USER: ${POSTGRES_USER:-loop_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # MUST be set in .env
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -22,18 +22,16 @@ services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     container_name: loop-it-backend
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-loop_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-loop-it}
       PORT: 3000
       NODE_ENV: ${NODE_ENV:-production}
-      # CRITICAL: These MUST be set in .env file
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      # Frontend CORS
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      # Database connection variables
       DB_HOST: postgres
       DB_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:-loop_user}
@@ -57,6 +55,7 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
         VITE_APP_NAME: ${VITE_APP_NAME:-Loop-It}
@@ -72,7 +71,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 120s
+      start_period: 30s  # Reduziert von 120s - nginx startet schnell
     networks:
       - loop-it-network
 

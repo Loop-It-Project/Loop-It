@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: loopit-dev
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - postgres.yaml
+  - ingress.yaml
+  - ../../base/backend
+  - ../../base/frontend
+
+images:
+  - name: loop-it-backend
+    newName: vinjust/loop-it-backend
+    newTag: 79ee367e3561804d821e57fc426f5e993223480c
+  - name: loop-it-frontend
+    newName: vinjust/loop-it-frontend
+    newTag: 79ee367e3561804d821e57fc426f5e993223480c
+
+labels:
+  - includeSelectors: true
+    pairs:
+      environment: development
+      managed-by: argocd
