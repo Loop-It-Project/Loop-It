@@ -1,3 +1,25 @@
+# Projekttagebuch Marc Droit - 17.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+firstUniverses fertigstellen
+
+## *Fortschritte & Ergebnisse:*
+
+firstUniverses Styling und Anpassung an gewünschte Funktionen fertig
+
+## *Herausforderungen & Blockaden:*
+
+Merge-Konflikte von drizzle-Dateien ausgelöst
+
+## *Was ich heute gelernt habe:*
+
+Verbesserter Umgang mit manuellem Lösen von Merge-Konflikten
+
+## *Plan für morgen:*
+
+FirstUniversePopUp mit Backend verbinden + Hobbies Styling/Layout
+
 # Projekttagebuch Marc Droit - 16.07.2025
 
 ## *Heutige Hauptaufgabe(n):*

@@ -118,7 +118,7 @@ const FirstUniverses = ({ user }) => {
 
   return (
     <div className="flex justify-center">
-      <div className="max-w-md w-full">
+      <div className="max-w-md w-full mb-15">
         <BackButton />
 
         <div className="bg-white rounded-2xl p-8 shadow-2xl">

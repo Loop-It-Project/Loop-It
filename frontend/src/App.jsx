@@ -265,20 +265,18 @@ function App() {
               )
             }
           />
+
+          {/* Allgemeine Routes - für alle aufrufbar */}
           <Route 
             path="/privacypolicy"
             element={
-              <PublicRoute user={user}>
-                <PrivacyPolicy />
-              </PublicRoute>
-            }
+            <PrivacyPolicy />
+          }
           />
           <Route 
             path="/imprint"
             element={
-              <PublicRoute user={user}>
                 <Imprint />
-              </PublicRoute>
             }
           />
 
