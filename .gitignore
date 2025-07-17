@@ -56,3 +56,11 @@ k8s/*.tmp
 # Monitoring Environment
 k8s/monitoring/.env.monitoring
 *.env.monitoring
+
+
+# GitOps Secrets
+gitops/environments/development/secrets.yaml
+
+
+
+**/secrets.yaml
