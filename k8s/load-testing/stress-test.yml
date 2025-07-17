@@ -1,0 +1,39 @@
+config:
+  target: 'http://localhost'
+  phases:
+    - duration: 60
+      arrivalRate: 20
+      rampTo: 100
+      name: "Heavy Ramp"
+    - duration: 120  
+      arrivalRate: 150
+      name: "Stress Load"
+
+scenarios:
+  - name: "Heavy Backend Load"
+    weight: 60
+    flow:
+      - loop:
+        - get:
+            url: "/api/health?timestamp={{ $timestamp }}"
+        - get:
+            url: "/api/metrics"
+        count: 5
+  
+  - name: "Frontend Stress"
+    weight: 25
+    flow:
+      - get:
+          url: "/"
+      - get:
+          url: "/?cache={{ $randomInt(1, 1000) }}"
+  
+  - name: "Mixed API Stress"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/health"
+      - get:
+          url: "/api/metrics"
+      - get:
+          url: "/"

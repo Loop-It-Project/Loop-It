@@ -1,10 +1,19 @@
+# Frontend Deployment with NGINX Volume Fix
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
   namespace: loopit-dev
+  labels:
+    app: frontend
+    version: v1
 spec:
-  replicas: 1
+  replicas: 2                    # Basis für HPA
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
   selector:
     matchLabels:
       app: frontend
@@ -12,59 +21,148 @@ spec:
     metadata:
       labels:
         app: frontend
+        version: v1
     spec:
       containers:
       - name: frontend
         image: loopit/frontend:latest
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
+        
         ports:
         - containerPort: 80
           name: http
-        env:
-        - name: VITE_API_URL
-          value: "http://localhost:3000"
-        - name: VITE_APP_NAME
-          value: "Loop-It"
+          protocol: TCP
         
-        # HEALTH CHECKS für NGINX
+        # Optimierte Health Checks
         livenessProbe:
           httpGet:
-            path: /health
+            path: /
             port: 80
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 3
+          initialDelaySeconds: 10  # Reduziert von ursprünglich
+          periodSeconds: 30
           failureThreshold: 3
-          successThreshold: 1
-        
+          timeoutSeconds: 5
+          
         readinessProbe:
           httpGet:
-            path: /health
+            path: /
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
-          timeoutSeconds: 3
           failureThreshold: 2
-          successThreshold: 1
-        
-        # Resource Management
+          timeoutSeconds: 3
+
+        # Resource-Optimierung für HPA
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            cpu: 50m             # Frontend ist weniger ressourcenintensiv
+            memory: 64Mi
           limits:
-            memory: "256Mi"
-            cpu: "200m"
+            cpu: 200m
+            memory: 128Mi
+
+        # ✅ FIX: Volume Mounts für NGINX Verzeichnisse
+        volumeMounts:
+        - name: cache-volume
+          mountPath: /var/cache/nginx
+        - name: run-volume
+          mountPath: /var/run
+
+        # ✅ FIX: Security Context ohne readOnlyRootFilesystem
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 101
+          capabilities:
+            drop:
+            - ALL
+          # readOnlyRootFilesystem: false # Entfernt für NGINX Compatibility
+
+      # ✅ FIX: Volumes für NGINX
+      volumes:
+      - name: cache-volume
+        emptyDir: {}
+      - name: run-volume
+        emptyDir: {}
+
 ---
+# Frontend Service (unverändert)
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend
   namespace: loopit-dev
+  labels:
+    app: frontend
 spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
   selector:
     app: frontend
-  ports:
-  - port: 80
-    targetPort: 80
-    name: http
+
+---
+# Frontend HPA (Production-optimiert)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: loopit-dev
+  labels:
+    app: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 10
+  
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60   # Frontend weniger CPU-intensiv
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70
+        
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 120
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      selectPolicy: Min
+
+---
+# Frontend Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: loopit-dev
+  labels:
+    app: frontend
+spec:
+  minAvailable: 1                # Mindestens 1 Frontend verfügbar
+  selector:
+    matchLabels:
+      app: frontend
+  unhealthyPodEvictionPolicy: AlwaysAllow
