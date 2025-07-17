@@ -14,10 +14,10 @@ resources:
 images:
   - name: loop-it-backend
     newName: vinjust/loop-it-backend
-    newTag: 69bc18ea0ee1fed66de149f34ae174670ab464ec
+    newTag: 603fef8a05563f4cdbcce2afe13623bf015034fb
   - name: loop-it-frontend
     newName: vinjust/loop-it-frontend
-    newTag: 69bc18ea0ee1fed66de149f34ae174670ab464ec
+    newTag: 603fef8a05563f4cdbcce2afe13623bf015034fb
 
 labels:
   - includeSelectors: true
