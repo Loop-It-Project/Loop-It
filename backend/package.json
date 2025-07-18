@@ -15,12 +15,15 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "db:drop": "drizzle-kit drop"
+    "db:drop": "drizzle-kit drop",
+    "db:seed": "tsx src/db/seeds/seeds.ts",
+    "db:seed:swipe": "tsx -e \"import('./src/db/seeds/seedSwipeTestData.js').then(m => m.seedSwipeTestData())\""
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/socket.io": "^3.0.1",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

@@ -12,7 +12,8 @@ import {
   Bell,
   Clock,
   X,
-  Trash2
+  Trash2,
+  Zap
 } from 'lucide-react';
 import CreateUniverse from './CreateUniverse'; 
 import FeedService from '../services/feedServices';
@@ -21,6 +22,7 @@ import AdminService from '../services/adminService';
 import useEscapeKey from '../hooks/useEscapeKey';
 import PendingFriendRequests from './PendingFriendRequests';
 import FriendshipService from '../services/friendshipService';
+import SwipeGame from './SwipeGame';
 
 // Header-Komponente für die Navigation und Aktionen im Dashboard
 // Importiere die benötigten Icons von Lucide
@@ -33,6 +35,7 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showSwipeGame, setShowSwipeGame] = useState(false);
 
   // Search History States
   const [searchHistory, setSearchHistory] = useState([]);
@@ -234,14 +237,20 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
 
   // ESC-Key Handler
   useEscapeKey(() => {
+    if (showSwipeGame) {
+      setShowSwipeGame(false);
+    }
     if (showSearchResults) {
       setShowSearchResults(false);
       setSearchQuery('');
     }
+    if (showSearchHistory) {
+      setShowSearchHistory(false);
+    }
     if (showCreateUniverse) {
       setShowCreateUniverse(false);
     }
-  }, showSearchResults || showCreateUniverse);
+  }, showSwipeGame || showSearchResults || showSearchHistory || showCreateUniverse);
 
   // Handle Universe Click Function
   const handleUniverseClick = (universeSlug) => {
@@ -490,6 +499,16 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
                 </button>
               </div>
 
+              {/* Swipe Game Button */}
+              <button
+                onClick={() => setShowSwipeGame(true)}
+                className="flex items-center space-x-2 px-4 py-2 cursor-pointer bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                title="Swipe Game - Finde neue Freunde!"
+              >
+                <Zap size={20} />
+                <span>Swipe</span>
+              </button>
+
               {/* Create Universe Button */}
               <button
                 onClick={() => setShowCreateUniverse(true)}
@@ -582,7 +601,7 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
 
               {/* Notifications Button (für später) */}
               <button
-                className="p-2 text-gray-500 cursor-pointer hover:text-gray-700 hover:scale-110 hover:bg-gray-50 rounded-lg transition-all"
+                className="p-2 text-gray-500 cursor-pointer hover:text-secondary hover:scale-110 hover:bg-gray-50 rounded-lg transition-all"
                 title="Benachrichtigungen"
               >
                 <Bell size={20} />
@@ -622,6 +641,14 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
         <CreateUniverse
           onClose={() => setShowCreateUniverse(false)}
           onUniverseCreated={handleUniverseCreated}
+        />
+      )}
+
+      {/* Swipe Game Modal */}
+      {showSwipeGame && (
+        <SwipeGame
+          currentUser={user}
+          onClose={() => setShowSwipeGame(false)}
         />
       )}
     </>

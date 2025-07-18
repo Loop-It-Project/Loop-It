@@ -11,6 +11,7 @@ export * from './media';
 export * from './posts';
 export * from './comments';
 export * from './universes';
+export * from './swipeGame';
 
 // Communication
 export * from './conversations';
@@ -150,6 +151,19 @@ export type {
   UniverseChatModeration,
   NewUniverseChatModeration
 } from './universeChat';
+
+export type {
+  SwipeAction,
+  NewSwipeAction,
+  Match,
+  NewMatch,
+  SwipePreferences,
+  NewSwipePreferences,
+  SwipeStats,
+  NewSwipeStats,
+  SwipeQueue,
+  NewSwipeQueue
+} from './swipeGame';
 
 // Schema Overview Comment
 /**

@@ -43,6 +43,13 @@
       "when": 1752661213066,
       "tag": "0005_medical_nico_minoru",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1752825764770,
+      "tag": "0006_light_paper_doll",
+      "breakpoints": true
     }
   ]
 }

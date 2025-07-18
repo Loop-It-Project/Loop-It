@@ -184,7 +184,7 @@ const FriendshipButton = ({ targetUsername, currentUser, onStatusChange }) => {
         <button
           onClick={handleDeclineRequest}
           disabled={loading}
-          className="flex items-center space-x-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+          className="flex items-center space-x-1 px-3 py-2 bg-gray-100 text-secondary rounded-lg hover:bg-gray-200 transition-colors text-sm"
         >
           <UserX size={14} />
           <span>Ablehnen</span>

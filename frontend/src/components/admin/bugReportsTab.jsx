@@ -39,7 +39,7 @@ const BugReportsTab = () => {
     { value: 'open', label: 'Offen', icon: '🔴', color: 'text-red-600' },
     { value: 'in_progress', label: 'In Bearbeitung', icon: '🟡', color: 'text-yellow-600' },
     { value: 'resolved', label: 'Gelöst', icon: '🟢', color: 'text-green-600' },
-    { value: 'closed', label: 'Geschlossen', icon: '⚫', color: 'text-gray-600' },
+    { value: 'closed', label: 'Geschlossen', icon: '⚫', color: 'text-tertiary' },
     { value: 'duplicate', label: 'Duplikat', icon: '🔄', color: 'text-blue-600' },
     { value: 'invalid', label: 'Ungültig', icon: '❌', color: 'text-red-600' }
   ];
@@ -164,12 +164,12 @@ const BugReportsTab = () => {
 
   const getStatusColor = (status) => {
     const statusOption = statusOptions.find(opt => opt.value === status);
-    return statusOption ? statusOption.color : 'text-gray-600';
+    return statusOption ? statusOption.color : 'text-tertiary';
   };
 
   const getPriorityColor = (priority) => {
     const priorityOption = priorityOptions.find(opt => opt.value === priority);
-    return priorityOption ? priorityOption.color : 'text-gray-600';
+    return priorityOption ? priorityOption.color : 'text-tertiary';
   };
 
   const getCategoryIcon = (category) => {
@@ -186,7 +186,7 @@ const BugReportsTab = () => {
             <Bug className="w-6 h-6 text-red-600" />
             <span>Bug Reports</span>
           </h2>
-          <p className="text-gray-600">Verwalte eingereichte Bug Reports</p>
+          <p className="text-tertiary">Verwalte eingereichte Bug Reports</p>
         </div>
         <div className="flex space-x-4">
           {stats.byStatus && Object.entries(stats.byStatus).map(([status, count]) => (
@@ -260,7 +260,7 @@ const BugReportsTab = () => {
               category: '',
               search: ''
             })}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+            className="px-4 py-2 text-tertiary hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
           >
             Filter zurücksetzen
           </button>
@@ -272,12 +272,12 @@ const BugReportsTab = () => {
         {loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Lade Bug Reports...</p>
+            <p className="mt-2 text-tertiary">Lade Bug Reports...</p>
           </div>
         ) : bugReports.length === 0 ? (
           <div className="p-8 text-center">
             <Bug className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Keine Bug Reports gefunden</p>
+            <p className="text-tertiary">Keine Bug Reports gefunden</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -405,7 +405,7 @@ const BugReportsTab = () => {
               </div>
               <div>
                 <h3 className="font-semibold text-lg mb-2">{selectedReport.title}</h3>
-                <p className="text-gray-700 whitespace-pre-line">{selectedReport.description}</p>
+                <p className="text-secondary whitespace-pre-line">{selectedReport.description}</p>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-500">
                 <User className="w-4 h-4" />
@@ -418,7 +418,7 @@ const BugReportsTab = () => {
                   <Monitor className="w-4 h-4 text-blue-600" />
                   <span className="font-medium text-blue-900">Systeminfo</span>
                 </div>
-                <pre className="text-xs text-gray-700 whitespace-pre-wrap break-all">
+                <pre className="text-xs text-secondary whitespace-pre-wrap break-all">
                   {selectedReport.browserInfo}
                 </pre>
               </div>
