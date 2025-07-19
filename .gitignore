@@ -64,3 +64,12 @@ gitops/environments/development/secrets.yaml
 
 
 **/secrets.yaml
+
+
+# Lokale Terraform-Dateien
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+terraform.tfvars

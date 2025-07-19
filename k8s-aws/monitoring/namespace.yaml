@@ -1,0 +1,22 @@
+# Monitoring Namespace (OPTIMIZED)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    app.kubernetes.io/name: loop-it-monitoring
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: loop-it
+    app.kubernetes.io/managed-by: kubectl
+    app.kubernetes.io/version: "1.0.0"
+    # Für NetworkPolicies
+    monitoring: "true"
+    # Für Service Discovery
+    prometheus.io/monitoring: "true"
+  annotations:
+    description: "Loop-It Monitoring Stack - Prometheus, Grafana, Loki, Promtail"
+    contact: "devops@loop-it.com"
+    created-by: "Loop-It DevOps Team"
+    monitoring.coreos.com/enabled: "true"
