@@ -1,3 +1,5 @@
+# terraform-eks/provider.tf (Update your existing file)
+
 terraform {
   required_version = ">= 1.0"
 
@@ -9,6 +11,11 @@ terraform {
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = "~> 2.23"
+    }
+    # ADD THIS:
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.1"
     }
   }
 }

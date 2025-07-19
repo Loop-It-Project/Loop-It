@@ -45,3 +45,27 @@ variable "enable_spot_instances" {
   type        = bool
   default     = true
 }
+
+variable "deploy_applications" {
+  description = "Whether to deploy the Loop-It applications"
+  type        = bool
+  default     = true
+}
+
+variable "backend_replicas" {
+  description = "Number of backend replicas"
+  type        = number
+  default     = 1
+}
+
+variable "postgres_storage_size" {
+  description = "PostgreSQL storage size"
+  type        = string
+  default     = "2Gi"
+}
+
+variable "enable_monitoring" {
+  description = "Enable monitoring stack"
+  type        = bool
+  default     = false
+}

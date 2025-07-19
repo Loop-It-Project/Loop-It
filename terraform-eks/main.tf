@@ -1,3 +1,35 @@
+# EBS CSI Driver IAM Policy für Node Group
+resource "aws_iam_role_policy_attachment" "node_group_ebs_csi_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/Amazon_EBS_CSI_DriverPolicy"
+  role       = module.eks.eks_managed_node_groups.main.iam_role_name
+}
+
+# Zusätzliche EBS Permissions (falls der obige nicht reicht)
+resource "aws_iam_role_policy" "node_group_ebs_policy" {
+  name = "EKSNodeGroupEBSPolicy"
+  role = module.eks.eks_managed_node_groups.main.iam_role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateVolume",
+          "ec2:AttachVolume", 
+          "ec2:DetachVolume",
+          "ec2:ModifyVolume",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeInstances",
+          "ec2:CreateTags",
+          "ec2:DeleteTags",
+          "ec2:DescribeAvailabilityZones"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
 resource "aws_ecr_repository" "backend" {
   name = "loop-it/backend"
 }

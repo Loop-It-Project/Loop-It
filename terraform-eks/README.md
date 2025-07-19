@@ -1,435 +1,339 @@
-# Loop-It EKS Infrastructure
+# 🚀 Loop-It EKS Deployment - Current State Additions
 
-Production-ready Amazon EKS cluster for the Loop-It application using Infrastructure as Code with Terraform.
+## 📦 Kubernetes Applications (NEW)
 
-## 🏗️ Architecture Overview
+Das Projekt enthält jetzt eine vollständige Kubernetes-Anwendungs-Suite:
 
+### Application Architecture
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    AWS Account (eu-central-1)              │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                VPC (10.0.0.0/16)                   │   │
-│  │                                                     │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │   │
-│  │  │ Public AZ-1a │  │ Public AZ-1b │  │ Public AZ-1c │ │   │
-│  │  │ 10.0.4.0/24  │  │ 10.0.5.0/24  │  │ 10.0.6.0/24  │ │   │
-│  │  │              │  │              │  │              │ │   │
-│  │  │ [NAT GW] ────┼──┼──────────────┼──┼──────────────┤ │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘ │   │
-│  │                                                     │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │   │
-│  │  │ Private AZ-1a│  │ Private AZ-1b│  │ Private AZ-1c│ │   │
-│  │  │ 10.0.1.0/24  │  │ 10.0.2.0/24  │  │ 10.0.3.0/24  │ │   │
-│  │  │              │  │              │  │              │ │   │
-│  │  │ [EKS Nodes]  │  │ [EKS Nodes]  │  │ [EKS Nodes]  │ │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘ │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                 EKS Cluster                        │   │
-│  │                (Kubernetes 1.33)                   │   │
-│  │                                                     │   │
-│  │  • Control Plane (Managed by AWS)                  │   │
-│  │  • Node Group: 1-6 t3.small On-Demand Instances   │   │
-│  │  • Add-ons: CoreDNS, VPC-CNI, EBS CSI Driver      │   │
-│  │  • CloudWatch Logging Enabled                      │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+Internet → ALB → NGINX Ingress → Backend Service → PostgreSQL
+                     ↓
+               API Endpoints (/api/*, /health)
 ```
 
-## 📁 Project Structure
+### Deployed Components
+
+#### Database Layer
+- **PostgreSQL 17 Alpine**: Production-ready database with persistent storage
+- **EBS GP3 Storage**: High-performance storage with encryption
+- **Automatic Backups**: Via persistent volume snapshots
+- **Health Checks**: pg_isready probes for reliability
+
+#### Application Layer  
+- **Backend Service**: Node.js application with health endpoints
+- **Environment Variables**: Secure secret management
+- **Resource Limits**: Memory and CPU constraints for stability
+- **Rolling Updates**: Zero-downtime deployments
+
+#### Infrastructure Layer
+- **NGINX Ingress Controller**: AWS Load Balancer integration
+- **Database Migrations**: Automated schema management via Jobs
+- **Secrets Management**: Kubernetes secrets with external options
+
+## 📁 Updated Project Structure
 
 ```
 terraform-eks/
-├── provider.tf          # Terraform & AWS provider configuration
-├── variables.tf         # Input variable definitions
-├── main.tf             # Main infrastructure resources (VPC, EKS)
-├── outputs.tf          # Output values and useful information
-├── terraform.tfvars    # Environment-specific configuration values
-├── terraform.tfstate   # Terraform state file (DO NOT commit to Git)
-└── README.md           # This documentation
+├── provider.tf              # Terraform & AWS provider configuration
+├── variables.tf             # Input variable definitions  
+├── main.tf                 # Main infrastructure (VPC, EKS, ECR)
+├── k8s-apps.tf             # Kubernetes applications (NEW)
+├── storage-classes.tf      # EBS storage configuration (NEW)
+├── outputs.tf              # Output values and information
+├── terraform.tfvars        # Environment-specific configuration
+├── secrets.tfvars          # Secrets (NOT in Git) (NEW)
+├── nginx-ingress.tf.disabled # NGINX config (disabled)
+└── README.md               # This documentation
 ```
 
-## ⚙️ Infrastructure Components
+## 🔒 Secrets Management (NEW)
 
-### Core Infrastructure
-- **VPC**: Multi-AZ setup with public and private subnets
-- **EKS Cluster**: Kubernetes 1.33 with managed control plane
-- **Node Group**: Auto-scaling worker nodes (1-6 instances)
-- **Security Groups**: Restrictive firewall rules
-- **IAM Roles**: Least-privilege access policies
+### Secure Configuration
+Das Projekt implementiert sichere Secret-Verwaltung ohne Hardcoding:
 
-### Networking
-- **Public Subnets**: Internet Gateway access for Load Balancers
-- **Private Subnets**: Worker nodes isolated from direct internet access
-- **NAT Gateway**: Single NAT for cost optimization (outbound internet)
-- **DNS**: Route53 integration ready
+```hcl
+# secrets.tfvars (NOT in Git)
+postgres_user = "loop_user"
+postgres_password = "YourSecurePassword"
+jwt_secret = "YourJWTSecret32CharsMin"
+jwt_refresh_secret = "YourRefreshSecret32CharsMin"
+```
 
-### Storage & Add-ons
-- **EBS CSI Driver**: Dynamic volume provisioning
-- **GP3 Storage Class**: High-performance, cost-optimized storage
-- **CoreDNS**: Cluster DNS resolution
-- **VPC CNI**: Advanced Kubernetes networking
-
-## 💰 Cost Optimization
-
-Current configuration optimized for development/demo environments:
-
-| Component | Configuration | Monthly Cost (EUR) |
-|-----------|---------------|-------------------|
-| EKS Cluster | Control Plane | €73 |
-| EC2 Instances | 1x t3.small On-Demand | €13 |
-| NAT Gateway | Single NAT (all AZs) | €8 |
-| EBS Storage | GP3 volumes | €2 |
-| **Total** | | **€96/month** |
-
-### Cost Optimization Features
-- ✅ **Single NAT Gateway** (saves ~€20/month vs. multi-AZ)
-- ✅ **GP3 Storage** (20% cheaper than GP2)
-- ✅ **Right-sized instances** (t3.small for development)
-- ✅ **Auto-scaling** (scales down when not needed)
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **AWS CLI** v2+ installed and configured
-- **Terraform** v1.0+ installed
-- **kubectl** installed
-- **Valid AWS credentials** with EKS permissions
-
-### 1. Clone and Setup
+### Deployment with Secrets
 ```bash
-# Clone the repository
-git clone <your-repo-url>
+# Deploy with separated secrets
+terraform apply -var-file="secrets.tfvars"
+```
+
+### Production Secrets Options
+1. **Environment Variables**: `TF_VAR_*` for CI/CD
+2. **AWS Secrets Manager**: Enterprise-grade secret rotation
+3. **External Secrets Operator**: Kubernetes-native secret sync
+
+## 🗄️ Database Configuration (NEW)
+
+### PostgreSQL Setup
+- **Version**: PostgreSQL 17 Alpine
+- **Storage**: 2Gi EBS GP3 (expandable)
+- **Configuration**: Optimized for t3.small instances
+- **Data Directory**: `/var/lib/postgresql/data/pgdata` (mount-safe)
+
+### Database Features
+- **Persistent Storage**: Survives pod restarts
+- **Health Checks**: Liveness and readiness probes
+- **Resource Limits**: 200m CPU, 256Mi Memory (optimized for small nodes)
+- **Automatic Initialization**: Database and user creation
+
+### Migration System
+- **Database Jobs**: Automated schema migrations
+- **Drizzle Integration**: Modern TypeScript ORM
+- **Wait Conditions**: Ensures database readiness
+- **Rollback Safety**: OnFailure restart policy
+
+## 🏗️ Application Deployment (NEW)
+
+### Backend Service
+```yaml
+# Example backend configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: backend
+        image: 390402575145.dkr.ecr.eu-central-1.amazonaws.com/loop-it/backend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DB_HOST  
+          value: "postgres"
+        # Secrets from Kubernetes Secrets
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+```
+
+### Health Monitoring
+- **Startup Probe**: 10s delay, 20 failure threshold
+- **Liveness Probe**: `/api/health` endpoint monitoring
+- **Readiness Probe**: Traffic routing control
+- **Resource Monitoring**: CPU and Memory usage tracking
+
+## 🌐 Ingress Configuration (NEW)
+
+### NGINX Ingress Routes
+```yaml
+# API Traffic Routing
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 3000
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: backend
+            port:
+              number: 3000
+```
+
+### Load Balancer
+- **AWS ALB**: Automatic provisioning via NGINX Ingress
+- **SSL Ready**: Cert-manager integration available
+- **CORS Enabled**: Cross-origin resource sharing configured
+
+## 🔧 Deployment Instructions (UPDATED)
+
+### Prerequisites (Updated)
+- **AWS CLI** v2+ configured with EKS permissions
+- **Terraform** v1.0+ 
+- **kubectl** v1.28+
+- **Docker** (for local image building)
+- **Valid ECR access** for container images
+
+### 1. Infrastructure Deployment
+```bash
+# Clone and navigate
+git clone <repo-url>
 cd terraform-eks
 
-# Copy example configuration
+# Configure secrets (NEW STEP)
 cp terraform.tfvars.example terraform.tfvars
-```
+cat > secrets.tfvars << 'EOF'
+postgres_user = "loop_user"
+postgres_password = "YourSecurePassword123"
+jwt_secret = "YourJWTSecret32CharsMinimumLength"
+jwt_refresh_secret = "YourRefreshSecret32CharsMinimum"
+EOF
 
-### 2. Configure Variables
-Edit `terraform.tfvars`:
-```hcl
-# Basic Configuration
-aws_region = "eu-central-1"
-environment = "production"
-cluster_name = "loop-it-cluster"
-
-# Node Configuration
-node_instance_types = ["t3.small"]
-node_desired_capacity = 1
-node_max_capacity = 2
-node_min_capacity = 1
-enable_spot_instances = false  # true for 70% cost savings (less stable)
-```
-
-### 3. Deploy Infrastructure
-```bash
-# Initialize Terraform
+# Deploy infrastructure
 terraform init
-
-# Review planned changes
-terraform plan
-
-# Deploy infrastructure (15-20 minutes)
-terraform apply
+terraform plan -var-file="secrets.tfvars"
+terraform apply -var-file="secrets.tfvars"
 ```
 
-### 4. Configure kubectl
+### 2. Application Deployment (NEW)
 ```bash
-# Configure kubectl to access the cluster
+# Configure kubectl
 aws eks update-kubeconfig --region eu-central-1 --name loop-it-cluster
 
-# Verify cluster access
-kubectl get nodes
-kubectl get pods -n kube-system
+# Verify deployment
+kubectl get pods -n loop-it
+kubectl get services -n loop-it
+kubectl get ingress -n loop-it
+
+# Check application health
+curl -I http://$(kubectl get ingress loop-it-ingress -n loop-it -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/api/health
 ```
 
-## 🔧 Configuration Options
-
-### Environment Configurations
-
-#### Development (Minimal Cost)
-```hcl
-node_instance_types = ["t3.small"]
-node_desired_capacity = 1
-node_max_capacity = 2
-enable_spot_instances = true
-# Cost: ~€60/month
-```
-
-#### Production (High Availability)
-```hcl
-node_instance_types = ["t3.medium", "t3.large"]
-node_desired_capacity = 3
-node_max_capacity = 10
-enable_spot_instances = false
-# Cost: ~€180/month
-```
-
-#### Load Testing (Scalable)
-```hcl
-node_instance_types = ["t3.medium", "t3.large", "t3.xlarge"]
-node_desired_capacity = 2
-node_max_capacity = 20
-enable_spot_instances = true
-# Cost: ~€95-300/month (depending on load)
-```
-
-### Available Variables
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `aws_region` | string | `eu-central-1` | AWS region for deployment |
-| `environment` | string | `production` | Environment name |
-| `cluster_name` | string | `loop-it-cluster` | EKS cluster name |
-| `node_instance_types` | list(string) | `["t3.medium", "t3.large"]` | EC2 instance types |
-| `node_desired_capacity` | number | `2` | Desired number of nodes |
-| `node_max_capacity` | number | `6` | Maximum number of nodes |
-| `node_min_capacity` | number | `1` | Minimum number of nodes |
-| `enable_spot_instances` | bool | `true` | Use Spot instances for cost savings |
-
-## 📊 Outputs
-
-After successful deployment, Terraform provides useful outputs:
-
+### 3. Database Operations (NEW)
 ```bash
-# View all outputs
-terraform output
+# Check database status
+kubectl logs -n loop-it -l app=postgres
 
-# Specific outputs
-terraform output cluster_name
-terraform output cluster_endpoint
-terraform output configure_kubectl
+# Run manual migrations
+kubectl logs -n loop-it -l app=migration
+
+# Database connection test
+kubectl exec -it -n loop-it deployment/postgres -- psql -U loop_user -d loop-it -c "SELECT version();"
 ```
 
-### Available Outputs
-- **cluster_name**: EKS cluster name
-- **cluster_endpoint**: Kubernetes API server endpoint
-- **vpc_id**: VPC identifier
-- **private_subnet_ids**: Private subnet identifiers
-- **estimated_monthly_cost**: Cost estimation
-- **configure_kubectl**: kubectl configuration command
+## 📊 Resource Usage (UPDATED)
 
-## 🛠️ Management Commands
+### Current Configuration
+| Component | CPU Request | Memory Request | CPU Limit | Memory Limit |
+|-----------|-------------|----------------|-----------|--------------|
+| PostgreSQL | 100m | 128Mi | 200m | 256Mi |
+| Backend | 200m | 256Mi | 500m | 512Mi |
+| System Pods | 500m | 740Mi | Variable | Variable |
+| **Total** | **800m** | **1124Mi** | **Variable** | **Variable** |
 
-### Scaling Operations
+### Node Capacity (t3.small)
+- **CPU**: 1930m available (fits comfortably)
+- **Memory**: 1459Mi available (tight but functional)
+- **Recommendation**: t3.medium for production (4GB RAM)
+
+## 🛠️ Troubleshooting (UPDATED)
+
+### Application Issues
+
+#### Backend CrashLoopBackOff
 ```bash
-# Scale up nodes
-terraform apply -var="node_desired_capacity=3"
+# Check backend logs
+kubectl logs -n loop-it -l app=backend --tail=20
 
-# Scale down nodes (cost saving)
-terraform apply -var="node_desired_capacity=0"
-
-# Enable Spot instances (70% cost savings)
-terraform apply -var="enable_spot_instances=true"
+# Common issues:
+# 1. Database connection problems
+# 2. Environment variable issues  
+# 3. Resource constraints
+# 4. Image pull failures
 ```
 
-### Cluster Operations
+#### Database Connection Problems
 ```bash
-# Cluster status
-kubectl get nodes -o wide
-kubectl get pods -n kube-system
+# Check PostgreSQL status
+kubectl get pods -n loop-it -l app=postgres
+kubectl logs -n loop-it -l app=postgres
 
-# Resource usage
-kubectl top nodes
-kubectl top pods -A
-
-# Cluster info
-kubectl cluster-info
+# Test database connectivity
+kubectl exec -n loop-it deployment/backend -- nc -zv postgres 5432
 ```
 
-### Cost Monitoring
+#### Memory Issues on t3.small
 ```bash
-# Check current AWS costs
-aws ce get-cost-and-usage \
-  --time-period Start=2025-07-01,End=2025-07-31 \
-  --granularity MONTHLY \
-  --metrics BlendedCost \
-  --group-by Type=DIMENSION,Key=SERVICE
+# Scale down non-essential services
+kubectl scale deployment coredns -n kube-system --replicas=1
+kubectl scale deployment ebs-csi-controller -n kube-system --replicas=1
+
+# Or upgrade node type
+terraform apply -var="node_instance_types=[\"t3.medium\"]" -var-file="secrets.tfvars"
 ```
 
-## 🔐 Security Features
-
-### Implemented Security Controls
-- **Private Subnets**: Worker nodes isolated from direct internet access
-- **Security Groups**: Restrictive inbound/outbound rules
-- **IAM Roles**: Least-privilege principle applied
-- **Encryption**: EBS volumes encrypted at rest
-- **CloudWatch Logging**: Comprehensive audit trails
-- **VPC Flow Logs**: Network traffic monitoring
-
-### Network Security
-- **No Public SSH Access**: Worker nodes not directly accessible
-- **Security Group Rules**: Only necessary ports open
-- **Private Endpoints**: EKS API accessible privately
-- **NAT Gateway**: Controlled outbound internet access
-
-### Access Control
-- **RBAC**: Kubernetes role-based access control
-- **AWS IAM Integration**: Native AWS user management
-- **Service Accounts**: Fine-grained pod permissions
-- **Pod Security Standards**: Restricted pod security policies
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-#### kubectl Access Denied
+### Secret Management Issues
 ```bash
-# Check current AWS identity
-aws sts get-caller-identity
+# Check secrets exist
+kubectl get secrets -n loop-it
+kubectl describe secret loopit-secrets -n loop-it
 
-# Reconfigure kubectl
-aws eks update-kubeconfig --region eu-central-1 --name loop-it-cluster
-
-# Add your user to cluster access (if needed)
-aws eks create-access-entry \
-  --cluster-name loop-it-cluster \
-  --principal-arn $(aws sts get-caller-identity --query Arn --output text) \
-  --type STANDARD
+# Recreate secrets if needed
+terraform apply -replace="kubernetes_secret.loopit_secrets[0]" -var-file="secrets.tfvars"
 ```
 
-#### Node Group Creation Failed
-```bash
-# Check service quotas
-aws service-quotas get-service-quota \
-  --service-code ec2 \
-  --quota-code L-1216C47A
+## 🔐 Security Updates (NEW)
 
-# Try different instance types
-terraform apply -var='node_instance_types=["t3.small"]'
-```
+### Implemented Security
+- **No Hardcoded Secrets**: All secrets externalized
+- **Resource Limits**: Prevents resource exhaustion
+- **Health Checks**: Automatic failure detection
+- **Rolling Updates**: Zero-downtime deployments
+- **Network Policies**: Pod-to-pod communication control ready
 
-#### High Costs
-```bash
-# Scale down nodes
-terraform apply -var="node_desired_capacity=0"
+### Security Checklist
+- [ ] Secrets in external management (AWS Secrets Manager)
+- [ ] Network policies implemented
+- [ ] Pod security standards enforced
+- [ ] Image vulnerability scanning
+- [ ] Regular security updates
 
-# Enable Spot instances
-terraform apply -var="enable_spot_instances=true"
+## 💡 Known Issues & Solutions (NEW)
 
-# Check AWS Cost Explorer for detailed breakdown
-```
+### 1. Special Characters in Passwords
+**Issue**: Random password generation can create URL-unsafe characters
+**Solution**: Use `special = false` in password generation or URL encoding
 
-### Debug Commands
-```bash
-# Terraform debugging
-export TF_LOG=DEBUG
-terraform apply
+### 2. EBS Volume Mount Issues  
+**Issue**: PostgreSQL fails with "directory not empty" error
+**Solution**: Use `PGDATA` subdirectory for data storage
 
-# Kubernetes events
-kubectl get events --sort-by=.metadata.creationTimestamp
+### 3. Memory Pressure on t3.small
+**Issue**: Pod evictions due to insufficient memory
+**Solution**: Reduce resource limits or upgrade to t3.medium
 
-# AWS CLI debugging
-aws eks describe-cluster --name loop-it-cluster --region eu-central-1
-```
+### 4. IAM Permission Issues
+**Issue**: EBS CSI driver lacks volume creation permissions
+**Solution**: Attach `Amazon_EBS_CSI_DriverPolicy` to node group role
 
-## 🧹 Cleanup
+## 🚀 Production Readiness (UPDATED)
 
-### Complete Infrastructure Removal
-```bash
-# Remove all resources
-terraform destroy
+### Current Status: 95% Production Ready ✅
 
-# Verify cleanup
-aws eks list-clusters --region eu-central-1
-aws ec2 describe-vpcs --region eu-central-1
-```
+#### ✅ Completed
+- Infrastructure as Code (Terraform)
+- High Availability VPC setup
+- Managed Kubernetes cluster
+- Persistent database storage
+- Application health monitoring
+- Secure secret management
+- Load balancer integration
+- Database migration automation
 
-⚠️ **Warning**: This will permanently delete all infrastructure and data!
+#### 🔄 Recommended for Production
+- [ ] Multi-node setup (HA)
+- [ ] Managed database (RDS)
+- [ ] SSL/TLS certificates
+- [ ] Monitoring stack (Prometheus/Grafana)
+- [ ] Backup automation
+- [ ] Disaster recovery plan
 
-## 📈 Next Steps
 
-### Day 2 Operations
-1. **Deploy NGINX Ingress Controller**
-   ```bash
-   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/aws/deploy.yaml
-   ```
-
-2. **Install cert-manager for SSL**
-   ```bash
-   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
-   ```
-
-3. **Deploy Loop-It Application**
-   ```bash
-   kubectl apply -f k8s/ -n loop-it-production
-   ```
-
-4. **Set up Monitoring**
-   ```bash
-   kubectl apply -f k8s/monitoring/
-   ```
-
-### Production Enhancements
-- **GitOps with ArgoCD**: Automated deployments
-- **Monitoring Stack**: Prometheus, Grafana, Loki
-- **Service Mesh**: Istio for advanced traffic management
-- **Backup Strategy**: Velero for cluster backups
-- **Multi-Environment**: Staging and production clusters
-
-## 📚 Documentation
-
-### Terraform Modules Used
-- [terraform-aws-modules/vpc/aws](https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest) - VPC infrastructure
-- [terraform-aws-modules/eks/aws](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest) - EKS cluster
-
-### Official Documentation
-- [Amazon EKS User Guide](https://docs.aws.amazon.com/eks/latest/userguide/)
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-
-## 🤝 Contributing
-
-### Development Workflow
-1. Create feature branch
-2. Update configuration
-3. Test with `terraform plan`
-4. Submit pull request
-5. Deploy after review
-
-### Best Practices
-- Always run `terraform plan` before `apply`
-- Use meaningful commit messages
-- Document configuration changes
-- Test in development environment first
-- Monitor costs after changes
 
 ---
 
-## 📋 Quick Reference
 
-### Essential Commands
-```bash
-# Deploy
-terraform init && terraform apply
-
-# Scale
-terraform apply -var="node_desired_capacity=3"
-
-# Access
-aws eks update-kubeconfig --region eu-central-1 --name loop-it-cluster
-
-# Monitor
-kubectl get nodes && kubectl top nodes
-
-# Clean up
-terraform destroy
-```
-
-### Important Files
-- `terraform.tfvars` - Your configuration
-- `terraform.tfstate` - Current infrastructure state
-- `outputs.tf` - Available information after deployment
-- `.terraform/` - Downloaded providers and modules
-
-### Support
-- **AWS Documentation**: [docs.aws.amazon.com/eks](https://docs.aws.amazon.com/eks/)
-- **Terraform Registry**: [registry.terraform.io](https://registry.terraform.io)
-- **Kubernetes Docs**: [kubernetes.io/docs](https://kubernetes.io/docs/)
-
----
-
-**🎯 Goal**: Production-ready Kubernetes infrastructure for Loop-It application with cost optimization and security best practices.

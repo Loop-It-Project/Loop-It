@@ -1,0 +1,228 @@
+# terraform-eks/nginx-ingress.tf
+# NGINX Ingress Controller via Pure Kubernetes Manifests
+
+# NGINX Ingress Namespace
+resource "kubernetes_namespace" "ingress_nginx" {
+  count = var.deploy_applications ? 1 : 0
+  
+  metadata {
+    name = "ingress-nginx"
+    labels = {
+      "app.kubernetes.io/name"     = "ingress-nginx"
+      "app.kubernetes.io/instance" = "ingress-nginx"
+    }
+  }
+}
+
+# ServiceAccount
+resource "kubernetes_service_account" "ingress_nginx" {
+  count = var.deploy_applications ? 1 : 0
+  
+  metadata {
+    name      = "ingress-nginx"
+    namespace = kubernetes_namespace.ingress_nginx[0].metadata[0].name
+    labels = {
+      "app.kubernetes.io/name"      = "ingress-nginx"
+      "app.kubernetes.io/instance"  = "ingress-nginx"
+      "app.kubernetes.io/component" = "controller"
+    }
+  }
+}
+
+# ConfigMap für NGINX Ingress Controller
+resource "kubernetes_config_map" "ingress_nginx_controller" {
+  count = var.deploy_applications ? 1 : 0
+  
+  metadata {
+    name      = "ingress-nginx-controller"
+    namespace = kubernetes_namespace.ingress_nginx[0].metadata[0].name
+    labels = {
+      "app.kubernetes.io/name"      = "ingress-nginx"
+      "app.kubernetes.io/instance"  = "ingress-nginx"
+      "app.kubernetes.io/component" = "controller"
+    }
+  }
+
+  data = {
+    "use-forwarded-headers"      = "true"
+    "compute-full-forwarded-for" = "true"
+    "use-proxy-protocol"         = "false"
+  }
+}
+
+# NGINX Ingress Controller Deployment
+resource "kubernetes_deployment" "ingress_nginx_controller" {
+  count = var.deploy_applications ? 1 : 0
+  
+  metadata {
+    name      = "ingress-nginx-controller"
+    namespace = kubernetes_namespace.ingress_nginx[0].metadata[0].name
+    labels = {
+      "app.kubernetes.io/name"      = "ingress-nginx"
+      "app.kubernetes.io/instance"  = "ingress-nginx"
+      "app.kubernetes.io/component" = "controller"
+      "app.kubernetes.io/version"   = "1.13.0"
+    }
+  }
+
+  spec {
+    replicas = 1
+    
+    selector {
+      match_labels = {
+        "app.kubernetes.io/name"      = "ingress-nginx"
+        "app.kubernetes.io/instance"  = "ingress-nginx"
+        "app.kubernetes.io/component" = "controller"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          "app.kubernetes.io/name"      = "ingress-nginx"
+          "app.kubernetes.io/instance"  = "ingress-nginx"
+          "app.kubernetes.io/component" = "controller"
+        }
+      }
+
+      spec {
+        service_account_name = kubernetes_service_account.ingress_nginx[0].metadata[0].name
+        
+        container {
+          name  = "controller"
+          image = "registry.k8s.io/ingress-nginx/controller:v1.13.0"
+          
+          port {
+            name           = "http"
+            container_port = 80
+            protocol       = "TCP"
+          }
+          
+          port {
+            name           = "https"
+            container_port = 443
+            protocol       = "TCP"
+          }
+          
+          port {
+            name           = "webhook"
+            container_port = 8443
+            protocol       = "TCP"
+          }
+
+          args = [
+            "/nginx-ingress-controller",
+            "--publish-service=$(POD_NAMESPACE)/ingress-nginx-controller",
+            "--election-id=ingress-nginx-leader",
+            "--controller-class=k8s.io/ingress-nginx",
+            "--ingress-class=nginx",
+            "--configmap=$(POD_NAMESPACE)/ingress-nginx-controller",
+            "--v=2"
+          ]
+
+          env {
+            name = "POD_NAME"
+            value_from {
+              field_ref {
+                field_path = "metadata.name"
+              }
+            }
+          }
+          
+          env {
+            name = "POD_NAMESPACE"
+            value_from {
+              field_ref {
+                field_path = "metadata.namespace"
+              }
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path   = "/healthz"
+              port   = 10254
+              scheme = "HTTP"
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 10
+            timeout_seconds       = 1
+            failure_threshold     = 5
+          }
+
+          readiness_probe {
+            http_get {
+              path   = "/healthz"
+              port   = 10254
+              scheme = "HTTP"
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 10
+            timeout_seconds       = 1
+            failure_threshold     = 3
+          }
+
+          resources {
+            requests = {
+              cpu    = "100m"
+              memory = "90Mi"
+            }
+          }
+        }
+
+        node_selector = {
+          "kubernetes.io/os" = "linux"
+        }
+      }
+    }
+  }
+  
+  depends_on = [
+    kubernetes_config_map.ingress_nginx_controller
+  ]
+}
+
+# NGINX Ingress Controller Service
+resource "kubernetes_service" "ingress_nginx_controller" {
+  count = var.deploy_applications ? 1 : 0
+  
+  metadata {
+    name      = "ingress-nginx-controller"
+    namespace = kubernetes_namespace.ingress_nginx[0].metadata[0].name
+    labels = {
+      "app.kubernetes.io/name"      = "ingress-nginx"
+      "app.kubernetes.io/instance"  = "ingress-nginx"
+      "app.kubernetes.io/component" = "controller"
+    }
+    annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-type"             = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-backend-protocol" = "http"
+    }
+  }
+
+  spec {
+    type = "LoadBalancer"
+    
+    selector = {
+      "app.kubernetes.io/name"      = "ingress-nginx"
+      "app.kubernetes.io/instance"  = "ingress-nginx"
+      "app.kubernetes.io/component" = "controller"
+    }
+
+    port {
+      name        = "http"
+      port        = 80
+      protocol    = "TCP"
+      target_port = "http"
+    }
+
+    port {
+      name        = "https"
+      port        = 443
+      protocol    = "TCP"
+      target_port = "https"
+    }
+  }
+
+  depends_on = [kubernetes_deployment.ingress_nginx_controller]
+}
