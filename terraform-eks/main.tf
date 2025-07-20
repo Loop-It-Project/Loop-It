@@ -1,6 +1,7 @@
 # EBS CSI Driver IAM Policy für Node Group
 resource "aws_iam_role_policy_attachment" "node_group_ebs_csi_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/Amazon_EBS_CSI_DriverPolicy"
+  # WICHTIG: Die korrekte Policy ARN verwenden
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
   role       = module.eks.eks_managed_node_groups.main.iam_role_name
 }
 

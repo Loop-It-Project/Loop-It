@@ -24,8 +24,6 @@ resource "kubernetes_namespace" "loop_it" {
 # SECRETS
 # ============================================================================
 
-
-
 resource "kubernetes_secret" "loopit_secrets" {
   count = var.deploy_applications ? 1 : 0
   
@@ -36,9 +34,10 @@ resource "kubernetes_secret" "loopit_secrets" {
 
   data = {
     postgres-user         = var.postgres_user
-    postgres-password     = var.postgres_password      # Aus Environment Variable
-    jwt-secret           = var.jwt_secret             # Aus Environment Variable  
-    jwt-refresh-secret   = var.jwt_refresh_secret     # Aus Environment Variable
+    postgres-password     = var.postgres_password
+    jwt-secret           = var.jwt_secret
+    jwt-refresh-secret   = var.jwt_refresh_secret
+    database-url         = var.database_url
   }
 
   type = "Opaque"
@@ -67,17 +66,16 @@ resource "kubernetes_persistent_volume_claim" "postgres_pvc" {
     }
   }
   
-  wait_until_bound = true
+  wait_until_bound = false
 }
 
 resource "kubernetes_deployment" "postgres" {
   count = var.deploy_applications ? 1 : 0
 
-  # 🚀 TIMEOUT REDUZIEREN!
   timeouts {
-    create = "2m"    # Reduziert von 10m auf 2m
-    update = "2m"    # Reduziert von 10m auf 2m
-    delete = "2m"    # Auch Delete timeout
+    create = "2m"
+    update = "2m"
+    delete = "2m"
   }
 
   metadata {
@@ -131,7 +129,6 @@ resource "kubernetes_deployment" "postgres" {
               }
             }
           }
-          # 🚀 WICHTIG: PostgreSQL Data Directory in Subdirectory
           env {
             name  = "PGDATA"
             value = "/var/lib/postgresql/data/pgdata"
@@ -160,12 +157,12 @@ resource "kubernetes_deployment" "postgres" {
           }
           resources {
             limits = {
-              cpu    = "200m"    # reduziert von 500m  
-              memory = "256Mi"   # reduziert von 512Mi
+              cpu    = "200m"
+              memory = "256Mi"
             }
             requests = {
-              cpu    = "100m"    # reduziert von 250m
-              memory = "128Mi"   # reduziert von 256Mi  
+              cpu    = "100m"
+              memory = "128Mi"  
             }
           }
         }
@@ -265,32 +262,11 @@ resource "kubernetes_job" "db_migration" {
             value = "production"
           }
           env {
-            name  = "DB_HOST"
-            value = "postgres"
-          }
-          env {
-            name  = "DB_PORT"
-            value = "5432"
-          }
-          env {
-            name  = "POSTGRES_DB"
-            value = "loop-it"
-          }
-          env {
-            name = "POSTGRES_USER"
+            name = "DATABASE_URL"
             value_from {
               secret_key_ref {
                 name = kubernetes_secret.loopit_secrets[0].metadata[0].name
-                key  = "postgres-user"
-              }
-            }
-          }
-          env {
-            name = "POSTGRES_PASSWORD"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.loopit_secrets[0].metadata[0].name
-                key  = "postgres-password"
+                key  = "database-url"
               }
             }
           }
@@ -315,7 +291,6 @@ resource "kubernetes_job" "db_migration" {
     kubernetes_service.postgres
   ]
 
-  # Job wird bei jedem Terraform Apply neu erstellt
   lifecycle {
     replace_triggered_by = [
       terraform_data.migration_trigger.output
@@ -323,7 +298,6 @@ resource "kubernetes_job" "db_migration" {
   }
 }
 
-# Trigger für Migration Job
 resource "terraform_data" "migration_trigger" {
   input = timestamp()
 }
@@ -429,38 +403,13 @@ resource "kubernetes_deployment" "backend" {
             value = "production"
           }
           env {
-            name  = "DB_HOST"
-            value = "postgres"
-          }
-          env {
-            name  = "DB_PORT"
-            value = "5432"
-          }
-          env {
-            name  = "POSTGRES_DB"
-            value = "loop-it"
-          }
-          env {
-            name = "POSTGRES_USER"
+            name = "DATABASE_URL"
             value_from {
               secret_key_ref {
                 name = kubernetes_secret.loopit_secrets[0].metadata[0].name
-                key  = "postgres-user"
+                key  = "database-url"
               }
             }
-          }
-          env {
-            name = "POSTGRES_PASSWORD"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.loopit_secrets[0].metadata[0].name
-                key  = "postgres-password"
-              }
-            }
-          }
-          env {
-            name  = "DATABASE_URL"
-            value = "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(POSTGRES_DB)"
           }
           env {
             name = "JWT_SECRET"
@@ -492,12 +441,12 @@ resource "kubernetes_deployment" "backend" {
 
           resources {
             requests = {
-              cpu    = "200m"
-              memory = "256Mi"
+              cpu    = "100m"   # Reduziert von 200m
+              memory = "128Mi"  # Reduziert von 256Mi
             }
             limits = {
-              cpu    = "500m"
-              memory = "512Mi"
+              cpu    = "300m"   # Reduziert von 500m
+              memory = "256Mi"  # Reduziert von 512Mi
             }
           }
 
@@ -555,10 +504,138 @@ resource "kubernetes_service" "backend" {
 }
 
 # ============================================================================
+# FRONTEND APPLICATION (FIXED)
+# ============================================================================
+
+resource "kubernetes_deployment" "frontend" {
+  count = var.deploy_applications ? 1 : 0
+  
+  metadata {
+    name      = "frontend"
+    namespace = kubernetes_namespace.loop_it[0].metadata[0].name
+    labels = {
+      app     = "frontend"
+      version = "v1"
+    }
+  }
+
+  spec {
+    replicas = var.frontend_replicas
+
+    strategy {
+      type = "RollingUpdate"
+      rolling_update {
+        max_unavailable = "25%"
+        max_surge      = "25%"
+      }
+    }
+
+    selector {
+      match_labels = {
+        app = "frontend"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app     = "frontend"
+          version = "v1"
+        }
+      }
+
+      spec {
+        container {
+          name  = "frontend"
+          image = "nginxinc/nginx-unprivileged:alpine"
+          image_pull_policy = "IfNotPresent"
+
+          port {
+            container_port = 8080
+            name          = "http"
+            protocol      = "TCP"
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/"
+              port = 8080
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 30
+            failure_threshold     = 3
+            timeout_seconds       = 5
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/"
+              port = 8080
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 5
+            failure_threshold     = 2
+            timeout_seconds       = 3
+          }
+
+          resources {
+            requests = {
+              cpu    = "25m"
+              memory = "32Mi"
+            }
+            limits = {
+              cpu    = "100m"
+              memory = "64Mi"
+            }
+          }
+
+          security_context {
+            allow_privilege_escalation = false
+            run_as_non_root           = true
+            run_as_user              = 101
+            capabilities {
+              drop = ["ALL"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    kubernetes_deployment.backend
+  ]
+}
+
+resource "kubernetes_service" "frontend" {
+  count = var.deploy_applications ? 1 : 0
+  
+  metadata {
+    name      = "frontend"
+    namespace = kubernetes_namespace.loop_it[0].metadata[0].name
+    labels = {
+      app = "frontend"
+    }
+  }
+
+  spec {
+    selector = {
+      app = "frontend"
+    }
+
+    port {
+      port        = 80
+      target_port = 8080
+      protocol    = "TCP"
+      name        = "http"
+    }
+  }
+}
+
+# ============================================================================
 # NGINX INGRESS CONTROLLER (Pure Kubernetes)
 # ============================================================================
 
-# Da du bereits NGINX Ingress Controller hast, verwenden wir eine Data Source
 data "kubernetes_service" "ingress_nginx_controller" {
   count = var.deploy_applications ? 1 : 0
   
@@ -567,22 +644,7 @@ data "kubernetes_service" "ingress_nginx_controller" {
     namespace = "ingress-nginx"
   }
   
-  # Falls NGINX Ingress noch nicht installiert ist, installiere es via kubectl apply
-  # Dies ist ein Fallback, normalerweise sollte es bereits existieren
   depends_on = [module.eks]
-}
-
-# Optional: NGINX Ingress Installation via kubectl_manifest (falls nicht vorhanden)
-resource "kubernetes_manifest" "nginx_ingress_install" {
-  count = var.deploy_applications ? 0 : 0  # Disabled by default, da du es bereits hast
-  
-  manifest = {
-    apiVersion = "v1"
-    kind       = "Namespace"
-    metadata = {
-      name = "ingress-nginx"
-    }
-  }
 }
 
 # ============================================================================
@@ -640,12 +702,26 @@ resource "kubernetes_ingress_v1" "loop_it" {
             }
           }
         }
+
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = kubernetes_service.frontend[0].metadata[0].name
+              port {
+                number = 80
+              }
+            }
+          }
+        }
       }
     }
   }
 
   depends_on = [
     kubernetes_service.backend,
+    kubernetes_service.frontend,
     data.kubernetes_service.ingress_nginx_controller
   ]
 }
