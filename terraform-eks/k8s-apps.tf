@@ -75,7 +75,7 @@ resource "kubernetes_deployment" "postgres" {
   timeouts {
     create = "2m"
     update = "2m"
-    delete = "2m"
+    delete = "1m"
   }
 
   metadata {
@@ -296,6 +296,11 @@ resource "kubernetes_job" "db_migration" {
       terraform_data.migration_trigger.output
     ]
   }
+
+  timeouts {
+    create = "3m"
+    delete = "1m"
+  }
 }
 
 resource "terraform_data" "migration_trigger" {
@@ -471,6 +476,12 @@ resource "kubernetes_deployment" "backend" {
   depends_on = [
     kubernetes_job.db_migration
   ]
+
+  timeouts {
+    create = "2m"
+    update = "2m"
+    delete = "1m"
+  }
 }
 
 resource "kubernetes_service" "backend" {
@@ -509,7 +520,6 @@ resource "kubernetes_service" "backend" {
 
 resource "kubernetes_deployment" "frontend" {
   count = var.deploy_applications ? 1 : 0
-  
   metadata {
     name      = "frontend"
     namespace = kubernetes_namespace.loop_it[0].metadata[0].name
@@ -518,10 +528,8 @@ resource "kubernetes_deployment" "frontend" {
       version = "v1"
     }
   }
-
   spec {
     replicas = var.frontend_replicas
-
     strategy {
       type = "RollingUpdate"
       rolling_update {
@@ -529,13 +537,11 @@ resource "kubernetes_deployment" "frontend" {
         max_surge      = "25%"
       }
     }
-
     selector {
       match_labels = {
         app = "frontend"
       }
     }
-
     template {
       metadata {
         labels = {
@@ -543,41 +549,36 @@ resource "kubernetes_deployment" "frontend" {
           version = "v1"
         }
       }
-
       spec {
         container {
           name  = "frontend"
-          image = "nginxinc/nginx-unprivileged:alpine"
+          image = "${aws_ecr_repository.frontend.repository_url}:latest"
           image_pull_policy = "IfNotPresent"
-
           port {
-            container_port = 8080
+            container_port = 8080    # geändert von 80
             name          = "http"
             protocol      = "TCP"
           }
-
           liveness_probe {
             http_get {
               path = "/"
-              port = 8080
+              port = 8080           # geändert von 80
             }
-            initial_delay_seconds = 10
+            initial_delay_seconds = 30
             period_seconds        = 30
             failure_threshold     = 3
             timeout_seconds       = 5
           }
-
           readiness_probe {
             http_get {
-              path = "/"
-              port = 8080
+              path = "/health"      # geändert von "/"
+              port = 8080           # geändert von 80
             }
             initial_delay_seconds = 5
             period_seconds        = 5
             failure_threshold     = 2
             timeout_seconds       = 3
           }
-
           resources {
             requests = {
               cpu    = "25m"
@@ -588,7 +589,14 @@ resource "kubernetes_deployment" "frontend" {
               memory = "64Mi"
             }
           }
-
+          volume_mount {
+            name       = "nginx-cache"
+            mount_path = "/var/cache/nginx"
+          }
+          volume_mount {
+            name       = "nginx-run"
+            mount_path = "/var/run"
+          }
           security_context {
             allow_privilege_escalation = false
             run_as_non_root           = true
@@ -598,18 +606,32 @@ resource "kubernetes_deployment" "frontend" {
             }
           }
         }
+        volume {
+          name = "nginx-cache"
+          empty_dir {
+            size_limit = "50Mi"
+          }
+        }
+        volume {
+          name = "nginx-run"
+          empty_dir {
+            size_limit = "10Mi"
+          }
+        }
       }
     }
   }
+  depends_on = [kubernetes_namespace.loop_it]
 
-  depends_on = [
-    kubernetes_deployment.backend
-  ]
+  timeouts {
+    create = "2m"
+    update = "2m"
+    delete = "1m"
+  }
 }
 
 resource "kubernetes_service" "frontend" {
   count = var.deploy_applications ? 1 : 0
-  
   metadata {
     name      = "frontend"
     namespace = kubernetes_namespace.loop_it[0].metadata[0].name
@@ -617,15 +639,14 @@ resource "kubernetes_service" "frontend" {
       app = "frontend"
     }
   }
-
   spec {
+    type = "ClusterIP"
     selector = {
       app = "frontend"
     }
-
     port {
       port        = 80
-      target_port = 8080
+      target_port = 8080    # geändert von 80
       protocol    = "TCP"
       name        = "http"
     }
@@ -653,7 +674,6 @@ data "kubernetes_service" "ingress_nginx_controller" {
 
 resource "kubernetes_ingress_v1" "loop_it" {
   count = var.deploy_applications ? 1 : 0
-  
   metadata {
     name      = "loop-it-ingress"
     namespace = kubernetes_namespace.loop_it[0].metadata[0].name
@@ -671,10 +691,8 @@ resource "kubernetes_ingress_v1" "loop_it" {
       "nginx.ingress.kubernetes.io/cors-allow-headers" = "Content-Type, Authorization, X-Requested-With"
     }
   }
-
   spec {
     ingress_class_name = "nginx"
-    
     rule {
       http {
         path {
@@ -689,7 +707,6 @@ resource "kubernetes_ingress_v1" "loop_it" {
             }
           }
         }
-        
         path {
           path      = "/health"
           path_type = "Exact"
@@ -702,7 +719,18 @@ resource "kubernetes_ingress_v1" "loop_it" {
             }
           }
         }
-
+        path {
+          path      = "/metrics"
+          path_type = "Exact"
+          backend {
+            service {
+              name = kubernetes_service.backend[0].metadata[0].name
+              port {
+                number = 3000
+              }
+            }
+          }
+        }
         path {
           path      = "/"
           path_type = "Prefix"
@@ -718,10 +746,14 @@ resource "kubernetes_ingress_v1" "loop_it" {
       }
     }
   }
-
   depends_on = [
     kubernetes_service.backend,
     kubernetes_service.frontend,
     data.kubernetes_service.ingress_nginx_controller
   ]
+  lifecycle {
+    replace_triggered_by = [
+      kubernetes_service.frontend[0].metadata[0].name
+    ]
+  }
 }

@@ -1,41 +1,82 @@
-# 🚀 Loop-It EKS Deployment Guide
+# 🚀 Loop-It EKS Deployment
 
 **Production-Ready Kubernetes Infrastructure auf AWS EKS**
 
 ## 📋 Inhaltsverzeichnis
 
-- [Überblick](#überblick)
-- [Voraussetzungen](#voraussetzungen)
-- [Schritt-für-Schritt Deployment](#schritt-für-schritt-deployment)
-- [Troubleshooting](#troubleshooting)
-- [Betrieb & Monitoring](#betrieb--monitoring)
-- [Nächste Schritte](#nächste-schritte)
+- [Überblick](#-überblick)
+- [Architektur](#-architektur)
+- [Voraussetzungen](#-voraussetzungen)
+- [Deployment Guide](#-deployment-guide)
+- [Konfiguration](#-konfiguration)
+- [Troubleshooting](#-troubleshooting)
+- [Betrieb & Wartung](#-betrieb--wartung)
+- [Kosten](#-kosten)
 
 ---
 
 ## 🌟 Überblick
 
-### **Was wird deployed:**
-- **EKS Cluster** (Kubernetes 1.33) mit t3.small Nodes
+Diese Terraform-Konfiguration deployt eine **vollständige Loop-It Social Media Plattform** auf AWS EKS mit folgenden Komponenten:
+
+### **✅ Was funktioniert:**
+- **EKS Cluster** (Kubernetes 1.33) mit managed Node Groups
 - **PostgreSQL 17** Database mit persistentem EBS Storage
-- **Node.js Backend API** mit Health Endpoints
-- **NGINX Ingress Controller** mit AWS Load Balancer
+- **Node.js Backend API** mit Health Monitoring & JWT Authentication
+- **React Frontend** mit Vite Build System
+- **NGINX Ingress Controller** mit AWS Network Load Balancer
+- **Automatische Database Migrations** via Kubernetes Jobs
 - **Secure Secret Management** via Kubernetes Secrets
-- **Automated Database Migrations** via Kubernetes Jobs
+- **Container Registry** via Amazon ECR
 
-### **Architektur:**
+### **🎯 Production Features:**
+- **Health Checks**: Liveness/Readiness Probes
+- **Auto-Scaling**: Horizontal Pod Autoscaler ready
+- **Security**: Non-root containers, Security Contexts
+- **Monitoring**: Prometheus metrics endpoints
+- **Logging**: Structured JSON logs
+- **CORS**: Cross-Origin Resource Sharing configured
+
+---
+
+## 🏗️ Architektur
+
 ```
-Internet → AWS NLB → NGINX Ingress → Backend Service → PostgreSQL
-                          ↓
-                    API Endpoints:
-                    - /health
-                    - /api/health  
-                    - /api/*
+Internet
+    ↓
+AWS Network Load Balancer (ELB)
+    ↓
+NGINX Ingress Controller
+    ↓
+┌─────────────────────────────────────────┐
+│           Kubernetes Cluster            │
+│  ┌─────────────┐  ┌──────────────────┐  │
+│  │  Frontend   │  │     Backend      │  │
+│  │   (React)   │  │   (Node.js)      │  │
+│  │             │  │                  │  │
+│  │ Port: 8080  │  │   Port: 3000     │  │
+│  └─────────────┘  └──────────────────┘  │
+│                           │              │
+│                           ↓              │
+│                  ┌─────────────────┐     │
+│                  │   PostgreSQL    │     │
+│                  │  (Port: 5432)   │     │
+│                  │   EBS Storage   │     │
+│                  └─────────────────┘     │
+└─────────────────────────────────────────┘
 ```
 
-### **Kosten:**
-- **~125 EUR/Monat** für Production-Setup
-- **~95 EUR/Monat** mit Spot Instances (weniger stabil)
+### **Routing:**
+- `/*` → Frontend (React App)
+- `/api/*` → Backend (Node.js API)
+- `/health` → Backend Health Check
+- `/metrics` → Backend Prometheus Metrics
+
+### **Networking:**
+- **VPC**: Dedicated VPC mit öffentlichen & privaten Subnets
+- **Security Groups**: Restrictive Firewall Rules
+- **Load Balancer**: AWS NLB mit SSL-Termination Support
+- **Ingress**: NGINX mit CORS & WebSocket Support
 
 ---
 
@@ -43,9 +84,9 @@ Internet → AWS NLB → NGINX Ingress → Backend Service → PostgreSQL
 
 ### **Software Requirements:**
 ```bash
-# AWS CLI v2+
+# AWS CLI v2.x
 aws --version
-# aws-cli/2.x.x Python/3.x.x
+# aws-cli/2.x.x
 
 # Terraform v1.0+
 terraform version
@@ -55,75 +96,84 @@ terraform version
 kubectl version --client
 # Client Version: v1.28.x
 
-# Git
-git --version
+# Docker Engine
+docker --version
+# Docker version 24.x.x
 ```
 
-### **AWS Setup:**
+### **AWS Permissions:**
+Ihr Account benötigt folgende AWS Services:
+- **EKS**: Cluster Management (`AmazonEKSClusterPolicy`)
+- **EC2**: VPC/Subnet/Security Groups (`AmazonVPCFullAccess`)
+- **IAM**: Rollen für EKS Nodes (`IAMFullAccess`)
+- **ECR**: Container Registry (`AmazonEC2ContainerRegistryFullAccess`)
+- **EBS**: Persistent Storage (`AmazonEBSCSIDriverPolicy`)
+
+### **AWS Configuration:**
 ```bash
-# AWS Credentials konfigurieren
+# Option 1: AWS Access Keys
 aws configure
-# ODER AWS SSO verwenden:
-aws sso login --profile your-profile
-```
 
-### **Permissions Required:**
-- **EKS**: `AmazonEKSClusterPolicy`, EKS Cluster Management
-- **EC2**: VPC/Subnet/Security Group Management
-- **IAM**: Role/Policy Management für EKS
-- **ECR**: Container Registry Access
+# Option 2: AWS SSO (empfohlen)
+aws sso login --profile your-profile
+export AWS_PROFILE=your-profile
+```
 
 ---
 
-## 🚀 Schritt-für-Schritt Deployment
+## 🚀 Deployment Guide
 
 ### **1. Repository Setup**
 
 ```bash
-# Repository klonen
 git clone <your-loop-it-repo>
 cd terraform-eks
 
-# Project Structure verificieren
+# Verzeichnisstruktur prüfen
 ls -la
 # Sollte enthalten:
-# - provider.tf
-# - variables.tf  
-# - main.tf
-# - k8s-apps.tf
-# - storage-classes.tf
-# - outputs.tf
+# ├── provider.tf          # AWS & Kubernetes Provider
+# ├── variables.tf         # Alle konfigurierbaren Variablen
+# ├── main.tf             # EKS Cluster & ECR Repositories
+# ├── k8s-apps.tf         # Kubernetes Applications
+# ├── storage-classes.tf  # EBS Storage Classes
+# ├── outputs.tf          # Cluster URLs & Connection Info
+# └── terraform.tfvars    # Umgebungsconfig (zu erstellen)
 ```
 
-### **2. Terraform Configuration**
+### **2. Konfiguration**
 
 #### **terraform.tfvars erstellen:**
-```bash
-cat > terraform.tfvars << 'EOF'
-# Project & AWS Basics
+```hcl
+# Project & AWS Configuration
 project_name          = "loop-it"
 environment           = "production"
 aws_region            = "eu-central-1"
 cluster_name          = "loop-it-cluster"
 
 # Node Configuration
-node_instance_types   = ["t3.small"]     # Kostengünstig für Start
-node_desired_capacity = 1
-node_max_capacity     = 1
+node_instance_types   = ["t3.small"]        # Kosteneffizient für Start
+node_desired_capacity = 1                   # Kann später skaliert werden
+node_max_capacity     = 3
 node_min_capacity     = 1
-enable_spot_instances = false             # Für Stabilität
+enable_spot_instances = false               # Für Produktionsstabilität
 
-# Application Settings
+# Application Settings  
 deploy_applications   = true
 backend_replicas      = 1
-postgres_storage_size = "2Gi"
-enable_monitoring     = false
-EOF
+frontend_replicas     = 1
+postgres_storage_size = "2Gi"              # EBS GP3 Volume
+
+# Cost Optimization
+cost_optimization = {
+  single_nat_gateway = true                # Reduziert NAT Gateway Kosten
+  gp3_storage       = true                 # Günstigerer Storage
+  spot_instances    = false                # Spot = billiger aber instabil
+}
 ```
 
-#### **secrets.tfvars erstellen (NICHT in Git!):**
-```bash
-cat > secrets.tfvars << 'EOF'
+#### **secrets.tfvars erstellen (🚨 NICHT in Git committen!):**
+```hcl
 # Database Credentials
 postgres_user     = "loop_user"
 postgres_password = "SecureLoopItPassword2025!"
@@ -132,61 +182,62 @@ postgres_password = "SecureLoopItPassword2025!"
 jwt_secret         = "your-super-secure-jwt-secret-key-32chars-minimum-length"
 jwt_refresh_secret = "your-super-secure-refresh-secret-key-32chars-minimum-length"
 
-# Database URL (für Drizzle ORM)
+# Database Connection für Backend
 database_url = "postgresql://loop_user:SecureLoopItPassword2025!@postgres:5432/loop-it"
-EOF
+```
 
-# WICHTIG: Aus Git ausschließen
+```bash
+# WICHTIG: Secrets aus Git ausschließen
 echo "secrets.tfvars" >> .gitignore
 ```
 
 ### **3. Infrastructure Deployment**
 
-#### **Phase 1: Nur Infrastructure (ohne Apps):**
+#### **Phase 1: EKS Cluster erstellen**
 ```bash
 # Terraform initialisieren
 terraform init
 
-# Plan prüfen
+# Deployment Plan prüfen
 terraform plan -var="deploy_applications=false" -var-file="secrets.tfvars"
 
-# Infrastructure deployen
+# Infrastructure deployen (ohne Apps)
 terraform apply -var="deploy_applications=false" -var-file="secrets.tfvars"
-# Eingabe: yes
+# Input: yes
+
+# Output sollte zeigen:
+# ✅ EKS Cluster: loop-it-cluster
+# ✅ VPC & Subnets
+# ✅ ECR Repositories
+# ✅ IAM Roles
 ```
 
-#### **Phase 2: Kubectl Access Setup**
-
+#### **Phase 2: Kubernetes Access konfigurieren**
 ```bash
-# Kubectl für EKS konfigurieren
+# kubectl für EKS konfigurieren
 aws eks update-kubeconfig --region eu-central-1 --name loop-it-cluster
 
-# Cluster Status testen
+# Cluster Test
 kubectl get nodes
+# Expected Output:
 # NAME                                          STATUS   ROLES    AGE   VERSION
 # ip-10-0-x-xxx.eu-central-1.compute.internal   Ready    <none>   5m    v1.33.0-eks-xxxxx
 
-# WICHTIGER SCHRITT: EKS Access Entry für SSO User
-# Falls du AWS SSO verwendest, über AWS Console:
-# 1. Gehe zu EKS Console → loop-it-cluster → Access
-# 2. "Create access entry" 
-# 3. Principal: Deine aktuelle SSO Session
-# 4. Policy: AmazonEKSClusterAdminPolicy
-# 5. Access scope: Cluster
-
-# Test ob kubectl funktioniert
-kubectl get namespaces
+# 🚨 WICHTIG für AWS SSO User:
+# Falls kubectl Permission Fehler, in AWS Console:
+# EKS → loop-it-cluster → Access → Create Access Entry
+# Principal: Dein SSO User/Role
+# Policy: AmazonEKSClusterAdminPolicy
 ```
 
-#### **Phase 3: NGINX Ingress Installation**
-
+#### **Phase 3: NGINX Ingress installieren**
 ```bash
-# NGINX Ingress Controller installieren
+# NGINX Ingress Controller deployen
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.13.0/deploy/static/provider/aws/deploy.yaml
 
-# Status überwachen
+# Installation überwachen
 kubectl get pods -n ingress-nginx -w
-# Warten bis alle Pods "Running"
+# Warten bis alle Pods "Running" sind
 
 # Load Balancer Ready Check
 kubectl wait --namespace ingress-nginx \
@@ -194,15 +245,42 @@ kubectl wait --namespace ingress-nginx \
   --selector=app.kubernetes.io/component=controller \
   --timeout=300s
 
-# Load Balancer URL abrufen
+# External URL abrufen (dauert 2-3 Minuten)
 kubectl get svc -n ingress-nginx ingress-nginx-controller
-# EXTERNAL-IP sollte AWS ELB URL zeigen
+# EXTERNAL-IP sollte AWS ELB URL anzeigen
 ```
 
-#### **Phase 4: Applications Deployment**
+### **4. Container Images bauen & pushen**
 
 ```bash
-# Applications aktivieren
+# ECR URLs aus Terraform abrufen
+BACKEND_ECR_URL=$(terraform output -raw ecr_backend_repository_url)
+FRONTEND_ECR_URL=$(terraform output -raw ecr_frontend_repository_url)
+AWS_REGION=$(terraform output -raw aws_region)
+
+# ECR Login
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $(echo $BACKEND_ECR_URL | cut -d'/' -f1)
+
+# Backend Image bauen & pushen
+cd ../backend
+docker build -t $BACKEND_ECR_URL:latest .
+docker push $BACKEND_ECR_URL:latest
+
+# Frontend Image bauen & pushen  
+cd ../frontend
+# LoadBalancer URL für Frontend API Configuration
+LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+docker build --build-arg VITE_API_URL=http://$LB_URL -t $FRONTEND_ECR_URL:latest .
+docker push $FRONTEND_ECR_URL:latest
+```
+
+### **5. Applications deployen**
+
+```bash
+cd ../terraform-eks
+
+# Kubernetes Applications aktivieren
 terraform apply -var="deploy_applications=true" -var-file="secrets.tfvars"
 
 # Deployment Status überwachen
@@ -212,167 +290,194 @@ kubectl get pods -n loop-it -w
 # NAME                               READY   STATUS      RESTARTS   AGE
 # backend-xxx-xxx                    1/1     Running     0          2m
 # db-migration-xxx                   0/1     Completed   0          5m  
+# frontend-xxx-xxx                   1/1     Running     0          2m
 # postgres-xxx-xxx                   1/1     Running     0          5m
 ```
 
-### **4. Deployment Verification**
+### **6. Deployment Verification**
 
 ```bash
 # Load Balancer URL ermitteln
 LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-echo "Load Balancer: http://$LB_URL"
+echo "🌐 Loop-It App: http://$LB_URL"
 
-# Health Check Tests
-curl -v "http://$LB_URL/health"
-curl -v "http://$LB_URL/api/health"
+# Health Checks
+curl "http://$LB_URL/api/health"
+# Expected: {"status":"OK","timestamp":"2025-07-20T...","env":{"hasJwtSecret":true,"hasDbUrl":true,"port":"3000"}}
 
-# Expected Response:
-# {
-#   "status": "OK",
-#   "timestamp": "2025-07-19T18:05:37.258Z",
-#   "env": {
-#     "hasJwtSecret": true,
-#     "hasDbUrl": true, 
-#     "port": "3000"
-#   }
-# }
+# Frontend Test
+curl -I "http://$LB_URL/"
+# Expected: HTTP/1.1 200 OK
 
-# Alle Services Status
-kubectl get all -n loop-it
-kubectl get ingress -n loop-it
+# Backend API Test
+curl -X POST "http://$LB_URL/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"test123","username":"testuser","firstName":"Test","lastName":"User"}'
+# Expected: {"success":true,"message":"User created successfully",...}
+```
+
+---
+
+## ⚙️ Konfiguration
+
+### **Wichtige Terraform Variables:**
+
+| Variable | Beschreibung | Default | Empfehlung |
+|----------|-------------|---------|------------|
+| `node_instance_types` | EC2 Instance Typen | `["t3.small"]` | t3.medium für Production |
+| `backend_replicas` | Backend Pod Anzahl | `1` | 2-3 für High Availability |
+| `postgres_storage_size` | Database Storage | `"2Gi"` | 5-10Gi für Production |
+| `enable_spot_instances` | Spot Instances nutzen | `false` | true für Development |
+| `deploy_applications` | K8s Apps deployen | `true` | false für Infrastructure-only |
+
+### **Kubernetes Resources:**
+
+#### **Backend Configuration:**
+- **Image**: Node.js 18 Alpine
+- **Resources**: 100m CPU, 128Mi RAM (Request) / 300m CPU, 256Mi RAM (Limit)
+- **Health Checks**: `/api/health` endpoint
+- **Environment**: Production mit JWT Authentication
+
+#### **Frontend Configuration:**
+- **Image**: NGINX Alpine mit React Build
+- **Resources**: 25m CPU, 32Mi RAM (Request) / 100m CPU, 64Mi RAM (Limit)
+- **Port**: 8080 (non-root nginx)
+- **Build Args**: `VITE_API_URL` für Backend Connection
+
+#### **PostgreSQL Configuration:**
+- **Image**: PostgreSQL 17 Alpine
+- **Resources**: 100m CPU, 128Mi RAM (Request) / 200m CPU, 256Mi RAM (Limit)
+- **Storage**: EBS GP3 mit 2Gi (erweiterbar)
+- **Persistence**: Kubernetes PVC mit ReadWriteOnce
+
+### **Ingress Configuration:**
+```yaml
+# Routing Rules
+paths:
+  - path: "/api"          # Backend API
+    pathType: "Prefix"
+    service: backend:3000
+  
+  - path: "/health"       # Health Endpoint
+    pathType: "Exact"
+    service: backend:3000
+    
+  - path: "/metrics"      # Prometheus Metrics
+    pathType: "Exact"  
+    service: backend:3000
+    
+  - path: "/"            # Frontend
+    pathType: "Prefix"
+    service: frontend:80
 ```
 
 ---
 
 ## 🔧 Troubleshooting
 
-### **Häufige Probleme & Lösungen**
+### **Häufige Probleme & Lösungen:**
 
-#### **1. kubectl Authentication Fehler**
+#### **1. kubectl Permission Denied**
 ```bash
 # Problem: "server has asked for the client to provide credentials"
 
-# Lösung für AWS SSO User:
-# 1. AWS Console → EKS → loop-it-cluster → Access
-# 2. Create Access Entry für deine SSO Role
+# Lösung für AWS SSO:
+# 1. AWS Console → EKS → loop-it-cluster → Access → Create Access Entry
+# 2. Principal: Deine SSO Identity  
 # 3. Policy: AmazonEKSClusterAdminPolicy
 
-# Kubeconfig neu generieren:
-rm -f ~/.kube/config
+# kubeconfig neu generieren:
 aws eks update-kubeconfig --region eu-central-1 --name loop-it-cluster
 ```
 
-#### **2. PVC Timeout Errors**
+#### **2. Frontend zeigt "Verbindung zum Server fehlgeschlagen"**
 ```bash
-# Problem: "client rate limiter Wait returned an error: context deadline exceeded"
+# Problem: Frontend kann Backend nicht erreichen
 
-# Lösung: wait_until_bound = false in k8s-apps.tf
-resource "kubernetes_persistent_volume_claim" "postgres_pvc" {
-  # ... configuration
-  wait_until_bound = false  # ← WICHTIG!
-}
+# Debug:
+kubectl logs -n loop-it -l app=frontend
+kubectl logs -n loop-it -l app=backend
 
-# State bereinigen:
-terraform state rm 'kubernetes_persistent_volume_claim.postgres_pvc[0]'
-terraform apply -var-file="secrets.tfvars"
+# Lösung: Frontend mit korrekter API URL neu bauen
+LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+cd ../frontend
+docker build --build-arg VITE_API_URL=http://$LB_URL -t $FRONTEND_ECR_URL:latest .
+docker push $FRONTEND_ECR_URL:latest
+kubectl rollout restart deployment/frontend -n loop-it
 ```
 
 #### **3. Backend CrashLoopBackOff**
 ```bash
-# Problem: Backend startet nicht wegen DATABASE_URL
+# Problem: Backend startet nicht
 
 # Debug:
-kubectl logs -n loop-it -l app=backend --tail=20
 kubectl describe pod -n loop-it -l app=backend
+kubectl logs -n loop-it -l app=backend --tail=50
 
-# Lösung: Ensure DATABASE_URL in secrets
-# secrets.tfvars muss enthalten:
-database_url = "postgresql://loop_user:SecureLoopItPassword2025!@postgres:5432/loop-it"
+# Häufige Ursachen:
+# - DATABASE_URL falsch konfiguriert
+# - JWT_SECRET fehlt oder zu kurz
+# - PostgreSQL noch nicht ready
 
-# Secret neu erstellen:
+# Lösung: Secrets prüfen und neu erstellen
+kubectl get secret loopit-secrets -n loop-it -o yaml
 kubectl delete secret loopit-secrets -n loop-it
 terraform apply -var-file="secrets.tfvars"
 ```
 
-#### **4. Memory Issues auf t3.small**
+#### **4. PostgreSQL Timeout beim Start**
 ```bash
-# Problem: Pod evictions wegen Memory
+# Problem: wait_until_bound = true verursacht Timeouts
 
-# Sofort-Fix: System Pods reduzieren
-kubectl scale deployment coredns -n kube-system --replicas=1
-
-# Langfristig: Node upgraden
-terraform apply -var="node_instance_types=[\"t3.medium\"]" -var-file="secrets.tfvars"
-```
-
-#### **5. IAM Policy Fehler**
-```bash
-# Problem: "Policy arn:aws:iam::aws:policy/service-role/Amazon_EBS_CSI_DriverPolicy does not exist"
-
-# Lösung: Korrekte Policy ARN in main.tf
-resource "aws_iam_role_policy_attachment" "node_group_ebs_csi_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"  # ← Ohne "_"
-  role       = module.eks.eks_managed_node_groups.main.iam_role_name
+# Lösung in k8s-apps.tf:
+resource "kubernetes_persistent_volume_claim" "postgres_pvc" {
+  wait_until_bound = false  # ← WICHTIG!
 }
+
+# State bereinigen falls nötig:
+terraform state rm 'kubernetes_persistent_volume_claim.postgres_pvc[0]'
+terraform apply -var-file="secrets.tfvars"
 ```
 
-### **Deployment Validation Checklist**
+#### **5. Ingress Controller hängt in Pending**
+```bash
+# Problem: LoadBalancer wird nicht erstellt
+
+# Debug:
+kubectl describe svc -n ingress-nginx ingress-nginx-controller
+kubectl get events -n ingress-nginx
+
+# Lösung: AWS Load Balancer Controller installieren falls nötig
+kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master"
+```
+
+### **Debug Commands:**
 
 ```bash
-# ✅ Cluster Ready
-kubectl get nodes
-# Status: Ready
+# Cluster Gesamtstatus
+kubectl get all -A
 
-# ✅ All Pods Running  
-kubectl get pods -A
-# Alle Pods: Running (außer Completed Jobs)
+# Loop-It spezifische Resources
+kubectl get all,ingress,secrets -n loop-it
 
-# ✅ Ingress Ready
-kubectl get svc -n ingress-nginx
-# EXTERNAL-IP: AWS ELB URL verfügbar
+# Pod Logs
+kubectl logs -n loop-it -l app=backend -f
+kubectl logs -n loop-it -l app=frontend -f  
+kubectl logs -n loop-it -l app=postgres -f
 
-# ✅ Application Health
-curl -I http://$LB_URL/health
-# HTTP/1.1 200 OK
+# Resource Usage
+kubectl top pods -n loop-it
+kubectl top nodes
 
-# ✅ Database Connected
-kubectl exec -n loop-it deployment/postgres -- psql -U loop_user -d loop-it -c "SELECT version();"
-# PostgreSQL 17.x on x86_64-pc-linux-musl
-
-# ✅ Secrets Loaded
-kubectl get secrets -n loop-it
-# loopit-secrets: 5 keys (postgres-user, postgres-password, jwt-secret, jwt-refresh-secret, database-url)
+# Cluster Events
+kubectl get events --sort-by='.lastTimestamp' | tail -20
 ```
 
 ---
 
-## 📊 Betrieb & Monitoring
+## 🔄 Betrieb & Wartung
 
-### **Daily Operations**
-
-#### **Logs Monitoring:**
-```bash
-# Backend Logs
-kubectl logs -n loop-it -l app=backend -f
-
-# Database Logs  
-kubectl logs -n loop-it -l app=postgres -f
-
-# Ingress Logs
-kubectl logs -n ingress-nginx -l app.kubernetes.io/component=controller -f
-```
-
-#### **Resource Monitoring:**
-```bash
-# Pod Resource Usage
-kubectl top pods -n loop-it
-
-# Node Resource Usage
-kubectl top nodes
-
-# Memory/CPU Pressure Check
-kubectl describe nodes
-```
+### **Daily Operations:**
 
 #### **Health Monitoring:**
 ```bash
@@ -380,305 +485,208 @@ kubectl describe nodes
 #!/bin/bash
 LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
+echo "🔍 Loop-It Health Check - $(date)"
+
 # API Health
-API_STATUS=$(curl -s "http://$LB_URL/api/health" | jq -r '.status')
-if [ "$API_STATUS" != "OK" ]; then
+API_STATUS=$(curl -s "http://$LB_URL/api/health" | jq -r '.status' 2>/dev/null)
+if [ "$API_STATUS" = "OK" ]; then
+  echo "✅ API Status: $API_STATUS"
+else
   echo "🚨 API Health Failed: $API_STATUS"
   exit 1
 fi
 
-# Database Health
-DB_STATUS=$(kubectl exec -n loop-it deployment/postgres -- pg_isready -U loop_user -d loop-it)
-if [[ $DB_STATUS != *"accepting connections"* ]]; then
-  echo "🚨 Database Health Failed: $DB_STATUS"
+# Database Health  
+kubectl exec -n loop-it deployment/postgres -- pg_isready -U loop_user -d loop-it >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  echo "✅ Database: Ready"
+else
+  echo "🚨 Database: Not Ready"
   exit 1
 fi
 
-echo "✅ All Systems Healthy"
+# Pod Status
+UNHEALTHY_PODS=$(kubectl get pods -n loop-it --no-headers | grep -v -E "(Running|Completed)" | wc -l)
+if [ $UNHEALTHY_PODS -eq 0 ]; then
+  echo "✅ All Pods: Healthy"
+else
+  echo "🚨 Unhealthy Pods: $UNHEALTHY_PODS"
+  kubectl get pods -n loop-it | grep -v -E "(Running|Completed)"
+  exit 1
+fi
+
+echo "✅ All Systems Operational"
 ```
 
-### **Backup Strategy**
-
-#### **Database Backup:**
+#### **Log Management:**
 ```bash
-# Manual Database Backup
+# Application Logs
+kubectl logs -n loop-it -l app=backend --tail=100 -f
+kubectl logs -n loop-it -l app=frontend --tail=100 -f
+
+# System Logs
+kubectl logs -n kube-system -l k8s-app=aws-node --tail=50
+kubectl logs -n ingress-nginx -l app.kubernetes.io/component=controller --tail=50
+```
+
+#### **Backup Strategy:**
+```bash
+# Database Backup
 kubectl exec -n loop-it deployment/postgres -- pg_dump -U loop_user loop-it > backup-$(date +%Y%m%d).sql
 
-# EBS Snapshot Backup (via AWS CLI)
-VOLUME_ID=$(kubectl get pv -o jsonpath='{.items[?(@.spec.claimRef.name=="postgres-pvc")].spec.csi.volumeHandle}')
-aws ec2 create-snapshot --volume-id $VOLUME_ID --description "Loop-It DB Backup $(date)"
-```
-
-#### **Configuration Backup:**
-```bash
-# Kubernetes Resources Backup
+# Kubernetes Configuration Backup
 kubectl get all,ingress,secrets,configmaps -n loop-it -o yaml > k8s-backup-$(date +%Y%m%d).yaml
 
 # Terraform State Backup
 cp terraform.tfstate terraform.tfstate.backup-$(date +%Y%m%d)
 ```
 
-### **Scaling Operations**
+### **Scaling Operations:**
 
-#### **Horizontal Scaling:**
+#### **Horizontales Scaling:**
 ```bash
 # Backend Replicas erhöhen
 kubectl scale deployment backend -n loop-it --replicas=3
 
-# Oder via Terraform
+# Via Terraform:
 terraform apply -var="backend_replicas=3" -var-file="secrets.tfvars"
 ```
 
-#### **Vertical Scaling (Node Upgrade):**
+#### **Vertikales Scaling:**
 ```bash
-# Node Type upgraden für mehr Resources
+# Node Instance Type upgraden
 terraform apply -var="node_instance_types=[\"t3.medium\"]" -var-file="secrets.tfvars"
 
 # Database Storage erweitern
 terraform apply -var="postgres_storage_size=5Gi" -var-file="secrets.tfvars"
 ```
 
----
+### **Updates & Deployments:**
 
-## 🚀 Nächste Schritte
-
-### **Immediate Enhancements (1-2 Wochen)**
-
-#### **1. Frontend Deployment:**
+#### **Application Updates:**
 ```bash
-# Frontend Container zu k8s-apps.tf hinzufügen
-resource "kubernetes_deployment" "frontend" {
-  # ... configuration
-}
+# Neue Images bauen & pushen
+cd ../backend
+docker build -t $BACKEND_ECR_URL:$(git rev-parse --short HEAD) .
+docker push $BACKEND_ECR_URL:$(git rev-parse --short HEAD)
 
-# Ingress erweitern für Frontend
-path {
-  path      = "/"
-  path_type = "Prefix"
-  backend {
-    service {
-      name = "frontend"
-      port {
-        number = 80
-      }
-    }
-  }
-}
+# Rolling Update
+kubectl set image deployment/backend backend=$BACKEND_ECR_URL:$(git rev-parse --short HEAD) -n loop-it
+
+# Rollback falls nötig
+kubectl rollout undo deployment/backend -n loop-it
 ```
 
-#### **2. SSL/TLS Certificates:**
+#### **Infrastructure Updates:**
 ```bash
-# cert-manager installieren
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+# Terraform Plan vor Updates
+terraform plan -var-file="secrets.tfvars"
 
-# Let's Encrypt ClusterIssuer
-kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: letsencrypt-prod
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: your-email@example.com
-    privateKeySecretRef:
-      name: letsencrypt-prod
-    solvers:
-    - http01:
-        ingress:
-          class: nginx
-EOF
+# Staged Updates
+terraform apply -target=module.eks -var-file="secrets.tfvars"
+terraform apply -var-file="secrets.tfvars"
 ```
-
-#### **3. Domain Setup:**
-```bash
-# Route 53 Domain für Loop-It
-aws route53 create-hosted-zone --name loop-it.com --caller-reference $(date +%s)
-
-# DNS Record für Load Balancer
-aws route53 change-resource-record-sets --hosted-zone-id Z1234567890 --change-batch '{
-  "Changes": [{
-    "Action": "CREATE",
-    "ResourceRecordSet": {
-      "Name": "app.loop-it.com",
-      "Type": "CNAME", 
-      "TTL": 300,
-      "ResourceRecords": [{"Value": "'$LB_URL'"}]
-    }
-  }]
-}'
-```
-
-### **Medium Term (1-2 Monate)**
-
-#### **4. Monitoring Stack:**
-```bash
-# Prometheus + Grafana via Helm
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
-
-# Access Grafana
-kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
-# http://localhost:3000 (admin/prom-operator)
-```
-
-#### **5. CI/CD Pipeline:**
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy to EKS
-on:
-  push:
-    branches: [main]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Configure AWS
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-central-1
-    
-    - name: Build & Push to ECR
-      run: |
-        aws ecr get-login-password | docker login --username AWS --password-stdin 390402575145.dkr.ecr.eu-central-1.amazonaws.com
-        docker build -t backend ./backend
-        docker tag backend:latest 390402575145.dkr.ecr.eu-central-1.amazonaws.com/loop-it/backend:latest
-        docker push 390402575145.dkr.ecr.eu-central-1.amazonaws.com/loop-it/backend:latest
-    
-    - name: Deploy to EKS
-      run: |
-        aws eks update-kubeconfig --name loop-it-cluster
-        kubectl rollout restart deployment/backend -n loop-it
-```
-
-#### **6. Production Database (RDS):**
-```hcl
-# RDS PostgreSQL für Production
-resource "aws_db_instance" "postgres" {
-  identifier     = "loop-it-postgres"
-  engine         = "postgres"
-  engine_version = "17.2"
-  instance_class = "db.t3.micro"
-  allocated_storage = 20
-  
-  db_name  = "loopit"
-  username = "loop_user"
-  password = var.postgres_password
-  
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  db_subnet_group_name   = aws_db_subnet_group.postgres.name
-  
-  backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
-  
-  skip_final_snapshot = true
-}
-```
-
-### **Long Term (3-6 Monate)**
-
-#### **7. High Availability:**
-- Multi-AZ EKS Cluster
-- RDS Multi-AZ
-- Auto-Scaling Groups
-- Cross-Region Backup
-
-#### **8. Advanced Features:**
-- ElasticSearch/OpenSearch für Logs
-- Redis für Caching
-- S3 für File Uploads
-- SES für Email Service
-- Cognito für User Management
-
-#### **9. Cost Optimization:**
-- Spot Instances für Development
-- Reserved Instances für Production
-- S3 Lifecycle Policies
-- CloudWatch Cost Monitoring
 
 ---
 
-## 💰 Kostenübersicht
+## 💰 Kosten
 
 ### **Aktuelle Konfiguration (~125 EUR/Monat):**
-- **EKS Cluster**: ~73 EUR/Monat
-- **EC2 t3.small**: ~40 EUR/Monat (On-Demand)
-- **EBS GP3 2GB**: ~2 EUR/Monat
-- **NAT Gateway**: ~8 EUR/Monat
-- **Load Balancer**: ~2 EUR/Monat
 
-### **Optimierungen:**
-- **Spot Instances**: -70% auf EC2 Kosten
-- **t3.medium**: +100% EC2 Kosten, aber bessere Performance
-- **RDS**: +30-50 EUR/Monat, aber managed Service
+| Service | Kosten/Monat | Beschreibung |
+|---------|--------------|--------------|
+| **EKS Cluster** | ~73 EUR | Kubernetes Control Plane |
+| **EC2 t3.small** | ~40 EUR | Worker Node (On-Demand) |
+| **EBS GP3 2GB** | ~2 EUR | PostgreSQL Storage |
+| **NAT Gateway** | ~8 EUR | Outbound Internet (single AZ) |
+| **Network Load Balancer** | ~2 EUR | Ingress Traffic |
+| **Total** | **~125 EUR** | |
 
-### **Production Estimate (~200-300 EUR/Monat):**
-- EKS Cluster + t3.medium Nodes
-- RDS PostgreSQL (Multi-AZ)
-- CloudWatch + ALB
-- S3 + CloudFront für Static Assets
+### **Optimierungsoptionen:**
+
+#### **Development Environment (60-80 EUR/Monat):**
+```hcl
+# terraform.tfvars für Development
+enable_spot_instances = true           # -70% EC2 Kosten
+node_instance_types  = ["t3.micro"]   # Kleinere Instances
+postgres_storage_size = "1Gi"         # Weniger Storage
+```
+
+#### **Production Environment (200-300 EUR/Monat):**
+```hcl
+# terraform.tfvars für Production
+node_instance_types   = ["t3.medium"]  # Mehr Performance
+node_desired_capacity = 2               # High Availability
+backend_replicas      = 3               # Load Distribution
+postgres_storage_size = "10Gi"         # Mehr Database Storage
+
+# + RDS PostgreSQL (managed) = +50 EUR
+# + CloudWatch Logs/Metrics = +10 EUR  
+# + S3 Backup Storage = +5 EUR
+```
+
+### **Cost Monitoring:**
+```bash
+# AWS Cost Explorer via CLI
+aws ce get-cost-and-usage \
+  --time-period Start=2025-07-01,End=2025-07-31 \
+  --granularity MONTHLY \
+  --metrics BlendedCost \
+  --group-by Type=DIMENSION,Key=SERVICE
+
+# Resource Usage Monitoring
+kubectl top nodes
+kubectl top pods -A --sort-by=memory
+```
 
 ---
 
-## 📞 Support & Community
+## 📚 Referenzen & Links
 
-### **Logs & Debugging:**
-```bash
-# Comprehensive Debug Script
-#!/bin/bash
-echo "=== Loop-It EKS Debug Report ==="
-echo "Date: $(date)"
-echo
+### **Terraform Modules:**
+- [AWS EKS Module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest)
+- [AWS VPC Module](https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest)
 
-echo "=== Cluster Status ==="
-kubectl get nodes -o wide
+### **Kubernetes Documentation:**
+- [EKS User Guide](https://docs.aws.amazon.com/eks/latest/userguide/)
+- [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/)
+- [Kubernetes Best Practices](https://kubernetes.io/docs/concepts/configuration/overview/)
 
-echo -e "\n=== Pod Status ==="
-kubectl get pods -A
+### **Monitoring & Observability:**
+- [Prometheus Kubernetes](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config)
+- [AWS CloudWatch Container Insights](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Container-Insights-setup-EKS.html)
 
-echo -e "\n=== Service Status ==="
-kubectl get svc -A
+### **Security & Best Practices:**
+- [EKS Security Best Practices](https://aws.github.io/aws-eks-best-practices/)
+- [Kubernetes Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 
-echo -e "\n=== Recent Events ==="
-kubectl get events --sort-by='.lastTimestamp' | tail -10
+---
 
-echo -e "\n=== Backend Logs (Last 20 lines) ==="
-kubectl logs -n loop-it -l app=backend --tail=20
+## 🆘 Support
 
-echo -e "\n=== Database Status ==="
-kubectl exec -n loop-it deployment/postgres -- pg_isready -U loop_user -d loop-it
+### **Bei Problemen:**
 
-echo -e "\n=== API Health Check ==="
-LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-curl -s "http://$LB_URL/api/health" | jq .
-```
+1. **Debug Commands ausführen** (siehe Troubleshooting)
+2. **Logs sammeln** mit den bereitgestellten Scripts
+3. **AWS Support** für Infrastructure Issues
+4. **Kubernetes Community** für App-spezifische Probleme
 
 ### **Useful Commands Cheatsheet:**
 ```bash
-# Quick Status Check
+# Quick Aliases
 alias k="kubectl"
-alias kgp="kubectl get pods"
-alias kgs="kubectl get svc" 
-alias kgi="kubectl get ingress"
-alias kd="kubectl describe"
-alias kl="kubectl logs"
+alias kgp="kubectl get pods -n loop-it"
+alias kgs="kubectl get svc -n loop-it"
+alias kl="kubectl logs -n loop-it"
 
 # Loop-It Specific
-alias loop-pods="kubectl get pods -n loop-it"
-alias loop-logs="kubectl logs -n loop-it -l app=backend -f"
+alias loop-status="kubectl get all -n loop-it"
 alias loop-health="curl -s http://\$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/api/health | jq ."
+alias loop-url="echo http://\$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 ```
 
 ---
 
 
 
-**Nächster Schritt: [Frontend hinzufügen](#1-frontend-deployment) oder [SSL Setup](#2-ssltls-certificates)**
-
----
-
-*Last updated: July 19, 2025*  
+*Erstellt: Juli 2025
