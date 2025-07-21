@@ -1,0 +1,88 @@
+{{- if .Values.podDisruptionBudget.backend.enabled }}
+# Backend Pod Disruption Budget
+apiVersion: {{ include "loop-it.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "loop-it.fullname" . }}-backend-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.backend.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.podDisruptionBudget.backend.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.backend.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.backend.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.backend.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "loop-it.backend.selectorLabels" . | nindent 6 }}
+  {{- if .Capabilities.APIVersions.Has "policy/v1" }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  {{- end }}
+
+{{- end }}
+
+{{- if .Values.podDisruptionBudget.frontend.enabled }}
+---
+# Frontend Pod Disruption Budget
+apiVersion: {{ include "loop-it.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "loop-it.fullname" . }}-frontend-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.frontend.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.podDisruptionBudget.frontend.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.frontend.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.frontend.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.frontend.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "loop-it.frontend.selectorLabels" . | nindent 6 }}
+  {{- if .Capabilities.APIVersions.Has "policy/v1" }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  {{- end }}
+
+{{- end }}
+
+{{- if and .Values.postgresql.enabled .Values.podDisruptionBudget.postgresql.enabled }}
+---
+# PostgreSQL Pod Disruption Budget
+apiVersion: {{ include "loop-it.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "loop-it.fullname" . }}-postgresql-pdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.postgresql.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.podDisruptionBudget.postgresql.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.postgresql.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.postgresql.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.postgresql.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "loop-it.postgresql.selectorLabels" . | nindent 6 }}
+  {{- if .Capabilities.APIVersions.Has "policy/v1" }}
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+  {{- end }}
+
+{{- end }}

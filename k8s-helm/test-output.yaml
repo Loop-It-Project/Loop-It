@@ -1,0 +1,1624 @@
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: loop-it-ingress-nginx
+  namespace: default
+automountServiceAccountToken: true
+---
+# Source: loop-it/charts/postgresql/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: loop-it-postgresql
+  namespace: "default"
+  labels:
+    app.kubernetes.io/name: postgresql
+    helm.sh/chart: postgresql-12.0.1
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+data:
+  postgres-password: "NlVXVFdSVnVmTg=="
+  password: "bG9jYWxkZXYxMjM="
+  # We don't auto-generate LDAP password when it's not provided as we do for other passwords
+---
+# Source: loop-it/templates/secrets.yaml
+# PostgreSQL Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: loop-it-postgresql
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: database
+type: Opaque
+data:
+  postgres-user: bG9vcF91c2Vy
+  postgres-password: bG9jYWxkZXYxMjM=
+---
+# Source: loop-it/templates/secrets.yaml
+# JWT Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: loop-it-jwt
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: auth
+type: Opaque
+data:
+  jwt-secret: YlIwbkhxb3F3WURMbmZQTkRxTHZZbDh0cWdsaFZsdXFiRklHTmswcDdYWVk0ZU9LajZ2WTM0Y1E4TklsZ0dhVg==
+  jwt-refresh-secret: RzV4NlBUaXVIaGRqeEM5U0ZNM2pvU0lBSmFvYjhpY04wV0kwdENYem5qTlVmRlFvczF5VVp2Wmplbkp3NlFBbA==
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: loop-it-ingress-nginx-controller
+  namespace: default
+data:
+---
+# Source: loop-it/templates/postgresql/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loop-it-postgresql-pvc
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: postgresql
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+---
+# Source: loop-it/charts/ingress-nginx/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+  name: loop-it-ingress-nginx
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - nodes
+      - pods
+      - secrets
+      - namespaces
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses/status
+    verbs:
+      - update
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - list
+      - watch
+      - get
+---
+# Source: loop-it/charts/ingress-nginx/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+  name: loop-it-ingress-nginx
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: loop-it-ingress-nginx
+subjects:
+  - kind: ServiceAccount
+    name: loop-it-ingress-nginx
+    namespace: default
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: loop-it-ingress-nginx
+  namespace: default
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - pods
+      - secrets
+      - endpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  # Omit Ingress status permissions if `--update-status` is disabled.
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses/status
+    verbs:
+      - update
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    resourceNames:
+      - loop-it-ingress-nginx-leader
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - list
+      - watch
+      - get
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: loop-it-ingress-nginx
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: loop-it-ingress-nginx
+subjects:
+  - kind: ServiceAccount
+    name: loop-it-ingress-nginx
+    namespace: default
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-service-webhook.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: loop-it-ingress-nginx-controller-admission
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+    - name: https-webhook
+      port: 443
+      targetPort: webhook
+      appProtocol: https
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: controller
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: loop-it-ingress-nginx-controller
+  namespace: default
+spec:
+  type: LoadBalancer
+  ipFamilyPolicy: SingleStack
+  ipFamilies: 
+    - IPv4
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+      appProtocol: http
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+      appProtocol: https
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: controller
+---
+# Source: loop-it/charts/postgresql/templates/primary/svc-headless.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loop-it-postgresql-hl
+  namespace: "default"
+  labels:
+    app.kubernetes.io/name: postgresql
+    helm.sh/chart: postgresql-12.0.1
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: primary
+    # Use this annotation in addition to the actual publishNotReadyAddresses
+    # field below because the annotation will stop being respected soon but the
+    # field is broken in some versions of Kubernetes:
+    # https://github.com/kubernetes/kubernetes/issues/58662
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  type: ClusterIP
+  clusterIP: None
+  # We want all pods in the StatefulSet to have their addresses published for
+  # the sake of the other Postgresql pods even before they're ready, since they
+  # have to be able to talk to each other in order to become ready.
+  publishNotReadyAddresses: true
+  ports:
+    - name: tcp-postgresql
+      port: 5432
+      targetPort: tcp-postgresql
+  selector:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: primary
+---
+# Source: loop-it/charts/postgresql/templates/primary/svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loop-it-postgresql
+  namespace: "default"
+  labels:
+    app.kubernetes.io/name: postgresql
+    helm.sh/chart: postgresql-12.0.1
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: primary
+  annotations:
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: tcp-postgresql
+      port: 5432
+      targetPort: tcp-postgresql
+      nodePort: null
+  selector:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: primary
+---
+# Source: loop-it/templates/backend/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loop-it-backend
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: backend
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "3000"
+    prometheus.io/scrape: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: backend
+---
+# Source: loop-it/templates/frontend/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loop-it-frontend
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: frontend
+---
+# Source: loop-it/templates/postgresql/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loop-it-postgresql
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: postgresql
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgresql
+  selector:
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/component: postgresql
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: loop-it-ingress-nginx-controller
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+      app.kubernetes.io/instance: loop-it
+      app.kubernetes.io/component: controller
+  replicas: 1
+  revisionHistoryLimit: 10
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: ingress-nginx-4.13.0
+        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/version: "1.13.0"
+        app.kubernetes.io/part-of: ingress-nginx
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: controller
+    spec:
+      dnsPolicy: ClusterFirst
+      containers:
+        - name: controller
+          image: registry.k8s.io/ingress-nginx/controller:v1.13.0@sha256:dc75a7baec7a3b827a5d7ab0acd10ab507904c7dad692365b3e3b596eca1afd2
+          imagePullPolicy: IfNotPresent
+          lifecycle: 
+            preStop:
+              exec:
+                command:
+                - /wait-shutdown
+          args: 
+            - /nginx-ingress-controller
+            - --publish-service=$(POD_NAMESPACE)/loop-it-ingress-nginx-controller
+            - --election-id=loop-it-ingress-nginx-leader
+            - --controller-class=k8s.io/ingress-nginx
+            - --ingress-class=nginx
+            - --configmap=$(POD_NAMESPACE)/loop-it-ingress-nginx-controller
+            - --validating-webhook=:8443
+            - --validating-webhook-certificate=/usr/local/certificates/cert
+            - --validating-webhook-key=/usr/local/certificates/key
+          securityContext: 
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 82
+            allowPrivilegeEscalation: false
+            seccompProfile: 
+              type: RuntimeDefault
+            capabilities:
+              drop:
+              - ALL
+              add:
+              - NET_BIND_SERVICE
+            readOnlyRootFilesystem: false
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LD_PRELOAD
+              value: /usr/local/lib/libmimalloc.so
+          livenessProbe: 
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe: 
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+            - name: webhook
+              containerPort: 8443
+              protocol: TCP
+          volumeMounts:
+            - name: webhook-cert
+              mountPath: /usr/local/certificates/
+              readOnly: true
+          resources: 
+            requests:
+              cpu: 100m
+              memory: 90Mi
+      nodeSelector: 
+        kubernetes.io/os: linux
+      serviceAccountName: loop-it-ingress-nginx
+      automountServiceAccountToken: true
+      terminationGracePeriodSeconds: 300
+      volumes:
+        - name: webhook-cert
+          secret:
+            secretName: loop-it-ingress-nginx-admission
+---
+# Source: loop-it/templates/backend/deployment-simple.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loop-it-backend
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loop-it
+      app.kubernetes.io/instance: loop-it
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loop-it
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: backend
+          image: loop-it/backend:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          
+          env:
+            - name: PORT
+              value: "3000"
+            - name: NODE_ENV
+              value: "development"
+            - name: FRONTEND_URL
+              value: "http://localhost"
+            
+            # Database connection
+            - name: DATABASE_URL
+              value: "postgresql://loop_user:localdev123@loop-it-postgresql:5432/loop-it"
+            
+            # JWT Secrets (einfach für lokale Entwicklung)
+            - name: JWT_SECRET
+              value: "local-dev-jwt-secret-key-for-development-only"
+            - name: JWT_REFRESH_SECRET
+              value: "local-dev-refresh-secret-key-for-development-only"
+            - name: JWT_EXPIRES_IN
+              value: "24h"
+          startup:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            failureThreshold: 10
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 0
+            periodSeconds: 20
+            failureThreshold: 5
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 2
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+---
+# Source: loop-it/templates/backend/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loop-it-backend
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loop-it
+      app.kubernetes.io/instance: loop-it
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loop-it
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/component: backend
+        version: "dev"
+      annotations:
+        checksum/config: d5b76a871cda3e39ea1335fe4be2e8d26bd0475b81d91b3a8b98dec2c8db8646
+    spec:
+      securityContext:
+        fsGroup: 1001
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: backend
+          image: loop-it/backend:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            # Application configuration
+            - name: FRONTEND_URL
+              value: "http://localhost"
+            - name: JWT_EXPIRES_IN
+              value: "7d"
+            - name: NODE_ENV
+              value: "development"
+            - name: PORT
+              value: "3000"
+            
+            # Database configuration
+            - name: DB_HOST
+              value: "loop-it-postgresql"
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: loop-it-postgresql
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loop-it-postgresql
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: "loop-it"
+            - name: DATABASE_URL
+              value: "postgresql://loop_user:$(POSTGRES_PASSWORD)@loop-it-postgresql:5432/loop-it"
+            
+            # JWT configuration
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: loop-it-jwt
+                  key: jwt-secret
+            - name: JWT_REFRESH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: loop-it-jwt
+                  key: jwt-refresh-secret
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            failureThreshold: 10
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 0
+            periodSeconds: 20
+            failureThreshold: 5
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 2
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            runAsNonRoot: true
+            runAsUser: 1001
+          
+          volumeMounts:
+            - name: uploads-volume
+              mountPath: /app/uploads
+          
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+      
+      volumes:
+        - name: uploads-volume
+          emptyDir: {}
+---
+# Source: loop-it/templates/frontend/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loop-it-frontend
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loop-it
+      app.kubernetes.io/instance: loop-it
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loop-it
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/component: frontend
+        version: "dev"
+    spec:
+      securityContext:
+        fsGroup: 101
+      containers:
+        - name: frontend
+          image: loop-it/frontend:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 5
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 2
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 25m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            runAsNonRoot: true
+            runAsUser: 101
+          
+          # NGINX Volume Mounts (Fix aus deinem funktionierenden Setup)
+          volumeMounts:
+            - name: cache-volume
+              mountPath: /var/cache/nginx
+            - name: run-volume
+              mountPath: /var/run
+      
+      # NGINX Volumes (Fix aus deinem funktionierenden Setup)
+      volumes:
+        - name: cache-volume
+          emptyDir: {}
+        - name: run-volume
+          emptyDir: {}
+---
+# Source: loop-it/templates/postgresql/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loop-it-postgresql
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: postgresql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Important for StatefulSet-like behavior with PVC
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loop-it
+      app.kubernetes.io/instance: loop-it
+      app.kubernetes.io/component: postgresql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loop-it
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/component: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:17-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: "loop-it"
+            - name: POSTGRES_USER
+              value: "loop_user"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loop-it-postgresql
+                  key: postgres-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          livenessProbe:
+            exec:
+              command:
+              - pg_isready
+              - -U
+              - loop_user
+              - -d
+              - loop-it
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+              - pg_isready
+              - -U
+              - loop_user
+              - -d
+              - loop-it
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          
+          volumeMounts:
+            - name: postgresql-storage
+              mountPath: /var/lib/postgresql/data
+      
+      volumes:
+        - name: postgresql-storage
+          persistentVolumeClaim:
+            claimName: loop-it-postgresql-pvc
+---
+# Source: loop-it/charts/postgresql/templates/primary/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loop-it-postgresql
+  namespace: "default"
+  labels:
+    app.kubernetes.io/name: postgresql
+    helm.sh/chart: postgresql-12.0.1
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: primary
+  annotations:
+spec:
+  replicas: 1
+  serviceName: loop-it-postgresql-hl
+  updateStrategy:
+    rollingUpdate: {}
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/instance: loop-it
+      app.kubernetes.io/component: primary
+  template:
+    metadata:
+      name: loop-it-postgresql
+      labels:
+        app.kubernetes.io/name: postgresql
+        helm.sh/chart: postgresql-12.0.1
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: primary
+      annotations:
+    spec:
+      serviceAccountName: default
+      
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: postgresql
+                    app.kubernetes.io/instance: loop-it
+                    app.kubernetes.io/component: primary
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      securityContext:
+        fsGroup: 1001
+      hostNetwork: false
+      hostIPC: false
+      initContainers:
+      containers:
+        - name: postgresql
+          image: docker.io/postgres:17-alpine
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsUser: 1001
+          env:
+            - name: BITNAMI_DEBUG
+              value: "false"
+            - name: POSTGRESQL_PORT_NUMBER
+              value: "5432"
+            - name: POSTGRESQL_VOLUME_DIR
+              value: "/bitnami/postgresql"
+            - name: PGDATA
+              value: "/bitnami/postgresql/data"
+            # Authentication
+            - name: POSTGRES_USER
+              value: "loop_user"
+            - name: POSTGRES_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loop-it-postgresql
+                  key: postgres-password
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loop-it-postgresql
+                  key: password
+            - name: POSTGRES_DB
+              value: "loop-it"
+            # Replication
+            # Initdb
+            # Standby
+            # LDAP
+            - name: POSTGRESQL_ENABLE_LDAP
+              value: "no"
+            # TLS
+            - name: POSTGRESQL_ENABLE_TLS
+              value: "no"
+            # Audit
+            - name: POSTGRESQL_LOG_HOSTNAME
+              value: "false"
+            - name: POSTGRESQL_LOG_CONNECTIONS
+              value: "false"
+            - name: POSTGRESQL_LOG_DISCONNECTIONS
+              value: "false"
+            - name: POSTGRESQL_PGAUDIT_LOG_CATALOG
+              value: "off"
+            # Others
+            - name: POSTGRESQL_CLIENT_MIN_MESSAGES
+              value: "error"
+            - name: POSTGRESQL_SHARED_PRELOAD_LIBRARIES
+              value: "pgaudit"
+          ports:
+            - name: tcp-postgresql
+              containerPort: 5432
+          livenessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U "loop_user" -d "dbname=loop-it" -h 127.0.0.1 -p 5432
+          readinessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - -e
+                
+                - |
+                  exec pg_isready -U "loop_user" -d "dbname=loop-it" -h 127.0.0.1 -p 5432
+          resources:
+            limits: {}
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+            - name: data
+              mountPath: /bitnami/postgresql
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: "8Gi"
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-ingressclass.yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx
+spec:
+  controller: k8s.io/ingress-nginx
+---
+# Source: loop-it/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loop-it-ingress
+  namespace: default
+  labels:
+    helm.sh/chart: loop-it-0.2.0
+    app.kubernetes.io/name: loop-it
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: loop-it
+    environment: local
+    tier: development
+    app.kubernetes.io/component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-allow-headers: Content-Type, Authorization, X-Requested-With
+    nginx.ingress.kubernetes.io/cors-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+    nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+spec:
+  ingressClassName: nginx
+  rules:
+    -
+      host: "localhost"
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: loop-it-backend
+                port:
+                  number: 3000
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: loop-it-backend
+                port:
+                  number: 3000
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: loop-it-backend
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: loop-it-frontend
+                port:
+                  number: 80
+---
+# Source: loop-it/charts/ingress-nginx/templates/controller-poddisruptionbudget.yaml
+# PDB is not supported for DaemonSets.
+# https://github.com/kubernetes/kubernetes/issues/108124
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/validating-webhook.yaml
+# before changing this value, check the required kubernetes version
+# https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#prerequisites
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+  name: loop-it-ingress-nginx-admission
+webhooks:
+  - name: validate.nginx.ingress.kubernetes.io
+    matchPolicy: Equivalent
+    rules:
+      - apiGroups:
+          - networking.k8s.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - ingresses
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: loop-it-ingress-nginx-controller-admission
+        namespace: default
+        port: 443
+        path: /networking/v1/ingresses
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/job-patch/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: loop-it-ingress-nginx-admission
+  namespace: default
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+automountServiceAccountToken: true
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/job-patch/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: loop-it-ingress-nginx-admission
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+rules:
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - update
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/job-patch/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: loop-it-ingress-nginx-admission
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: loop-it-ingress-nginx-admission
+subjects:
+  - kind: ServiceAccount
+    name: loop-it-ingress-nginx-admission
+    namespace: default
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/job-patch/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: loop-it-ingress-nginx-admission
+  namespace: default
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - create
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/job-patch/rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: loop-it-ingress-nginx-admission
+  namespace: default
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: loop-it-ingress-nginx-admission
+subjects:
+  - kind: ServiceAccount
+    name: loop-it-ingress-nginx-admission
+    namespace: default
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/job-patch/job-createSecret.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loop-it-ingress-nginx-admission-create
+  namespace: default
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+spec:
+  ttlSecondsAfterFinished: 0
+  template:
+    metadata:
+      name: loop-it-ingress-nginx-admission-create
+      labels:
+        helm.sh/chart: ingress-nginx-4.13.0
+        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/version: "1.13.0"
+        app.kubernetes.io/part-of: ingress-nginx
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: admission-webhook
+    spec:
+      containers:
+        - name: create
+          image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.6.0@sha256:c9f76a75fd00e975416ea1b73300efd413116de0de8570346ed90766c5b5cefb
+          imagePullPolicy: IfNotPresent
+          args:
+            - create
+            - --host=loop-it-ingress-nginx-controller-admission,loop-it-ingress-nginx-controller-admission.$(POD_NAMESPACE).svc
+            - --namespace=$(POD_NAMESPACE)
+            - --secret-name=loop-it-ingress-nginx-admission
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          securityContext: 
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+      restartPolicy: OnFailure
+      serviceAccountName: loop-it-ingress-nginx-admission
+      automountServiceAccountToken: true
+      nodeSelector: 
+        kubernetes.io/os: linux
+---
+# Source: loop-it/charts/ingress-nginx/templates/admission-webhooks/job-patch/job-patchWebhook.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loop-it-ingress-nginx-admission-patch
+  namespace: default
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    helm.sh/chart: ingress-nginx-4.13.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: loop-it
+    app.kubernetes.io/version: "1.13.0"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admission-webhook
+spec:
+  ttlSecondsAfterFinished: 0
+  template:
+    metadata:
+      name: loop-it-ingress-nginx-admission-patch
+      labels:
+        helm.sh/chart: ingress-nginx-4.13.0
+        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/instance: loop-it
+        app.kubernetes.io/version: "1.13.0"
+        app.kubernetes.io/part-of: ingress-nginx
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: admission-webhook
+    spec:
+      containers:
+        - name: patch
+          image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.6.0@sha256:c9f76a75fd00e975416ea1b73300efd413116de0de8570346ed90766c5b5cefb
+          imagePullPolicy: IfNotPresent
+          args:
+            - patch
+            - --webhook-name=loop-it-ingress-nginx-admission
+            - --namespace=$(POD_NAMESPACE)
+            - --patch-mutating=false
+            - --secret-name=loop-it-ingress-nginx-admission
+            - --patch-failure-policy=Fail
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          securityContext: 
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+      restartPolicy: OnFailure
+      serviceAccountName: loop-it-ingress-nginx-admission
+      automountServiceAccountToken: true
+      nodeSelector: 
+        kubernetes.io/os: linux

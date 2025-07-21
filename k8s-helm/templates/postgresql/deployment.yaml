@@ -1,0 +1,110 @@
+{{- if and .Values.postgresql.enabled (not .Values.postgresql.external) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "loop-it.fullname" . }}-postgresql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.postgresql.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Important for StatefulSet-like behavior with PVC
+  selector:
+    matchLabels:
+      {{- include "loop-it.postgresql.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "loop-it.postgresql.selectorLabels" . | nindent 8 }}
+      {{- with .Values.postgresql.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgresql
+          image: {{ include "loop-it.postgresql.image" . }}
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "loop-it.postgresql.secretName" . }}
+                  key: postgres-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          
+          {{- if .Values.postgresql.probes.liveness.enabled }}
+          livenessProbe:
+            {{- with .Values.postgresql.probes.liveness.exec }}
+            exec:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.postgresql.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgresql.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.postgresql.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.postgresql.probes.liveness.failureThreshold }}
+          {{- end }}
+          
+          {{- if .Values.postgresql.probes.readiness.enabled }}
+          readinessProbe:
+            {{- with .Values.postgresql.probes.readiness.exec }}
+            exec:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.postgresql.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgresql.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.postgresql.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.postgresql.probes.readiness.failureThreshold }}
+          {{- end }}
+          
+          {{- with .Values.postgresql.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          
+          volumeMounts:
+            - name: postgresql-storage
+              mountPath: /var/lib/postgresql/data
+      
+      volumes:
+        - name: postgresql-storage
+          {{- if .Values.postgresql.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "loop-it.fullname" . }}-postgresql-pvc
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      
+      {{- with .Values.postgresql.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.postgresql.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.postgresql.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

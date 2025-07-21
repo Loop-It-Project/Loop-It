@@ -115,6 +115,35 @@ variable "enable_monitoring" {
 }
 
 # ============================================================================
+# SSL & Security Variables
+# ============================================================================
+
+variable "domain_name" {
+  description = "Domain für HTTPS Loop-It App"
+  type        = string
+  default     = ""
+}
+
+variable "ssl_email" {
+  description = "Email für Let's Encrypt SSL Certificates"
+  type        = string
+  default     = ""
+}
+
+variable "enable_ssl" {
+  description = "Enable SSL/HTTPS with cert-manager"
+  type        = bool
+  default     = false
+}
+
+# Public/Private Access Control
+variable "public_ingress" {
+  description = "Soll der Ingress Controller öffentlich sein?"
+  type        = bool
+  default     = true
+}
+
+# ============================================================================
 # PROJECT VARIABLES
 # ============================================================================
 

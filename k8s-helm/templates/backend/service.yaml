@@ -1,0 +1,30 @@
+{{- if .Values.backend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "loop-it.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.backend.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.backend.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.monitoring.enabled }}
+    prometheus.io/scrape: "true"
+    prometheus.io/port: {{ .Values.backend.service.port | quote }}
+    prometheus.io/path: "/metrics"
+    {{- end }}
+    {{- with (include "loop-it.annotations" .) }}
+    {{- . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.backend.service.type }}
+  ports:
+    - port: {{ .Values.backend.service.port }}
+      targetPort: {{ .Values.backend.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "loop-it.backend.selectorLabels" . | nindent 4 }}
+{{- end }}

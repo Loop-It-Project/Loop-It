@@ -1,0 +1,26 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.persistence.enabled (not .Values.postgresql.external) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "loop-it.fullname" . }}-postgresql-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.postgresql.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.postgresql.persistence.storageClass }}
+  storageClassName: {{ .Values.postgresql.persistence.storageClass | quote }}
+  {{- else if .Values.global.storageClass }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
+  accessModes:
+    {{- range .Values.postgresql.persistence.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.postgresql.persistence.size | quote }}
+{{- end }}

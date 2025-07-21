@@ -1,0 +1,444 @@
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: "gp3"
+  
+# Common labels applied to all resources
+commonLabels: {}
+commonAnnotations: {}
+
+# Application name override
+nameOverride: ""
+fullnameOverride: ""
+
+# Environment (dev, staging, prod)
+environment: production
+
+# Backend configuration
+backend:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: loop-it/backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "3000"
+      prometheus.io/path: "/metrics"
+  
+  # Health checks (optimized from your working config)
+  probes:
+    startup:
+      enabled: true
+      httpGet:
+        path: /api/health
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 20
+      timeoutSeconds: 3
+    
+    liveness:
+      enabled: true
+      httpGet:
+        path: /api/health
+        port: 3000
+      initialDelaySeconds: 0
+      periodSeconds: 30
+      failureThreshold: 3
+      timeoutSeconds: 5
+    
+    readiness:
+      enabled: true
+      httpGet:
+        path: /api/health
+        port: 3000
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      failureThreshold: 2
+      timeoutSeconds: 3
+  
+  # Resources (from your optimized config)
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+  
+  # Environment variables
+  env:
+    PORT: "3000"
+    NODE_ENV: "production"
+    JWT_EXPIRES_IN: "7d"
+    FRONTEND_URL: "http://localhost"
+  
+  # Security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1001
+    capabilities:
+      drop:
+        - ALL
+  
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 1001
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity
+  affinity: {}
+
+# Frontend configuration  
+frontend:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: loop-it/frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  
+  # Health checks
+  probes:
+    liveness:
+      enabled: true
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      failureThreshold: 3
+      timeoutSeconds: 5
+    
+    readiness:
+      enabled: true
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 2
+      timeoutSeconds: 3
+  
+  # Resources (optimized for frontend)
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  
+  # Security context (fixed for nginx)
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 101
+    capabilities:
+      drop:
+        - ALL
+  
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 101
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity
+  affinity: {}
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  
+  # Use external chart if available
+  external: false
+  
+  # Internal PostgreSQL config (if external: false)
+  image:
+    repository: postgres
+    tag: "17"
+    pullPolicy: IfNotPresent
+  
+  auth:
+    postgresPassword: ""  # Will be set via secrets
+    username: "loop_user"
+    password: ""  # Will be set via secrets
+    database: "loop-it"
+  
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+  
+  # Health checks
+  probes:
+    liveness:
+      enabled: true
+      exec:
+        command:
+          - pg_isready
+          - -U
+          - loop_user
+          - -d
+          - loop-it
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    readiness:
+      enabled: true
+      exec:
+        command:
+          - pg_isready
+          - -U
+          - loop_user
+          - -d
+          - loop-it
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+  
+  # Resources
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Persistence
+  persistence:
+    enabled: true
+    storageClass: "gp3"
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  
+  annotations:
+    # AWS Load Balancer optimized
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    
+    # CORS for API communication
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization, X-Requested-With"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    
+    # AWS NLB specific
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+  
+  hosts:
+    - host: ""  # Will use AWS Load Balancer URL
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /health
+          pathType: Exact
+          service: backend  
+        - path: /metrics
+          pathType: Exact
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  
+  tls: []
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  backend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    
+    # Scaling behavior (from your production config)
+    behavior:
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 60
+          - type: Pods
+            value: 3
+            periodSeconds: 60
+        selectPolicy: Max
+      
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+        selectPolicy: Min
+  
+  frontend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+    
+    behavior:
+      scaleUp:
+        stabilizationWindowSeconds: 120
+        policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+        selectPolicy: Max
+      
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+        selectPolicy: Min
+
+# Pod Disruption Budgets
+podDisruptionBudget:
+  backend:
+    enabled: true
+    minAvailable: 50%
+  
+  frontend:
+    enabled: true
+    minAvailable: 1
+  
+  postgresql:
+    enabled: true
+    minAvailable: 1
+
+# Service Monitor for Prometheus (if monitoring is enabled)
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  namespace: monitoring
+
+# Secrets configuration
+secrets:
+  # Create secrets automatically
+  create: true
+  
+  # Secret names
+  postgresql:
+    secretName: "postgresql-secrets"
+  
+  jwt:
+    secretName: "jwt-secrets"
+  
+  # External secrets (if you have them)
+  external:
+    enabled: false
+    postgresqlSecretName: ""
+    jwtSecretName: ""
+
+# Network Policies (optional, for security)
+networkPolicy:
+  enabled: false
+
+# Monitoring integration
+monitoring:
+  enabled: true
+  
+  # Create ServiceMonitor for Prometheus
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    interval: 30s
+    path: /metrics
+  
+  # External monitoring services
+  external:
+    grafana:
+      enabled: true
+      namespace: monitoring
+    prometheus:
+      enabled: true
+      namespace: monitoring
+    loki:
+      enabled: true
+      namespace: monitoring
+
+# AWS specific configurations
+aws:
+  region: "eu-central-1"
+  
+  # ECR configuration
+  ecr:
+    enabled: true
+    registryId: "390402575145"
+    backendRepository: "loop-it/backend"
+    frontendRepository: "loop-it/frontend"
+  
+  # EKS specific
+  eks:
+    clusterName: "loop-it-cluster"
+    nodeGroup: "loop-it-nodes"
+  
+  # Storage classes
+  storageClasses:
+    gp3:
+      enabled: true
+      parameters:
+        type: gp3
+        fsType: ext4
+        encrypted: "true"
+
+# Load testing (optional)
+loadTesting:
+  enabled: false
+  image:
+    repository: artilleryio/artillery
+    tag: "latest"
+  
+  # Test configuration
+  tests:
+    stress:
+      enabled: false
+      duration: "2m"
+      arrivalRate: 50
