@@ -1,3 +1,99 @@
+# ============================================================================
+# HTTPS INGRESS (SSL-ENABLED) (TEMPORARILY COMMENTED OUT)
+# ============================================================================
+#
+# resource "kubernetes_ingress_v1" "loop_it_https" {
+#   count = var.deploy_applications && var.enable_ssl && var.domain_name != "" ? 1 : 0
+#   
+#   metadata {
+#     name      = "loop-it-ingress-https"
+#     namespace = kubernetes_namespace.loop_it[0].metadata[0].name
+#     
+#     annotations = {
+#       "kubernetes.io/ingress.class"                = "nginx"
+#       "cert-manager.io/cluster-issuer"             = "letsencrypt-prod"
+#       "nginx.ingress.kubernetes.io/ssl-redirect"   = "true"
+#       "nginx.ingress.kubernetes.io/force-ssl-redirect" = "true"
+#       
+#       # Security Headers für A+ SSL Rating
+#       "nginx.ingress.kubernetes.io/configuration-snippet" = <<-EOT
+#         more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+#         more_set_headers "X-Frame-Options: SAMEORIGIN";
+#         more_set_headers "X-Content-Type-Options: nosniff";
+#         more_set_headers "X-XSS-Protection: 1; mode=block";
+#         more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+#         more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:";
+#       EOT
+#       
+#       # Performance Headers
+#       "nginx.ingress.kubernetes.io/server-snippet" = <<-EOT
+#         gzip on;
+#         gzip_vary on;
+#         gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+#       EOT
+#     }
+#   }
+#   
+#   spec {
+#     ingress_class_name = "nginx"
+#     
+#     tls {
+#       hosts       = [var.domain_name]
+#       secret_name = "loopit-tls"
+#     }
+#     
+#     rule {
+#       host = var.domain_name
+#       
+#       http {
+#         path {
+#           path      = "/api"
+#           path_type = "Prefix"
+#           backend {
+#             service {
+#               name = kubernetes_service.backend[0].metadata[0].name
+#               port {
+#                 number = 3000
+#               }
+#             }
+#           }
+#         }
+#         
+#         path {
+#           path      = "/health"
+#           path_type = "Exact"
+#           backend {
+#             service {
+#               name = kubernetes_service.backend[0].metadata[0].name
+#               port {
+#                 number = 3000
+#               }
+#             }
+#           }
+#         }
+#         
+#         path {
+#           path      = "/"
+#           path_type = "Prefix"
+#           backend {
+#             service {
+#               name = kubernetes_service.frontend[0].metadata[0].name
+#               port {
+#                 number = 80
+#               }
+#             }
+#           }
+#         }
+#       }
+#     }
+#   }
+#   
+#   depends_on = [
+#     kubernetes_manifest.letsencrypt_prod,  # <- Das verursacht den Fehler
+#     kubernetes_service.backend,
+#     kubernetes_service.frontend
+#   ]
+# }
 # terraform-eks/k8s-apps.tf
 # Kubernetes Applications for Loop-It
 

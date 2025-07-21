@@ -1,8 +1,5 @@
-# terraform-eks/provider.tf (Update your existing file)
 
 terraform {
-  required_version = ">= 1.0"
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -12,34 +9,39 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.23"
     }
-    # ADD THIS:
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.1"
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.17"
     }
   }
 }
 
 provider "aws" {
   region = var.aws_region
-
-  default_tags {
-    tags = {
-      Project     = "Loop-It"
-      Environment = var.environment
-      ManagedBy   = "Terraform"
-      Team        = "DevOps"
-    }
-  }
 }
 
+# Kubernetes Provider - Dynamic Configuration
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-
+  
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
     args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+  }
+}
+
+# Helm Provider - Dynamic Configuration  
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    }
   }
 }
