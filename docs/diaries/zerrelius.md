@@ -1,3 +1,26 @@
+# Projekttagebuch – 21.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Swipe Game updaten mit who liked me button und Menü. Benachrichtungs Menü updated
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Beim Bug Fixing
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+-
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Real-Verifizierung, Blockierungsfunktion
+
+___
 # Projekttagebuch – 18.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)
