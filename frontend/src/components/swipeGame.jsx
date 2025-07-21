@@ -30,6 +30,8 @@ const SwipeGame = ({ currentUser, onClose }) => {
   const [preferences, setPreferences] = useState(null);
   const [stats, setStats] = useState(null);
   const [showStats, setShowStats] = useState(false);
+  const [pendingLikes, setPendingLikes] = useState([]);
+  const [showPendingLikes, setShowPendingLikes] = useState(false);
 
   const cardRef = useRef(null);
   const startPos = useRef({ x: 0, y: 0 });
@@ -39,6 +41,7 @@ const SwipeGame = ({ currentUser, onClose }) => {
     loadPotentialMatches();
     loadPreferences();
     loadStats();
+    loadPendingLikes();
   }, []);
 
   // Potentielle Matches laden
@@ -84,6 +87,121 @@ const SwipeGame = ({ currentUser, onClose }) => {
     }
   };
 
+  // Pending Likes laden
+  const loadPendingLikes = async () => {
+    try {
+      setIsLoading(true);
+      const result = await SwipeService.getPendingLikes();
+
+      if (result.success) {
+        setPendingLikes(result.data);
+      } else {
+        console.error('Error loading pending likes:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading pending likes:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Pending Likes Modal
+  const renderPendingLikesModal = () => {
+    if (!showPendingLikes || pendingLikes.length === 0) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-card rounded-xl p-8 max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-secondary">Wer dich geliked hat</h2>
+            <button
+              onClick={() => setShowPendingLikes(false)}
+              className="text-gray-500 cursor-pointer hover:text-secondary"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {pendingLikes.map(like => (
+              <div 
+                key={like.id} 
+                className="bg-card p-4 rounded-lg shadow border border-card flex items-center"
+              >
+                <div className="h-14 w-14 rounded-full bg-purple-100 flex items-center justify-center mr-4 overflow-hidden">
+                  {like.avatarId ? (
+                    <img 
+                      src={`/api/media/avatar/${like.avatarId}`} 
+                      alt="Profilbild" 
+                      className="h-full w-full object-cover" 
+                    />
+                  ) : (
+                    <User size={24} className="text-purple-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-secondary">
+                    {like.displayName || like.username}
+                  </h3>
+                  <p className="text-xs text-tertiary">
+                    Hat dich {like.action === 'super_like' ? 'super-' : ''}geliked am {new Date(like.timestamp).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={async () => {
+                      // Like zurück senden
+                      const result = await SwipeService.processSwipe(like.swiperId, 'like');
+                      if (result.success) {
+                        // Aus der Liste entfernen
+                        setPendingLikes(prev => prev.filter(item => item.id !== like.id));
+                        // Match anzeigen, falls entstanden
+                        if (result.data.isMatch) {
+                          setShowPendingLikes(false);
+                          setMatchData({
+                            user: {
+                              id: like.swiperId,
+                              displayName: like.displayName || like.username,
+                              avatarId: like.avatarId
+                            },
+                            match: result.data.match
+                          });
+                          setShowMatch(true);
+                        }
+                      }
+                    }}
+                    className="p-2 rounded-full bg-green-100 text-green-600 cursor-pointer hover:bg-green-200 transition-colors"
+                    title="Zurück liken"
+                  >
+                    <Heart size={18} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      // Ablehnen
+                      await SwipeService.processSwipe(like.swiperId, 'skip');
+                      // Aus der Liste entfernen
+                      setPendingLikes(prev => prev.filter(item => item.id !== like.id));
+                    }}
+                    className="p-2 rounded-full bg-red-100 text-red-600 cursor-pointer hover:bg-red-200 transition-colors"
+                    title="Ablehnen"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {pendingLikes.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-tertiary">Keine weiteren Likes vorhanden</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Swipe verarbeiten
   const handleSwipe = async (direction) => {
     if (currentCardIndex >= potentialMatches.length) return;
@@ -111,6 +229,13 @@ const SwipeGame = ({ currentUser, onClose }) => {
               match: result.data.match
             });
             setShowMatch(true);
+
+            window.dispatchEvent(new CustomEvent('friendship_updated', {
+              detail: {
+                action: 'created',
+                userId: currentMatch.id
+              }
+            }));
           }
           
           // Stats aktualisieren
@@ -615,6 +740,14 @@ const SwipeGame = ({ currentUser, onClose }) => {
               <TrendingUp size={20} className='hover:text-purple-600' />
             </button>
             <button
+              onClick={() => setShowPendingLikes(true)}
+              className="flex items-center space-x-2 mt-4 px-4 py-2 cursor-pointer bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all duration-200"
+              title="See who liked you"
+            >
+              <Heart size={20} />
+              <span>Who Liked Me ({pendingLikes.length})</span>
+            </button>
+            <button
               onClick={() => setShowPreferences(true)}
               className="p-2 text-tertiary cursor-pointer transition-colors"
               title="Einstellungen"
@@ -663,6 +796,7 @@ const SwipeGame = ({ currentUser, onClose }) => {
         {renderMatchModal()}
         {renderStatsModal()}
         {renderPreferencesModal()}
+        {renderPendingLikesModal()}
       </div>
     </div>
   );

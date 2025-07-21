@@ -256,6 +256,26 @@ export class SwipeService {
       await this.sendMatchNotification(user1Id, user2Id, newMatch[0]);
 
       console.log('✅ SwipeService: Match created successfully:', matchId);
+
+      // Create friendship after match
+      try {
+        const { FriendshipService } = require('./friendshipService');
+        const friendshipResult = await FriendshipService.createFriendship(user1Id, user2Id, 'match');
+        console.log('✅ SwipeService: Friendship creation result:', friendshipResult);
+
+        if (!friendshipResult.success) {
+          throw new Error(`Failed to create friendship: ${friendshipResult.error}`);
+        }
+      } catch (friendshipError) {
+        console.error('⚠️ SwipeService: Could not create friendship from match:', friendshipError);
+        // Füge detaillierteres Logging mit Type-Guard hinzu
+        console.error('Details:', {
+          user1Id, 
+          user2Id,
+          errorMessage: friendshipError instanceof Error ? friendshipError.message : String(friendshipError),
+          errorStack: friendshipError instanceof Error ? friendshipError.stack : undefined
+        });
+      }
       
       return newMatch[0];
 
@@ -695,6 +715,55 @@ export class SwipeService {
     } catch (error) {
       console.error('❌ SwipeService: Error getting swipe stats:', error);
       return { success: false, error: 'Failed to load stats' };
+    }
+  }
+
+  // New service method to get pending likes
+  static async getPendingLikes(userId: string) {
+    try {
+      // Get users who liked the current user but haven't been swiped on yet
+      const pendingLikes = await db
+        .select({
+          id: swipeActionsTable.id,
+          swiperId: swipeActionsTable.swiperId,
+          action: swipeActionsTable.action,
+          timestamp: swipeActionsTable.timestamp,
+          // Join user data
+          username: usersTable.username,
+          displayName: usersTable.displayName,
+          avatarId: profilesTable.avatarId,
+        })
+        .from(swipeActionsTable)
+        .innerJoin(usersTable, eq(swipeActionsTable.swiperId, usersTable.id))
+        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
+        .where(
+          and(
+            eq(swipeActionsTable.targetId, userId),
+            inArray(swipeActionsTable.action, ['like', 'super_like']),
+            // Nicht bereits gematcht
+            sql`NOT EXISTS (
+              SELECT 1 FROM ${matchesTable}
+              WHERE (
+                (${matchesTable.user1Id} = ${userId} AND ${matchesTable.user2Id} = ${swipeActionsTable.swiperId})
+                OR 
+                (${matchesTable.user1Id} = ${swipeActionsTable.swiperId} AND ${matchesTable.user2Id} = ${userId})
+              )
+            )`,
+            // Und keine Swipe-Aktion in die andere Richtung vorhanden
+            sql`NOT EXISTS (
+              SELECT 1 FROM ${swipeActionsTable} AS sa2
+              WHERE sa2.swiperId = ${userId}
+              AND sa2.targetId = ${swipeActionsTable.swiperId}
+            )`
+          )
+        )
+        .orderBy(desc(swipeActionsTable.timestamp))
+        .limit(50);
+
+      return pendingLikes;
+    } catch (error) {
+      console.error('❌ SwipeService: Error getting pending likes:', error);
+      throw error;
     }
   }
 }

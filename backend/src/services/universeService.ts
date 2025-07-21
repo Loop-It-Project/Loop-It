@@ -271,11 +271,11 @@ export class UniverseService {
         membershipStatus: universe.role || 'member'
       }));
 
-      console.log('✅ getUserUniverses result:', {
-        universeCount: formattedUniverses.length,
-        totalCount,
-        sampleUniverse: formattedUniverses[0] || null
-      });
+      // console.log('✅ getUserUniverses result:', {
+      //   universeCount: formattedUniverses.length,
+      //   totalCount,
+      //   sampleUniverse: formattedUniverses[0] || null
+      // });
 
       return {
         success: true,
@@ -660,10 +660,10 @@ export class UniverseService {
         membershipStatus: 'owner'
       }));
 
-      console.log('✅ getOwnedUniverses result:', {
-        universeCount: formattedUniverses.length,
-        totalCount
-      });
+      // console.log('✅ getOwnedUniverses result:', {
+      //   universeCount: formattedUniverses.length,
+      //   totalCount
+      // });
 
       return {
         success: true,

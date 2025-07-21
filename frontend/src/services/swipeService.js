@@ -155,6 +155,31 @@ class SwipeService extends BaseService {
       return { success: false, error: 'Network error' };
     }
   }
+
+  // Ausstehende Likes abrufen
+  static async getPendingLikes() {
+    try {
+      console.log('🔍 SwipeService: Getting pending likes...');
+
+      const response = await this.fetchWithAuth(`${API_URL}/api/swipe/pending-likes`, {
+        method: 'GET'
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('✅ SwipeService: Pending likes loaded:', data.data.length);
+        return { success: true, data: data.data };
+      } else {
+        console.error('❌ SwipeService: Failed to load pending likes:', data.error);
+        return { success: false, error: data.error };
+      }
+
+    } catch (error) {
+      console.error('❌ SwipeService: Network error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export default SwipeService;

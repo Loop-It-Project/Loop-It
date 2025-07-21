@@ -25,13 +25,6 @@ const LandingPage = () => {
             >
               Registrieren
             </Link>
-
-            {/* Hobbies Link */}
-            <Link
-              to="/hobbies"
-            >
-              hobbys
-            </Link>
           </div>
         </nav>
       </header>

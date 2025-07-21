@@ -50,6 +50,13 @@
       "when": 1752825764770,
       "tag": "0006_light_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1753087209555,
+      "tag": "0007_charming_dragon_lord",
+      "breakpoints": true
     }
   ]
 }

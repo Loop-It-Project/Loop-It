@@ -211,3 +211,25 @@ export const getSwipeStats = async (req: AuthRequest, res: Response): Promise<vo
     });
   }
 };
+
+// Add this new controller method
+export const getPendingLikes = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    const result = await SwipeService.getPendingLikes(req.user.id);
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Get pending likes error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load pending likes'
+    });
+  }
+};

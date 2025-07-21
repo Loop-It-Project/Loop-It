@@ -6,7 +6,8 @@ import {
   getUserMatches,
   getSwipePreferences,
   updateSwipePreferences,
-  getSwipeStats
+  getSwipeStats,
+  getPendingLikes
 } from '../controllers/swipeController';
 
 const router = Router();
@@ -29,5 +30,8 @@ router.put('/preferences', updateSwipePreferences);
 
 // Swipe-Statistiken
 router.get('/stats', getSwipeStats);
+
+// Add this new route
+router.get('/pending-likes', getPendingLikes);
 
 export default router;

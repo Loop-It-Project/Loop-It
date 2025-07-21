@@ -23,6 +23,7 @@ import useEscapeKey from '../hooks/useEscapeKey';
 import PendingFriendRequests from './PendingFriendRequests';
 import FriendshipService from '../services/friendshipService';
 import SwipeGame from './SwipeGame';
+import WebSocketService from '../services/websocketService';
 
 // Header-Komponente für die Navigation und Aktionen im Dashboard
 // Importiere die benötigten Icons von Lucide
@@ -36,6 +37,9 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSwipeGame, setShowSwipeGame] = useState(false);
+  const [matchNotifications, setMatchNotifications] = useState([]);
+  const [unreadMatchCount, setUnreadMatchCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Search History States
   const [searchHistory, setSearchHistory] = useState([]);
@@ -51,6 +55,8 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
   // Refs für Search Dropdown
   const searchRef = useRef(null);
   const searchDropdownRef = useRef(null);
+  const notificationsRef = useRef(null);
+  const friendRequestsRef = useRef(null);
 
   // Enhanced Admin Check mit Debug-Logs
   useEffect(() => {
@@ -161,16 +167,27 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
 
   // Click Outside Handler
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
+    function handleClickOutside(event) {
+      // Für Suche
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target) &&
+          searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearchResults(false);
         setShowSearchHistory(false);
-        setSearchFocused(false);
       }
-    };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+      // Für Notifications (neu)
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+
+      // Für Friend Requests (falls nötig)
+      if (friendRequestsRef.current && !friendRequestsRef.current.contains(event.target)) {
+        setShowFriendRequests(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Pending Friend Requests laden
@@ -183,6 +200,34 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  // Add this useEffect to listen for match notifications
+  useEffect(() => {
+    const handleMatchNotification = (event) => {
+      console.log('🎉 Header: Match notification received:', event);
+
+      // Add to notifications list
+      setMatchNotifications(prev => [{
+        id: Date.now(),
+        type: 'match',
+        data: event.detail?.data || event.data,
+        timestamp: new Date(),
+        read: false
+      }, ...prev]);
+
+      // Increment unread count
+      setUnreadMatchCount(prev => prev + 1);
+    };
+
+    // Listen for both custom events and WebSocket events
+    window.addEventListener('match_notification', handleMatchNotification);
+    WebSocketService.on('match_notification', handleMatchNotification);
+
+    return () => {
+      window.removeEventListener('match_notification', handleMatchNotification);
+      WebSocketService.off('match_notification', handleMatchNotification);
+    };
+  }, []);
 
   // Pending Requests Count laden
   const loadPendingRequestsCount = async () => {
@@ -250,7 +295,13 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
     if (showCreateUniverse) {
       setShowCreateUniverse(false);
     }
-  }, showSwipeGame || showSearchResults || showSearchHistory || showCreateUniverse);
+    if (showNotifications) {
+      setShowNotifications(false);
+    }
+    if (showFriendRequests) {
+      setShowFriendRequests(false);
+    }
+  }, showSwipeGame || showSearchResults || showSearchHistory || showCreateUniverse || showNotifications || showFriendRequests);
 
   // Handle Universe Click Function
   const handleUniverseClick = (universeSlug) => {
@@ -555,7 +606,10 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
 
                 {/* Friend Requests Dropdown */}
                 {showFriendRequests && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-primary rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                  <div 
+                    ref={friendRequestsRef}
+                    className="absolute right-0 top-full mt-2 w-80 bg-card border border-primary rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+                  >
                     <div className="p-3 border-b border-primary bg-card">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-primary">Freundschaftsanfragen</h3>
@@ -599,13 +653,94 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
                 <User size={20} />
               </Link>
 
-              {/* Notifications Button (für später) */}
-              <button
-                className="p-2 text-gray-500 cursor-pointer hover:text-secondary hover:scale-110 hover:bg-gray-50 rounded-lg transition-all"
-                title="Benachrichtigungen"
-              >
-                <Bell size={20} />
-              </button>
+              {/* Notifications Button */}
+              <div className="relative">
+                <button
+                  className="p-2 text-gray-500 cursor-pointer hover:text-secondary hover:scale-110 hover:bg-gray-50 rounded-lg transition-all"
+                  title="Benachrichtigungen"
+                  onClick={() => {
+                    // Wenn das Menü geöffnet wird, setze ungelesene Benachrichtigungen zurück
+                    if (!showNotifications) {
+                      setUnreadMatchCount(0);
+                      // Alle als gelesen markieren
+                      setMatchNotifications(prev => prev.map(n => ({...n, read: true})));
+                    }
+                    setShowNotifications(!showNotifications);
+                  }}
+                >
+                  <Bell size={20} />
+                  {(unreadMatchCount + pendingRequestsCount) > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold animate-pulse">
+                      {unreadMatchCount + pendingRequestsCount > 9 ? '9+' : unreadMatchCount + pendingRequestsCount}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Notifications dropdown */}
+                {showNotifications && (
+                  <div 
+                    ref={notificationsRef}
+                    className="absolute right-0 top-full mt-2 w-80 bg-card border border-primary rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+                  >
+                    <div className="p-3 border-b border-primary bg-card">
+                      <h3 className="font-semibold text-primary">Benachrichtigungen</h3>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto">
+                      {matchNotifications.length > 0 ? (
+                        <div>
+                          {matchNotifications.map(notification => (
+                            <div 
+                              key={notification.id} 
+                              className={`p-3 border-b border-primary hover:bg-secondary cursor-pointer ${notification.read ? '' : 'bg-card'}`}
+                              onClick={() => {
+                                // Mark as read
+                                setMatchNotifications(prev => prev.map(n => 
+                                  n.id === notification.id ? {...n, read: true} : n
+                                ));
+                                setUnreadMatchCount(prev => prev > 0 ? prev - 1 : 0);
+
+                                // Navigate to chat with the match
+                                // You can implement this based on your routing
+                              }}
+                            >
+                              <div className="flex items-center">
+                                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+                                  {notification.data?.otherUser?.avatarId ? (
+                                    <img 
+                                      src={`/api/media/avatar/${notification.data.otherUser.avatarId}`} 
+                                      alt="Avatar" 
+                                      className="h-10 w-10 rounded-full" 
+                                    />
+                                  ) : (
+                                    <User size={20} className="text-purple-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-secondary font-medium">
+                                    Neues Match! 🎉
+                                  </p>
+                                  <p className="text-tertiary text-sm">
+                                    Du hast ein Match mit {notification.data?.otherUser?.displayName || notification.data?.otherUser?.username || 'jemandem'}!
+                                  </p>
+                                  <p className="text-xs text-tertiary mt-1">
+                                    {new Date(notification.timestamp).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-6 text-center text-tertiary">
+                          <Bell size={32} className="mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Keine neuen Benachrichtigungen</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {/* Settings Button */}
               <button 

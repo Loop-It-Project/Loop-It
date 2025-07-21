@@ -1,8 +1,9 @@
 import { db } from '../connection';
 import { usersTable, profilesTable } from '../Schemas';
 import { swipePreferencesTable } from '../Schemas/swipeGame';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { eq } from 'drizzle-orm';
 
 export const seedSwipeTestData = async () => {
   try {
@@ -110,8 +111,8 @@ export const seedSwipeTestData = async () => {
         showMe: 'everyone',
         requireCommonInterests: false,
         minCommonInterests: 1,
-        excludeAlreadySwiped: true,
-        onlyShowActiveUsers: true,
+        excludeAlreadySwiped: false,
+        onlyShowActiveUsers: false,
         isVisible: true,
         isPremium: false
       });
