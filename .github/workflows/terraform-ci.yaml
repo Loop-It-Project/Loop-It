@@ -2,8 +2,6 @@ name: Terraform Infrastructure Pipeline
 
 on:
   push:
-    paths:
-      - "terraform-eks/**"
     branches:
       - main
       - feature/gitops-setup
