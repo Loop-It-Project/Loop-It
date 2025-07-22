@@ -32,7 +32,10 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: latest
+          terraform_version: "1.12.2"
+
+      - name: Terraform Version Info
+        run: terraform -version
 
       - name: Terraform Init
         run: cd terraform-eks && terraform init
@@ -63,7 +66,10 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: latest
+          terraform_version: "1.12.2"
+
+      - name: Terraform Version Info
+        run: terraform -version
 
       - name: Terraform Init
         run: cd terraform-eks && terraform init
