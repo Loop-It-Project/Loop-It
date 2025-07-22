@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth';
+import { requireAdmin } from '../middleware/adminAuth';
 import {
   getDashboardMetrics,
   getAllUsers,
@@ -11,7 +12,8 @@ import {
   toggleUniverseActive,
   transferUniverseOwnership,
   deleteUniverse,
-  restoreUniverse
+  restoreUniverse,
+  recalculateAllUniverseCounters,
 } from '../controllers/adminController';
 
 const router = Router();
@@ -34,6 +36,9 @@ router.patch('/universes/:universeId/active', auth, toggleUniverseActive);
 router.patch('/universes/:universeId/transfer', auth, transferUniverseOwnership);
 router.delete('/universes/:universeId', auth, deleteUniverse);
 router.patch('/universes/:universeId/restore', auth, restoreUniverse);
+
+// Recalculate Universe Counters
+router.post('/universes/recalculate-counters', auth, requireAdmin, recalculateAllUniverseCounters);
 
 // TODO: Add more admin routes
 // router.post('/moderation/reports/:reportId/resolve', auth, resolveReport);

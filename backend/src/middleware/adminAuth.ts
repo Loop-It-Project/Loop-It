@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AdminService } from '../services/adminService';
+import { AuthRequest } from '../middleware/auth';
 
-interface AuthRequest extends Request {
-  user?: { id: string; email: string; username: string };
+// Middleware to check if the user has admin permissions
+export interface AdminAuthRequest extends AuthRequest {
+  user?: { id: string; email: string; username: string; isAdmin?: boolean };
 }
 
 export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
