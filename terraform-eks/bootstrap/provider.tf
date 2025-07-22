@@ -1,7 +1,7 @@
 # terraform-eks/bootstrap/provider.tf
 
 terraform {
-  required_version = ">= 1.9.0"
+  required_version = ">= 1.12.2"
   
   required_providers {
     aws = {
