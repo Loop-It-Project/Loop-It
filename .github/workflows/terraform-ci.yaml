@@ -1,0 +1,74 @@
+name: 🏗️ Terraform Infrastructure Pipeline
+
+on:
+  push:
+    paths:
+      - 'terraform-eks/**'
+    branches:
+      - main
+      - feature/gitops-setup
+  workflow_dispatch:  # Optional: manuelles Triggern
+
+permissions:
+  id-token: write     # Für OIDC
+  contents: read
+
+env:
+  TF_VAR_deploy_applications: false  # Nur Infrastruktur
+
+jobs:
+  terraform-plan:
+    name: 📐 Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ☁️ Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: 💾 Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.1
+
+      - name: 🔍 Terraform Init
+        run: terraform init
+
+      - name: 📄 Terraform Format Check
+        run: terraform fmt -check
+
+      - name: 🧠 Terraform Plan
+        id: plan
+        run: terraform plan -out=tfplan
+
+  terraform-apply:
+    name: 🚀 Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    environment: infrastructure-production  # Manuelle Freigabe
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ☁️ Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: 💾 Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.1
+
+      - name: 🔄 Terraform Init
+        run: terraform init
+
+      - name: 🚀 Terraform Apply
+        run: terraform apply -auto-approve tfplan

@@ -297,111 +297,111 @@ resource "kubernetes_service" "postgres" {
 }
 
 # ============================================================================
-# DATABASE MIGRATION JOB
+# DATABASE MIGRATION JOB - KOMPLETT AUSKOMMENTIERT
 # ============================================================================
-
-resource "kubernetes_job" "db_migration" {
-  count = var.deploy_applications ? 1 : 0
-  
-  metadata {
-    name      = "db-migration-${formatdate("YYYYMMDD-hhmm", timestamp())}"
-    namespace = kubernetes_namespace.loop_it[0].metadata[0].name
-    labels = {
-      app       = "migration"
-      component = "database"
-    }
-  }
-
-  spec {
-    template {
-      metadata {
-        labels = {
-          app = "migration"
-        }
-      }
-
-      spec {
-        restart_policy = "OnFailure"
-
-        init_container {
-          name  = "wait-for-postgres"
-          image = "busybox:1.35"
-          
-          command = [
-            "sh", "-c",
-            "until nc -z postgres 5432; do echo 'Waiting for postgres...'; sleep 2; done; echo 'PostgreSQL is ready!'"
-          ]
-        }
-
-        container {
-          name  = "migration"
-          image = "${aws_ecr_repository.backend.repository_url}:latest"
-          
-          command = ["/bin/sh"]
-          args = [
-            "-c",
-            <<-EOT
-              echo "🔄 Running Database Migrations..."
-              
-              echo "📦 Installing dependencies..."
-              npm ci --only=production
-              
-              echo "🔧 Running Drizzle migrations..."
-              npm run db:push || npm run db:migrate || echo "⚠️ Migration command failed, continuing..."
-              
-              echo "✅ Migration job completed!"
-            EOT
-          ]
-
-          env {
-            name  = "NODE_ENV"
-            value = "production"
-          }
-          env {
-            name = "DATABASE_URL"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.loopit_secrets[0].metadata[0].name
-                key  = "database-url"
-              }
-            }
-          }
-
-          resources {
-            requests = {
-              memory = "128Mi"
-              cpu    = "100m"
-            }
-            limits = {
-              memory = "256Mi"
-              cpu    = "200m"
-            }
-          }
-        }
-      }
-    }
-  }
-
-  depends_on = [
-    kubernetes_deployment.postgres,
-    kubernetes_service.postgres
-  ]
-
-  lifecycle {
-    replace_triggered_by = [
-      terraform_data.migration_trigger.output
-    ]
-  }
-
-  timeouts {
-    create = "3m"
-    delete = "1m"
-  }
-}
-
-resource "terraform_data" "migration_trigger" {
-  input = timestamp()
-}
+#
+# resource "kubernetes_job" "db_migration" {
+#   count = var.deploy_applications ? 1 : 0
+#   
+#   metadata {
+#     name      = "db-migration-${formatdate("YYYYMMDD-hhmm", timestamp())}"
+#     namespace = kubernetes_namespace.loop_it[0].metadata[0].name
+#     labels = {
+#       app       = "migration"
+#       component = "database"
+#     }
+#   }
+#
+#   spec {
+#     template {
+#       metadata {
+#         labels = {
+#           app = "migration"
+#         }
+#       }
+#
+#       spec {
+#         restart_policy = "OnFailure"
+#
+#         init_container {
+#           name  = "wait-for-postgres"
+#           image = "busybox:1.35"
+#           
+#           command = [
+#             "sh", "-c",
+#             "until nc -z postgres 5432; do echo 'Waiting for postgres...'; sleep 2; done; echo 'PostgreSQL is ready!'"
+#           ]
+#         }
+#
+#         container {
+#           name  = "migration"
+#           image = "${aws_ecr_repository.backend.repository_url}:latest"
+#           
+#           command = ["/bin/sh"]
+#           args = [
+#             "-c",
+#             <<-EOT
+#               echo "🔄 Running Database Migrations..."
+#               
+#               echo "📦 Installing dependencies..."
+#               npm ci --only=production
+#               
+#               echo "🔧 Running Drizzle migrations..."
+#               npm run db:push || npm run db:migrate || echo "⚠️ Migration command failed, continuing..."
+#               
+#               echo "✅ Migration job completed!"
+#             EOT
+#           ]
+#
+#           env {
+#             name  = "NODE_ENV"
+#             value = "production"
+#           }
+#           env {
+#             name = "DATABASE_URL"
+#             value_from {
+#               secret_key_ref {
+#                 name = kubernetes_secret.loopit_secrets[0].metadata[0].name
+#                 key  = "database-url"
+#               }
+#             }
+#           }
+#
+#           resources {
+#             requests = {
+#               memory = "128Mi"
+#               cpu    = "100m"
+#             }
+#             limits = {
+#               memory = "256Mi"
+#               cpu    = "200m"
+#             }
+#           }
+#         }
+#       }
+#     }
+#   }
+#
+#   depends_on = [
+#     kubernetes_deployment.postgres,
+#     kubernetes_service.postgres
+#   ]
+#
+#   lifecycle {
+#     replace_triggered_by = [
+#       terraform_data.migration_trigger.output
+#     ]
+#   }
+#
+#   timeouts {
+#     create = "3m"
+#     delete = "1m"
+#   }
+# }
+#
+# resource "terraform_data" "migration_trigger" {
+#   input = timestamp()
+# }
 
 # ============================================================================
 # BACKEND APPLICATION
@@ -570,7 +570,8 @@ resource "kubernetes_deployment" "backend" {
   }
 
   depends_on = [
-    kubernetes_job.db_migration
+    # kubernetes_job.db_migration
+    kubernetes_service.postgres
   ]
 
   timeouts {

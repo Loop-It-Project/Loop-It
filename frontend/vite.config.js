@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss()
-  ]
-  // KEINE define-Sektion mehr!
+  ],
+  define: {
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3000')
+  }
 })

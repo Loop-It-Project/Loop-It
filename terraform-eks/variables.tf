@@ -1,3 +1,8 @@
+variable "cert_manager_email" {
+  description = "Email für cert-manager Let's Encrypt Zertifikate"
+  type        = string
+  default     = "vpj97@outlook.de"
+}
 variable "database_url" {
   description = "Complete database URL for Drizzle ORM"
   type        = string
