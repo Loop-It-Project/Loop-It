@@ -495,6 +495,25 @@ class AdminService {
       return { success: false, error: 'Network error' };
     }
   }
+
+  static async recalculateUniverseCounters() {
+    try {
+      const response = await this.fetchWithAuth(`${API_URL}/api/admin/universes/recalculate-counters`, {
+        method: 'POST'
+      });
+    
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Counter-Neuberechnung fehlgeschlagen' };
+      }
+    
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error recalculating universe counters:', error);
+      return { success: false, error: 'Netzwerkfehler bei der Counter-Neuberechnung' };
+    }
+  }
 }
 
 export default AdminService;

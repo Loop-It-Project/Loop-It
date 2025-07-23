@@ -181,36 +181,32 @@ class UniverseService {
     }
   }
 
-  // Universes entdecken
-  static async discoverUniverses(category = null, page = 1, limit = 20) {
+  // Universes entdecken - erweiterte Methode
+  static async discoverUniverses(category = null, page = 1, limit = 20, sortBy = 'popular') {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
+        sortBy
       });
-
+    
       if (category) {
         params.append('category', category);
       }
-
-      const response = await fetch(
-        `${API_URL}/api/universes/discover?${params}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+    
+      const response = await BaseService.fetchWithAuth(
+        `${API_URL}/api/universes/discover?${params}`
       );
-
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Failed to discover universes' };
       }
-
+      
       return await response.json();
     } catch (error) {
       console.error('Error discovering universes:', error);
-      throw error;
+      return { success: false, error: 'Network error' };
     }
   }
 

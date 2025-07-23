@@ -1,6 +1,10 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
+import { AdminAuthRequest } from '../middleware/adminAuth';
 import { AdminService } from '../services/adminService';
+import { UniverseService } from '../services/universeService';
+import { universesTable } from '../db/Schemas';
+import { db } from '../db/connection';
 
 // Dashboard Metriken abrufen
 export const getDashboardMetrics = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -9,7 +13,7 @@ export const getDashboardMetrics = async (req: AuthRequest, res: Response): Prom
     
     // Check admin permissions
     const permissionCheck = await AdminService.checkAdminPermissions(userId);
-    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) { // ✅ Optional chaining
+    if (!permissionCheck.success || !permissionCheck.data?.isAdmin) { // Optional chaining
       res.status(403).json({
         success: false,
         error: 'Admin access required'
@@ -354,5 +358,33 @@ export const restoreUniverse = async (req: any, res: any): Promise<void> => {
       success: false,
       error: 'Failed to restore universe'
     });
+  }
+};
+
+// Controller zum Neuberechnen der Universe-Counter
+export const recalculateAllUniverseCounters = async (req: AdminAuthRequest, res: Response): Promise<void> => {
+  try {
+    // Now TypeScript won't complain about isAdmin
+    if (!req.user?.isAdmin) {
+      res.status(403).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+    
+    // Rest of your function remains the same
+    const universes = await db.select({ id: universesTable.id }).from(universesTable);
+    
+    // Für jedes Universe die Counter neu berechnen
+    const results = await Promise.all(
+      universes.map(async (universe: { id: string }) => {
+        const postResult = await UniverseService.recalculateUniversePostCount(universe.id);
+        const memberResult = await UniverseService.recalculateUniverseMemberCount(universe.id);
+        return { universeId: universe.id, postResult, memberResult };
+      })
+    );
+    
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('Error recalculating universe counters:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };

@@ -40,16 +40,16 @@ export class PostService {
         mediaIds = []
       } = postData;
 
-      // ✅ DEBUGGING: Eingangsdaten prüfen
-      console.log('📸 PostService.createPost: Input data:', {
-        title,
-        content: content ? content.substring(0, 100) + '...' : null,
-        universeId,
-        authorId,
-        mediaIds,
-        mediaIdsType: typeof mediaIds,
-        mediaIdsLength: mediaIds?.length || 0
-      });
+      // Eingangsdaten prüfen
+      // console.log('📸 PostService.createPost: Input data:', {
+      //   title,
+      //   content: content ? content.substring(0, 100) + '...' : null,
+      //   universeId,
+      //   authorId,
+      //   mediaIds,
+      //   mediaIdsType: typeof mediaIds,
+      //   mediaIdsLength: mediaIds?.length || 0
+      // });
 
       // Validiere universeId
       if (!universeId) {
@@ -126,7 +126,7 @@ export class PostService {
         throw new Error('You must be a member of this universe to post');
       }
 
-      // ✅ ERWEITERT: Media-Daten laden falls vorhanden
+      // Media-Daten laden falls vorhanden
       let mediaDataForPost: MediaData[] = [];
       
       if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
@@ -143,7 +143,7 @@ export class PostService {
               mimeType: mediaTable.mimeType,
               fileSize: mediaTable.fileSize,
               dimensions: mediaTable.dimensions,
-              storagePath: mediaTable.storagePath // ✅ Für Debug
+              storagePath: mediaTable.storagePath // Für Debug
             })
             .from(mediaTable)
             .where(
@@ -175,7 +175,7 @@ export class PostService {
 
           console.log('📸 PostService: Processed media data:', mediaDataForPost);
           
-          // ✅ URL-Validation
+          // URL-Validation
           mediaDataForPost.forEach((media, index) => {
             console.log(`📸 PostService: Media ${index + 1} URLs:`, {
               id: media.id,
@@ -192,7 +192,7 @@ export class PostService {
         }
       }
 
-      // ✅ KORRIGIERT: Post erstellen (ohne media property)
+      // Post erstellen (ohne media property)
       const postId = uuidv4();
       const now = new Date();
 
@@ -206,7 +206,7 @@ export class PostService {
           universeId,
           authorId,
           hashtags: hashtags || [],
-          mediaIds: mediaIds || [], // ✅ Nur mediaIds, nicht media
+          mediaIds: mediaIds || [],
           isPublic,
           isDeleted: false,
           likeCount: 0,
@@ -216,7 +216,7 @@ export class PostService {
           updatedAt: now
         });
 
-      // ✅ ERWEITERT: Vollständige Post-Daten für Frontend zurückgeben
+      // Vollständige Post-Daten für Frontend zurückgeben
       const newPost = {
         id: postId,
         title: title || null,
@@ -226,7 +226,7 @@ export class PostService {
         authorId,
         hashtags: hashtags || [],
         mediaIds: mediaIds || [],
-        media: mediaDataForPost, // ✅ Hier sind die Media-Daten für Frontend
+        media: mediaDataForPost, // Hier sind die Media-Daten für Frontend
         isPublic,
         isDeleted: false,
         likeCount: 0,
@@ -256,14 +256,21 @@ export class PostService {
         timeAgo: 'Gerade eben'
       };
 
-      console.log('✅ PostService: Created post response:', {
-        postId,
-        hasMedia: mediaDataForPost.length > 0,
-        mediaCount: mediaDataForPost.length,
-        mediaIds: mediaIds,
-        responseMediaField: !!newPost.media,
-        responseMediaCount: newPost.media?.length || 0
-      });
+      // Nach erfolgreicher Post-Erstellung den Universe-Counter aktualisieren
+      await db.update(universesTable)
+        .set({ 
+          postCount: sql`${universesTable.postCount} + 1` 
+        })
+        .where(eq(universesTable.id, postData.universeId));
+
+      // console.log('✅ PostService: Created post response:', {
+      //   postId,
+      //   hasMedia: mediaDataForPost.length > 0,
+      //   mediaCount: mediaDataForPost.length,
+      //   mediaIds: mediaIds,
+      //   responseMediaField: !!newPost.media,
+      //   responseMediaCount: newPost.media?.length || 0
+      // });
 
       return newPost;
 

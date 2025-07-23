@@ -24,7 +24,7 @@ const router = express.Router();
 router.get('/check-name', checkUniverseName);
 
 // Universe Discovery (statisch)
-router.get('/discover', paginationValidation, discoverUniverses);
+router.get('/discover', auth, paginationValidation, discoverUniverses);
 
 // User-spezifische Routes (statisch)
 router.get('/user/owned', auth, paginationValidation, getOwnedUniverses); 

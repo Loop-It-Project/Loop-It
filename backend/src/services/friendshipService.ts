@@ -1,6 +1,7 @@
 import { db } from '../db/connection';
 import { friendshipsTable, usersTable, profilesTable } from '../db/Schemas';
 import { eq, and, or, desc, asc, sql } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 
 export class FriendshipService {
   // Freundschaftsanfrage senden
@@ -468,6 +469,85 @@ export class FriendshipService {
     } catch (error) {
       console.error('Error getting friends with common interests:', error);
       return { success: false, error: 'Failed to get friends with common interests' };
+    }
+  }
+
+  // Direkte Freundschaft erstellen (z.B. bei Matches)
+  static async createFriendship(user1Id: string, user2Id: string, source: string = 'match') {
+    try {
+      console.log(`🤝 Creating direct friendship between users: ${user1Id} and ${user2Id} (source: ${source})`);
+
+      // Check if users are already friends
+      const existingFriendship = await db
+        .select()
+        .from(friendshipsTable)
+        .where(
+          or(
+            and(
+              eq(friendshipsTable.requesterId, user1Id),
+              eq(friendshipsTable.addresseeId, user2Id)
+            ),
+            and(
+              eq(friendshipsTable.requesterId, user2Id),
+              eq(friendshipsTable.addresseeId, user1Id)
+            )
+          )
+        )
+        .limit(1);
+
+      if (existingFriendship.length > 0) {
+        const status = existingFriendship[0].status;
+        if (status === 'accepted') {
+          console.log('⚠️ Users are already friends');
+          return { success: true, message: 'Users are already friends', friendshipId: existingFriendship[0].id };
+        }
+
+        // Update existing friendship to accepted if pending or declined
+        await db
+          .update(friendshipsTable)
+          .set({
+            status: 'accepted',
+            respondedAt: new Date(),
+            notes: `Match from ${source}`
+          })
+          .where(eq(friendshipsTable.id, existingFriendship[0].id));
+
+        console.log('✅ Existing friendship status updated to accepted');
+        return { 
+          success: true, 
+          message: 'Friendship status updated to accepted', 
+          friendshipId: existingFriendship[0].id
+        };
+      }
+
+      // Create new direct friendship (immediately accepted)
+      const friendshipId = uuidv4();
+      await db
+        .insert(friendshipsTable)
+        .values({
+          id: friendshipId,
+          requesterId: user1Id,
+          addresseeId: user2Id,
+          status: 'accepted',
+          requestedAt: new Date(),
+          respondedAt: new Date(), // Immediately accepted
+          notes: `Match from ${source}`
+        });
+
+      console.log('✅ New friendship created successfully');
+      return { success: true, message: 'Friendship created', friendshipId };
+    } catch (error) {
+      console.error('❌ Error creating friendship:', error);
+      // Detaillierteres Logging
+      console.error('Friendship creation error details:', {
+        user1Id,
+        user2Id,
+        source,
+        errorName: error instanceof Error ? error.name : 'Unknown error',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
+      return { success: false, error: 'Failed to create friendship' };
     }
   }
 }
