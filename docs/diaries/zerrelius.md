@@ -1,3 +1,141 @@
+# Projekttagebuch – 23.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Bug Fixes, versucht zu deployen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Ging so
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Beim Bug Fixing
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Wie upgefuckt man sein kann wenn Team einige Teammitglieder einfach NICHTS machen!
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Real-Verifizierung, Blockierungsfunktion
+
+___
+# Projekttagebuch – 22.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Discover Universes eingebaut...
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Beim Bug Fixing
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Wie upgefuckt man sein kann wenn Team einige Teammitglieder einfach NICHTS machen!
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Real-Verifizierung, Blockierungsfunktion
+
+___
+# Projekttagebuch – 21.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Swipe Game updaten mit who liked me button und Menü. Benachrichtungs Menü updated
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Beim Bug Fixing
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+-
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Real-Verifizierung, Blockierungsfunktion
+
+___
+# Projekttagebuch – 18.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Swipe Game (Matchmaking) einbauen + Push Benachrichtigungen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Niergends
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Wie geil KI Tools sind und das man z.B. Copilot Intrudctions mitgeben kann usw.
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Real-Verifizierung, Blockierungsfunktion
+
+___
+# Projekttagebuch – 17.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Über die Abwesenheit unseres Product Owners zu reden und weiter zu planen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Niergends
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Wie geil KI Tools sind und das man z.B. Copilot Intrudctions mitgeben kann usw.
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Matchmaking System und Logik einbauen, Push Benachrichtigungen, Real-Verifizierung, Blockierungsfunktion
+
+___
+# Projekttagebuch – 16.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Search History einbauen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Alles erfolgreich geschafft.
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Niergends
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+-
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Matchmaking System und Logik einbauen, Push Benachrichtigungen, Real-Verifizierung, Blockierungsfunktion
+
+___
 # Projekttagebuch – 15.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)

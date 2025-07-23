@@ -1,0 +1,23 @@
+# terraform.tfvars.example
+# Copy this file to terraform.tfvars and customize it for your environment
+
+# Project & AWS Basics
+project_name     = "loop-it"
+environment      = "production"
+aws_region       = "eu-central-1"
+cluster_name     = "loop-it-cluster"
+
+# Node Group Configuration
+node_instance_types    = ["t3.small"]
+node_desired_capacity  = 1
+node_max_capacity      = 1
+node_min_capacity      = 1
+enable_spot_instances  = false  # Set to true to reduce cost (not always stable)
+
+# Optional tags (applied to resources)
+tags = {
+  Owner       = "DevOps Team"
+  CostCenter  = "LoopIt"
+  Purpose     = "EKS Infrastructure"
+  Environment = "production"
+}

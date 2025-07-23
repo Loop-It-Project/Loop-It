@@ -83,7 +83,7 @@ const ShareButton = ({ post, onShareComplete, compact = false }) => {
       id: 'email',
       name: 'E-Mail',
       icon: Mail,
-      color: 'text-gray-600 hover:text-gray-700',
+      color: 'text-tertiary hover:text-secondary',
       bgColor: 'hover:bg-gray-50'
     }
   ];

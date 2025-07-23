@@ -92,7 +92,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">Bug Report</h2>
-              <p className="text-sm text-gray-600">Hilf uns, das Problem zu beheben</p>
+              <p className="text-sm text-tertiary">Hilf uns, das Problem zu beheben</p>
             </div>
           </div>
           <button
@@ -112,7 +112,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
             <h3 className="text-2xl font-bold text-green-800 mb-2">
               Danke für deinen Bug Report!
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-tertiary mb-4">
               Wir haben dein Report erhalten und werden es so schnell wie möglich bearbeiten.
             </p>
             <p className="text-sm text-gray-500">
@@ -133,7 +133,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
 
             {/* Title */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="title" className="block text-sm font-medium text-secondary mb-2">
                 Titel des Problems *
               </label>
               <input
@@ -155,7 +155,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
             {/* Category & Priority */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="category" className="block text-sm font-medium text-secondary mb-2">
                   Kategorie
                 </label>
                 <select
@@ -174,7 +174,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
               </div>
 
               <div>
-                <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="priority" className="block text-sm font-medium text-secondary mb-2">
                   Priorität
                 </label>
                 <select
@@ -195,7 +195,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
 
             {/* Description */}
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-secondary mb-2">
                 Beschreibung des Problems *
               </label>
               <textarea
@@ -251,7 +251,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 rounded-lg text-secondary hover:bg-gray-50 transition-colors"
               >
                 Abbrechen
               </button>

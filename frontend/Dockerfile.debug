@@ -1,0 +1,56 @@
+# Build Stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build arguments
+ARG VITE_API_URL
+ARG VITE_APP_NAME=Loop-It
+
+# Environment Variables
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+
+# Debug: Show environment
+RUN echo "🔧 Build Environment:"
+RUN echo "VITE_API_URL: ${VITE_API_URL}"
+RUN echo "VITE_APP_NAME: ${VITE_APP_NAME}"
+
+# Debug: Show service files
+RUN echo "🔍 BaseService content:"
+RUN head -10 src/services/baseService.js
+
+# Build application
+RUN npm run build
+
+# Debug: Show built files
+RUN echo "📦 Built files:"
+RUN ls -la dist/
+RUN find dist/ -name "*.js" | head -5
+
+# Production Stage
+FROM nginx:alpine
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built application
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Debug: Show final files
+RUN echo "🏁 Final nginx files:"
+RUN ls -la /usr/share/nginx/html/
+
+# Expose port 8080
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]

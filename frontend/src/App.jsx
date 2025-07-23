@@ -65,6 +65,53 @@ function App() {
     }
   };
 
+  // Match Notification Handler
+  useEffect(() => {
+    const handleMatchNotification = (event) => {
+      console.log('🎉 App: Match notification received:', event.detail);
+      
+      // Browser-Benachrichtigung anzeigen
+      if (Notification.permission === 'granted') {
+        new Notification('Neues Match! 🎉', {
+          body: `Du hast ein Match mit ${event.detail.data.otherUser.displayName || event.detail.data.otherUser.username}!`,
+          icon: '/logo.png',
+          tag: 'match-notification'
+        });
+      }
+
+      // Toast-Benachrichtigung (falls Toast-System vorhanden)
+      if (window.showToast) {
+        window.showToast({
+          type: 'success',
+          title: 'Neues Match! 🎉',
+          message: `Du hast ein Match mit ${event.detail.data.otherUser.displayName || event.detail.data.otherUser.username}!`,
+          duration: 5000
+        });
+      }
+    };
+
+    // Match-Benachrichtigung Event Listener
+    window.addEventListener('match_notification', handleMatchNotification);
+
+    // WebSocket Match-Benachrichtigung
+    const handleWebSocketMatch = (data) => {
+      console.log('🎉 App: WebSocket match notification:', data);
+      
+      // Custom Event für App-weite Benachrichtigung
+      window.dispatchEvent(new CustomEvent('match_notification', {
+        detail: data
+      }));
+    };
+
+    // WebSocket Event Listener hinzufügen
+    WebSocketService.on('match_notification', handleWebSocketMatch);
+
+    return () => {
+      window.removeEventListener('match_notification', handleMatchNotification);
+      WebSocketService.off('match_notification', handleWebSocketMatch);
+    };
+  }, []);
+
   // Enhanced Login Handler mit Token-Monitoring
   const handleLogin = async (userData) => {
     setUser(userData);
@@ -75,6 +122,9 @@ function App() {
     if (token) {
       console.log('🔌 Initializing WebSocket connection...');
       WebSocketService.connect(token, userData);
+
+      // Notification Permission anfordern
+      await WebSocketService.requestNotificationPermission();
     }
     
     // Optional: Check for admin permissions after login

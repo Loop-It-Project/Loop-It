@@ -94,6 +94,13 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
   }
 };
 
+// Media URLs korrigieren vor der Anzeige
+const processedMedia = useMemo(() => {
+  if (!post.media || post.media.length === 0) return [];
+  
+  return post.media.map(item => BaseService.processMediaObject(item));
+}, [post.media]);
+
   // Comment Handler
   const handleComment = () => {
     if (onComment) {
@@ -431,9 +438,9 @@ const PostCard = ({ post, onUniverseClick, onHashtagClick, onLike, onComment, on
         )}
 
         {/* Media Gallery */}
-        {post.media && post.media.length > 0 && (
+        {processedMedia && processedMedia.length > 0 && (
           <div className="mb-3">
-            <MediaGallery media={post.media} />
+            <MediaGallery media={processedMedia} />
           </div>
         )}
 

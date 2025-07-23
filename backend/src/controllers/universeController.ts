@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { UniverseService } from '../services/universeService';
-import { body, param, query, validationResult } from 'express-validator';
+import { body, param, query, validationResult, } from 'express-validator';
 
 interface AuthRequest extends Request {
   user?: { 
@@ -172,19 +172,23 @@ export const getUniverseMembers = async (req: AuthRequest, res: Response): Promi
 // Universen entdecken
 // Diese Funktion ermöglicht es Nutzern, neue Universen zu entdecken.
 // Sie kann nach Kategorie gefiltert und paginiert werden.
-export const discoverUniverses = async (req: Request, res: Response): Promise<void> => {
+export const discoverUniverses = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as AuthRequest).user?.id; // Optional
+    const userId = req.user?.id; // Optional
     const category = req.query.category as string;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
+    const sortBy = req.query.sortBy as string || 'popular'; // popular, newest, active
 
-    const result = await UniverseService.discoverUniverses(userId, category, page, limit);
+    const result = await UniverseService.discoverUniverses(userId, category, page, limit, sortBy);
     
     res.status(200).json(result);
   } catch (error) {
     console.error('Discover universes error:', error);
-    res.status(500).json({ error: 'Failed to discover universes' });
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to discover universes' 
+    });
   }
 };
 

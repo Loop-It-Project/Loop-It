@@ -19,7 +19,7 @@ const BugReportSection = ({ user }) => {
       </div>
       
       <div className="space-y-4">
-        <p className="text-gray-600">
+        <p className="text-tertiary">
           Hast du einen Bug gefunden? Hilf uns dabei, Loop-It zu verbessern, indem du uns das Problem meldest.
         </p>
         

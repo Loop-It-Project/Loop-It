@@ -35,10 +35,10 @@ const UserBugReports = ({ onBack }) => {
       case 'open': return 'text-red-600 bg-red-100';
       case 'in_progress': return 'text-yellow-600 bg-yellow-100';
       case 'resolved': return 'text-green-600 bg-green-100';
-      case 'closed': return 'text-gray-600 bg-gray-100';
+      case 'closed': return 'text-tertiary bg-gray-100';
       case 'duplicate': return 'text-blue-600 bg-blue-100';
       case 'invalid': return 'text-purple-600 bg-purple-100';
-      default: return 'text-gray-600 bg-gray-100';
+      default: return 'text-tertiary bg-gray-100';
     }
   };
 
@@ -60,7 +60,7 @@ const UserBugReports = ({ onBack }) => {
       case 'medium': return 'text-yellow-600';
       case 'high': return 'text-orange-600';
       case 'critical': return 'text-red-600';
-      default: return 'text-gray-600';
+      default: return 'text-tertiary';
     }
   };
 
@@ -90,7 +90,7 @@ const UserBugReports = ({ onBack }) => {
     return (
       <div className="text-center py-8">
         <div className="animate-spin w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-gray-600">Lade Bug Reports...</p>
+        <p className="text-tertiary">Lade Bug Reports...</p>
       </div>
     );
   }
@@ -101,7 +101,7 @@ const UserBugReports = ({ onBack }) => {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setSelectedReport(null)}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center space-x-2 text-tertiary hover:text-gray-800 transition-colors"
           >
             <ArrowLeft size={16} />
             <span>Zurück zur Übersicht</span>
@@ -129,14 +129,14 @@ const UserBugReports = ({ onBack }) => {
             </div>
             <div>
               <span className="text-sm text-gray-500">Kategorie</span>
-              <div className="font-medium text-gray-700">{getCategoryLabel(selectedReport.category)}</div>
+              <div className="font-medium text-secondary">{getCategoryLabel(selectedReport.category)}</div>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
               <h3 className="font-medium text-gray-900 mb-2">Beschreibung</h3>
-              <p className="text-gray-700 whitespace-pre-line">{selectedReport.description}</p>
+              <p className="text-secondary whitespace-pre-line">{selectedReport.description}</p>
             </div>
 
             <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -167,7 +167,7 @@ const UserBugReports = ({ onBack }) => {
         <h2 className="text-xl font-bold text-gray-900">Meine Bug Reports</h2>
         <button
           onClick={onBack}
-          className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+          className="flex items-center space-x-2 text-tertiary hover:text-gray-800 transition-colors"
         >
           <ArrowLeft size={16} />
           <span>Zurück</span>
@@ -184,7 +184,7 @@ const UserBugReports = ({ onBack }) => {
       {bugReports.length === 0 ? (
         <div className="text-center py-8">
           <Bug className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">Du hast noch keine Bug Reports erstellt.</p>
+          <p className="text-tertiary">Du hast noch keine Bug Reports erstellt.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -201,7 +201,7 @@ const UserBugReports = ({ onBack }) => {
                       {getStatusLabel(report.status)}
                     </span>
                   </div>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">{report.description}</p>
+                  <p className="text-tertiary text-sm mb-3 line-clamp-2">{report.description}</p>
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
                     <span className={`font-medium ${getPriorityColor(report.priority)}`}>
                       {getPriorityLabel(report.priority)}
@@ -215,7 +215,7 @@ const UserBugReports = ({ onBack }) => {
                 </div>
                 <button
                   onClick={() => setSelectedReport(report)}
-                  className="ml-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="ml-4 p-2 text-gray-400 hover:text-tertiary transition-colors"
                   title="Details ansehen"
                 >
                   <Eye size={16} />

@@ -1,0 +1,126 @@
+{{- if .Values.autoscaling.backend.enabled }}
+# Backend HPA
+apiVersion: {{ include "loop-it.hpa.apiVersion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "loop-it.fullname" . }}-backend-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.backend.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "loop-it.fullname" . }}-backend
+  minReplicas: {{ .Values.autoscaling.backend.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.backend.maxReplicas }}
+  
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.backend.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.backend.targetMemoryUtilizationPercentage }}
+  
+  {{- if .Values.autoscaling.backend.behavior }}
+  behavior:
+    {{- with .Values.autoscaling.backend.behavior.scaleUp }}
+    scaleUp:
+      stabilizationWindowSeconds: {{ .stabilizationWindowSeconds }}
+      policies:
+        {{- range .policies }}
+        - type: {{ .type }}
+          value: {{ .value }}
+          periodSeconds: {{ .periodSeconds }}
+        {{- end }}
+      selectPolicy: {{ .selectPolicy }}
+    {{- end }}
+    {{- with .Values.autoscaling.backend.behavior.scaleDown }}
+    scaleDown:
+      stabilizationWindowSeconds: {{ .stabilizationWindowSeconds }}
+      policies:
+        {{- range .policies }}
+        - type: {{ .type }}
+          value: {{ .value }}
+          periodSeconds: {{ .periodSeconds }}
+        {{- end }}
+      selectPolicy: {{ .selectPolicy }}
+    {{- end }}
+  {{- end }}
+
+{{- end }}
+
+{{- if .Values.autoscaling.frontend.enabled }}
+---
+# Frontend HPA
+apiVersion: {{ include "loop-it.hpa.apiVersion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "loop-it.fullname" . }}-frontend-hpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.frontend.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "loop-it.fullname" . }}-frontend
+  minReplicas: {{ .Values.autoscaling.frontend.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.frontend.maxReplicas }}
+  
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.frontend.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.frontend.targetMemoryUtilizationPercentage }}
+  
+  {{- if .Values.autoscaling.frontend.behavior }}
+  behavior:
+    {{- with .Values.autoscaling.frontend.behavior.scaleUp }}
+    scaleUp:
+      stabilizationWindowSeconds: {{ .stabilizationWindowSeconds }}
+      policies:
+        {{- range .policies }}
+        - type: {{ .type }}
+          value: {{ .value }}
+          periodSeconds: {{ .periodSeconds }}
+        {{- end }}
+      selectPolicy: {{ .selectPolicy }}
+    {{- end }}
+    {{- with .Values.autoscaling.frontend.behavior.scaleDown }}
+    scaleDown:
+      stabilizationWindowSeconds: {{ .stabilizationWindowSeconds }}
+      policies:
+        {{- range .policies }}
+        - type: {{ .type }}
+          value: {{ .value }}
+          periodSeconds: {{ .periodSeconds }}
+        {{- end }}
+      selectPolicy: {{ .selectPolicy }}
+    {{- end }}
+  {{- end }}
+
+{{- end }}

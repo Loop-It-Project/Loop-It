@@ -11,6 +11,7 @@ export * from './media';
 export * from './posts';
 export * from './comments';
 export * from './universes';
+export * from './swipeGame';
 
 // Communication
 export * from './conversations';
@@ -93,13 +94,21 @@ export type {
   NewModerationQueue
 } from './moderation';
 
-export type {
-  SearchIndex,
-  NewSearchIndex,
-  TrendingTopic, 
-  NewTrendingTopic, 
-  SearchSuggestion, 
-  NewSearchSuggestion
+export { 
+  searchIndexTable,
+  searchHistoryTable,
+  searchSuggestionsTable,
+  searchFiltersTable,
+  userSearchPreferencesTable,
+  trendingTopicsTable,
+  type SearchIndex,
+  type NewSearchIndex,
+  type SearchHistory,
+  type NewSearchHistory,
+  type TrendingTopic,
+  type NewTrendingTopic,
+  type SearchSuggestion,
+  type NewSearchSuggestion
 } from './search';
 
 export type {
@@ -142,6 +151,19 @@ export type {
   UniverseChatModeration,
   NewUniverseChatModeration
 } from './universeChat';
+
+export type {
+  SwipeAction,
+  NewSwipeAction,
+  Match,
+  NewMatch,
+  SwipePreferences,
+  NewSwipePreferences,
+  SwipeStats,
+  NewSwipeStats,
+  SwipeQueue,
+  NewSwipeQueue
+} from './swipeGame';
 
 // Schema Overview Comment
 /**

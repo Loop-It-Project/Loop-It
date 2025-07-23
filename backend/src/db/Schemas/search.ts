@@ -64,7 +64,7 @@ export const searchHistoryTable = pgTable("search_history", {
   
   query: text().notNull(),
   normalizedQuery: text().notNull(),
-  queryType: varchar({ length: 20 }).notNull(),
+  queryType: varchar({ length: 20 }).notNull(), // 'text', 'hashtag', 'user', 'universe'
   
   filters: json(),
   sortBy: varchar({ length: 20 }),
@@ -74,11 +74,15 @@ export const searchHistoryTable = pgTable("search_history", {
   selectedResultId: uuid(),
   selectedResultRank: integer(),
   
-  searchSource: varchar({ length: 50 }),
+  searchSource: varchar({ length: 50 }).default('header_search'),
   userLocation: json(),
   
   createdAt: timestamp().defaultNow().notNull(),
 }, (table) => ({
+  userIdFk: foreignKey({
+    columns: [table.userId],
+    foreignColumns: [usersTable.id],
+  }),
   userIdx: index("search_history_user_idx").on(table.userId),
   queryIdx: index("search_history_query_idx").on(table.normalizedQuery),
   createdAtIdx: index("search_history_created_at_idx").on(table.createdAt),
@@ -219,3 +223,7 @@ export type TrendingTopic = typeof trendingTopicsTable.$inferSelect;
 export type NewTrendingTopic = typeof trendingTopicsTable.$inferInsert;
 export type SearchSuggestion = typeof searchSuggestionsTable.$inferSelect;
 export type NewSearchSuggestion = typeof searchSuggestionsTable.$inferInsert;
+export type SearchFilter = typeof searchFiltersTable.$inferSelect;
+export type NewSearchFilter = typeof searchFiltersTable.$inferInsert;
+export type UserSearchPreferences = typeof userSearchPreferencesTable.$inferSelect;
+export type NewUserSearchPreferences = typeof userSearchPreferencesTable.$inferInsert;

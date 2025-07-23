@@ -240,3 +240,76 @@ select option {
   background-color: rgb(55, 65, 81); /* gray-700 */
   color: white;
 }
+
+/* ===== SEARCH HISTORY STYLES ===== */
+.search-history-item {
+  transition: all 0.2s ease;
+}
+
+.search-history-item:hover {
+  background-color: var(--bg-hover);
+  transform: translateX(2px);
+}
+
+.search-history-item .delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.search-history-item:hover .delete-btn {
+  opacity: 1;
+}
+
+.search-dropdown {
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.search-dropdown-header {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  border-bottom: 1px solid var(--border-primary);
+}
+
+/* Dark mode search styles */
+.dark .search-dropdown {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.dark .search-dropdown-header {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+}
+
+/* Animation für History Items */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-history-item {
+  animation: slideInFromTop 0.3s ease forwards;
+}
+
+/* Scrollbar für History Dropdown */
+.search-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-dropdown::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.search-dropdown::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 3px;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

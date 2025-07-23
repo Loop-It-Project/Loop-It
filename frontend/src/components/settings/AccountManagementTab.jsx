@@ -105,7 +105,7 @@ const AccountManagementTab = ({ user, onLogout }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Grund (optional)
               </label>
               <textarea
@@ -121,7 +121,7 @@ const AccountManagementTab = ({ user, onLogout }) => {
           <div className="flex justify-end space-x-3">
             <button
               onClick={() => setShowDeactivateModal(false)}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+              className="px-4 py-2 text-secondary border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
             >
               Abbrechen
             </button>
@@ -156,7 +156,7 @@ const AccountManagementTab = ({ user, onLogout }) => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Grund (optional)
               </label>
               <textarea
@@ -169,7 +169,7 @@ const AccountManagementTab = ({ user, onLogout }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-secondary mb-2">
                 Passwort bestätigen *
               </label>
               <input
@@ -186,7 +186,7 @@ const AccountManagementTab = ({ user, onLogout }) => {
           <div className="flex justify-end space-x-3">
             <button
               onClick={() => setShowDeleteModal(false)}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+              className="px-4 py-2 text-secondary border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
             >
               Abbrechen
             </button>
@@ -214,7 +214,7 @@ const AccountManagementTab = ({ user, onLogout }) => {
             </div>
             <button
               onClick={() => setShowDeletionImpact(false)}
-              className="text-primary cursor-pointer hover:text-gray-600"
+              className="text-primary cursor-pointer hover:text-tertiary"
             >
               <ArrowLeft size={20} />
             </button>

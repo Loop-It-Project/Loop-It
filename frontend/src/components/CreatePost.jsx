@@ -116,7 +116,7 @@ const CreatePost = ({ onClose, onPostCreated, userUniverses }) => {
 
                 {userUniverses.length > 0 && allUserUniverses.length > userUniverses.length && (
                   <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-tertiary dark:text-gray-400">
                       ℹ️ {userUniverses.length} von {allUserUniverses.length} Universes sind verfügbar. {allUserUniverses.length - userUniverses.length} sind geschlossen/inaktiv.
                     </p>
                   </div>
