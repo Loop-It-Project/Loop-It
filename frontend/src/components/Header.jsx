@@ -22,7 +22,6 @@ import AdminService from '../services/adminService';
 import useEscapeKey from '../hooks/useEscapeKey';
 import PendingFriendRequests from './PendingFriendRequests';
 import FriendshipService from '../services/friendshipService';
-import SwipeGame from './SwipeGame';
 import WebSocketService from '../services/websocketService';
 
 // Header-Komponente für die Navigation und Aktionen im Dashboard
