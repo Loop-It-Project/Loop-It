@@ -75,5 +75,7 @@ gitops/environments/development/secrets.yaml
 secrets.tfvars
 
 terraform.tfvars
+terraform.tfvars.backup
+
 *.auto.tfvars
 *.auto.tfvars.json
