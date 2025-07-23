@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BackButton from './Backbutton';
 import UniverseService from '../services/universeService';
+import { useTheme } from '../contexts/ThemeContext';
 
-const FirstUniverses = ({ user }) => {
+const FirstUniverses = () => {
+  const { isDarkMode } = useTheme(); // Add this line
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -117,18 +118,26 @@ const FirstUniverses = ({ user }) => {
   };
 
   return (
-    <div className="flex justify-center">
-      <div className="max-w-md w-full mb-15">
-        <BackButton />
-
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
+    <div className={`flex justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gray-900'}`}>
+      <div className="max-w-md w-full mt-4 mb-4">
+        <div className={`${
+          isDarkMode ? 'bg-gray-800' : 'bg-white'
+        } rounded-2xl p-8 shadow-2xl`}>
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Teile deine Hobbys mit uns!</h1>
-            <p className="text-gray-600">Wähle Kategorien und tritt passenden Universen bei</p>
+            <h1 className={`text-3xl font-bold mb-2 ${
+              isDarkMode ? 'text-white' : 'text-gray-800'
+            }`}>
+              Teile deine Hobbys mit uns!
+            </h1>
+            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Wähle Kategorien und tritt passenden Universen bei
+            </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+            <div className={`${
+              isDarkMode ? 'bg-red-900 border-red-700 text-red-200' : 'bg-red-50 border-red-200 text-red-600'
+            } px-4 py-3 rounded-lg mb-6 border`}>
               {error}
             </div>
           )}
@@ -136,7 +145,9 @@ const FirstUniverses = ({ user }) => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Categories Selection */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className={`block text-sm font-medium ${
+                isDarkMode ? 'text-gray-200' : 'text-gray-700'
+              }`}>
                 Wähle deine Interessensgebiete
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -147,8 +158,10 @@ const FirstUniverses = ({ user }) => {
                     onClick={() => handleCategoryChange(category.value)}
                     className={`p-2 rounded-lg text-sm font-medium transition ${
                       selectedCategories.includes(category.value)
-                        ? 'bg-purple-100 text-purple-700 border-purple-200'
-                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                        ? 'bg-purple-600 text-white border-purple-500'
+                        : isDarkMode
+                          ? 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                     } border`}
                   >
                     {category.label}
@@ -160,17 +173,25 @@ const FirstUniverses = ({ user }) => {
             {/* Universes Selection */}
             {selectedCategories.length > 0 && (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={`block text-sm font-medium ${
+                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                }`}>
                   Verfügbare Universes
                 </label>
                 {loading ? (
-                  <p className="text-gray-500">Lade Universes...</p>
+                  <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
+                    Lade Universes...
+                  </p>
                 ) : availableUniverses.length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {availableUniverses.map(universe => (
                       <label
                         key={universe.id}
-                        className="flex items-center p-3 rounded-lg border hover:bg-gray-50 cursor-pointer"
+                        className={`flex items-center p-3 rounded-lg border ${
+                          isDarkMode
+                            ? 'border-gray-700 hover:bg-gray-700'
+                            : 'border-gray-200 hover:bg-gray-50'
+                        } cursor-pointer`}
                       >
                         <input
                           type="checkbox"
@@ -179,8 +200,12 @@ const FirstUniverses = ({ user }) => {
                           className="h-4 w-4 text-purple-600 rounded border-gray-300"
                         />
                         <div className="ml-3">
-                          <div className="font-medium text-gray-700">{universe.name}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className={`font-medium ${
+                            isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                          }`}>
+                            {universe.name}
+                          </div>
+                          <div className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
                             {universe.memberCount || 0} Mitglieder
                           </div>
                         </div>
@@ -188,7 +213,9 @@ const FirstUniverses = ({ user }) => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">Keine Universes in diesen Kategorien gefunden</p>
+                  <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
+                    Keine Universes in diesen Kategorien gefunden
+                  </p>
                 )}
               </div>
             )}
@@ -197,7 +224,11 @@ const FirstUniverses = ({ user }) => {
             <button
               type="submit"
               disabled={loading || selectedUniverses.length === 0}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full py-3 rounded-lg font-semibold transition ${
+                isDarkMode
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {loading ? 'Wird verarbeitet...' : 'Auswahl bestätigen'}
             </button>
