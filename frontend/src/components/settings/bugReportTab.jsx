@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Bug, ExternalLink } from 'lucide-react';
-import BugReportForm from '../BugReportForm';
-import UserBugReports from './UserBugReports';
+import BugReportForm from '../bugReportForm';
+import UserBugReports from './userBugReports';
 
 const BugReportSection = ({ user }) => {
   const [showBugReportForm, setShowBugReportForm] = useState(false);

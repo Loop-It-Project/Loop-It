@@ -1,0 +1,88 @@
+{{- if .Values.rbac.create }}
+# Prometheus ServiceAccount
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "loopit-monitoring.prometheus.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.prometheus.labels" . | nindent 4 }}
+  {{- with .Values.rbac.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+---
+# Prometheus ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-prometheus
+  labels:
+    {{- include "loopit-monitoring.prometheus.labels" . | nindent 4 }}
+rules:
+{{- toYaml .Values.rbac.prometheus.clusterRole.rules | nindent 0 }}
+
+---
+# Prometheus ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-prometheus
+  labels:
+    {{- include "loopit-monitoring.prometheus.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "loopit-monitoring.fullname" . }}-prometheus
+subjects:
+- kind: ServiceAccount
+  name: {{ include "loopit-monitoring.prometheus.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
+
+---
+# Promtail ServiceAccount
+{{- if .Values.promtail.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "loopit-monitoring.promtail.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.promtail.labels" . | nindent 4 }}
+  {{- with .Values.rbac.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+---
+# Promtail ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-promtail
+  labels:
+    {{- include "loopit-monitoring.promtail.labels" . | nindent 4 }}
+rules:
+{{- toYaml .Values.rbac.promtail.clusterRole.rules | nindent 0 }}
+
+---
+# Promtail ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-promtail
+  labels:
+    {{- include "loopit-monitoring.promtail.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "loopit-monitoring.fullname" . }}-promtail
+subjects:
+- kind: ServiceAccount
+  name: {{ include "loopit-monitoring.promtail.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}

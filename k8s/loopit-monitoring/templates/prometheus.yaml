@@ -1,0 +1,221 @@
+{{- if .Values.prometheus.enabled }}
+# Prometheus ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-prometheus-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.prometheus.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      # Prometheus selbst
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      {{- if .Values.prometheus.backend.enabled }}
+      # Loop-It Backend - DIREKT über Service
+      - job_name: 'loop-it-backend-direct'
+        static_configs:
+          - targets: ['{{ .Values.prometheus.backend.service.name }}.{{ .Values.prometheus.backend.service.namespace }}.svc.cluster.local:{{ .Values.prometheus.backend.service.port }}']
+        metrics_path: '{{ .Values.prometheus.backend.service.path }}'
+        scrape_interval: {{ .Values.prometheus.backend.scrapeInterval }}
+        scrape_timeout: {{ .Values.prometheus.backend.scrapeTimeout }}
+      {{- end }}
+
+      {{- if .Values.prometheus.serviceDiscovery.enabled }}
+      # Loop-It Backend - Service Discovery
+      - job_name: 'loop-it-backend-discovery'
+        kubernetes_sd_configs:
+          - role: service
+            namespaces:
+              names:
+                {{- range .Values.prometheus.serviceDiscovery.namespaces }}
+                - {{ . }}
+                {{- end }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: kubernetes_service_name
+      {{- end }}
+
+      # Kubernetes Pods
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+---
+{{- if .Values.persistence.enabled }}
+# Prometheus PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-prometheus-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.prometheus.labels" . | nindent 4 }}
+  {{- with .Values.persistence.prometheus.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.prometheus.accessMode }}
+  {{- $storageClass := include "loopit-monitoring.storageClass" (dict "storageClass" .Values.persistence.prometheus.storageClass "Values" .Values) }}
+  {{- if $storageClass }}
+  storageClassName: {{ $storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.prometheus.size }}
+
+---
+{{- end }}
+# Prometheus Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.prometheus.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "loopit-monitoring.prometheus.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "loopit-monitoring.prometheus.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations.prometheus }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.rbac.create }}
+      serviceAccountName: {{ include "loopit-monitoring.prometheus.serviceAccountName" . }}
+      {{- end }}
+      {{- include "loopit-monitoring.securityContext" (dict "securityContext" .Values.securityContext.prometheus) | nindent 6 }}
+      containers:
+      - name: prometheus
+        image: {{ include "loopit-monitoring.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.prometheus.image.repository "tag" .Values.prometheus.image.tag "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.prometheus.image.pullPolicy }}
+        ports:
+        - containerPort: 9090
+          name: http
+        args:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus'
+          - '--storage.tsdb.retention.time={{ .Values.prometheus.retention }}'
+          - '--web.enable-lifecycle'
+          - '--web.route-prefix=/'
+          - '--web.external-url=http://{{ .Values.ingress.hosts.prometheus }}'
+          - '--log.level=info'
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        {{- if .Values.persistence.enabled }}
+        - name: prometheus-storage
+          mountPath: /prometheus
+        {{- end }}
+        {{- include "loopit-monitoring.resources" .Values.prometheus | nindent 8 }}
+        {{- include "loopit-monitoring.healthCheck" (dict "healthCheck" .Values.healthChecks.prometheus "port" 9090) | nindent 8 }}
+        {{- include "loopit-monitoring.securityContext" (dict "securityContext" .Values.securityContext.prometheus) | nindent 8 }}
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: {{ include "loopit-monitoring.fullname" . }}-prometheus-config
+      {{- if .Values.persistence.enabled }}
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: {{ include "loopit-monitoring.fullname" . }}-prometheus-pvc
+      {{- else }}
+      - name: prometheus-storage
+        emptyDir: {}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+---
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "loopit-monitoring.fullname" . }}-prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loopit-monitoring.prometheus.labels" . | nindent 4 }}
+  annotations:
+    {{- include "loopit-monitoring.serviceAnnotations" (dict "serviceAnnotations" .Values.podAnnotations.prometheus "Values" .Values) | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "loopit-monitoring.prometheus.selectorLabels" . | nindent 4 }}
+  ports:
+  - port: 9090
+    targetPort: 9090
+    name: http
+{{- end }}
