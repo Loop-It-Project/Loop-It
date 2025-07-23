@@ -168,11 +168,6 @@ resource "kubernetes_persistent_volume_claim" "postgres_pvc" {
 resource "kubernetes_deployment" "postgres" {
   count = var.deploy_applications ? 1 : 0
 
-  timeouts {
-    create = "2m"
-    update = "2m"
-    delete = "1m"
-  }
 
   metadata {
     name      = "postgres"
@@ -393,10 +388,6 @@ resource "kubernetes_service" "postgres" {
 #     ]
 #   }
 #
-#   timeouts {
-#     create = "3m"
-#     delete = "1m"
-#   }
 # }
 #
 # resource "terraform_data" "migration_trigger" {
@@ -574,11 +565,6 @@ resource "kubernetes_deployment" "backend" {
     kubernetes_service.postgres
   ]
 
-  timeouts {
-    create = "2m"
-    update = "2m"
-    delete = "1m"
-  }
 }
 
 resource "kubernetes_service" "backend" {
@@ -720,11 +706,6 @@ resource "kubernetes_deployment" "frontend" {
   }
   depends_on = [kubernetes_namespace.loop_it]
 
-  timeouts {
-    create = "2m"
-    update = "2m"
-    delete = "1m"
-  }
 }
 
 resource "kubernetes_service" "frontend" {

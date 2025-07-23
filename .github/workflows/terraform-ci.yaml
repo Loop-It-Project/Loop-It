@@ -1,78 +1,108 @@
-name: Terraform Infrastructure Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
-      - feature/gitops-setup
-  workflow_dispatch: # Optional: manuelles Triggern
+    branches: [main, feature/gitops-setup]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+  workflow_dispatch:
 
 permissions:
-  id-token: write # Für OIDC
+  id-token: write
   contents: read
 
-env:
-  TF_VAR_deploy_applications: false # Nur Infrastruktur
-
 jobs:
-  terraform-plan:
-    name: Terraform Plan
+  build-and-deploy:
+    name: 🏗️ Build & Deploy
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials (OIDC)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.12.2"
+      # 🔨 Build Backend
+      - name: Build Backend Image
+        working-directory: ./backend
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+          
+          # ECR Login
+          aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+          
+          # Build & Push
+          docker build -t $ECR_REGISTRY/loop-it/backend:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/loop-it/backend:$IMAGE_TAG
+          
+          echo "BACKEND_IMAGE=$ECR_REGISTRY/loop-it/backend:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Terraform Version Info
-        run: terraform -version
+      # 🎨 Build Frontend  
+      - name: Build Frontend Image
+        working-directory: ./frontend
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+          
+          # Get LoadBalancer URL for Frontend API Config
+          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name ${{ vars.EKS_CLUSTER_NAME }}
+          LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "localhost")
+          
+          # Build with API URL
+          docker build --build-arg VITE_API_URL=http://$LB_URL -t $ECR_REGISTRY/loop-it/frontend:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/loop-it/frontend:$IMAGE_TAG
+          
+          echo "FRONTEND_IMAGE=$ECR_REGISTRY/loop-it/frontend:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Terraform Init
-        run: cd terraform-eks && terraform init
+      # 🚀 Deploy to EKS
+      - name: Deploy to Kubernetes
+        run: |
+          # Update kubeconfig
+          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name ${{ vars.EKS_CLUSTER_NAME }}
+          
+          # Check cluster
+          kubectl get nodes
+          
+          # Update Backend Image
+          kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }} -n loop-it
+          kubectl rollout status deployment/backend -n loop-it --timeout=300s
+          
+          # Update Frontend Image  
+          kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }} -n loop-it
+          kubectl rollout status deployment/frontend -n loop-it --timeout=300s
 
-      - name: Terraform Format Check
-        run: cd terraform-eks && terraform fmt -check
+      # 🧪 Health Check
+      - name: Health Check
+        run: |
+          # Wait for deployment
+          sleep 30
+          
+          # Get LoadBalancer URL
+          LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          
+          echo "🌐 Application URL: http://$LB_URL"
+          
+          # Test Backend Health
+          curl -f "http://$LB_URL/api/health" || echo "Backend health check failed"
+          
+          # Test Frontend
+          curl -f "http://$LB_URL/" || echo "Frontend check failed"
+          
+          echo "✅ Deployment Complete!"
 
-      - name: Terraform Plan
-        id: plan
-        run: cd terraform-eks && terraform plan -out=tfplan
-
-  terraform-apply:
-    name: Terraform Apply
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    environment: infrastructure-production # Manuelle Freigabe
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.12.2"
-
-      - name: Terraform Version Info
-        run: terraform -version
-
-      - name: Terraform Init
-        run: cd terraform-eks && terraform init
-
-      - name: Terraform Apply
-        run: cd terraform-eks && terraform apply -auto-approve tfplan
+      # 📊 Summary
+      - name: Deployment Summary
+        run: |
+          LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          
+          echo "### 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend Image:** \`${{ env.BACKEND_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend Image:** \`${{ env.FRONTEND_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Application URL:** http://$LB_URL" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

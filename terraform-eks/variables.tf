@@ -163,3 +163,112 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# Am Ende von terraform-eks/variables.tf hinzufügen (falls noch nicht vorhanden):
+
+# ============================================================================
+# MONITORING VARIABLES
+# ============================================================================
+
+variable "grafana_admin_user" {
+  description = "Grafana admin username"
+  type        = string
+  default     = "admin"
+  sensitive   = true
+}
+
+variable "grafana_admin_password" {
+  description = "Grafana admin password"
+  type        = string
+  sensitive   = true
+}
+
+variable "grafana_secret_key" {
+  description = "Grafana secret key (min 32 chars)"
+  type        = string
+  sensitive   = true
+}
+
+variable "monitoring_domain" {
+  description = "Domain for Grafana dashboard"
+  type        = string
+  default     = "monitoring.localhost"
+}
+
+variable "prometheus_domain" {
+  description = "Domain for Prometheus UI"
+  type        = string
+  default     = "prometheus.localhost"
+}
+
+variable "loki_domain" {
+  description = "Domain for Loki UI"
+  type        = string
+  default     = "loki.localhost"
+}
+
+variable "prometheus_storage_size" {
+  description = "Prometheus storage size"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "grafana_storage_size" {
+  description = "Grafana storage size"
+  type        = string
+  default     = "2Gi"
+}
+
+variable "loki_storage_size" {
+  description = "Loki storage size"
+  type        = string
+  default     = "5Gi"
+}
+
+variable "prometheus_retention_time" {
+  description = "Prometheus data retention time"
+  type        = string
+  default     = "7d"
+}
+
+variable "loki_retention_period" {
+  description = "Loki log retention period"
+  type        = string
+  default     = "168h"
+}
+
+variable "prometheus_memory_limit" {
+  description = "Prometheus memory limit"
+  type        = string
+  default     = "1Gi"
+}
+
+variable "prometheus_cpu_limit" {
+  description = "Prometheus CPU limit"
+  type        = string
+  default     = "500m"
+}
+
+variable "grafana_memory_limit" {
+  description = "Grafana memory limit"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "grafana_cpu_limit" {
+  description = "Grafana CPU limit"
+  type        = string
+  default     = "500m"
+}
+
+variable "loki_memory_limit" {
+  description = "Loki memory limit"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "loki_cpu_limit" {
+  description = "Loki CPU limit"
+  type        = string
+  default     = "300m"
+}
