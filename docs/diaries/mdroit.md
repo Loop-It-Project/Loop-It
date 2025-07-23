@@ -1,3 +1,46 @@
+# Projekttagebuch Marc Droit - 23.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+firstUniverses anpassen / Deployment (Gruppe)
+## *Fortschritte & Ergebnisse:*
+
+firstUniverses editiert und darkmode hinzugefügt
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+Styling/Layout überarbeiten, Änderungen debuggen
+
+# Projekttagebuch Marc Droit - 22.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+firstUniverses fertigstellen
+
+## *Fortschritte & Ergebnisse:*
+
+firstUniverses fertig
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+Deployment / frontend anpassen
+
 # Projekttagebuch Marc Droit - 17.07.2025
 
 ## *Heutige Hauptaufgabe(n):*
