@@ -91,3 +91,19 @@ spec:
   ports:
     - port: 5432
       targetPort: 5432
+
+---
+# PostgreSQL Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+  namespace: loopit-dev
+  labels:
+    app: postgres
+spec:
+  minAvailable: 1 # PostgreSQL muss immer verfügbar sein
+  selector:
+    matchLabels:
+      app: postgres
+  unhealthyPodEvictionPolicy: IfHealthyBudget # Konservativ für DB

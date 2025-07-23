@@ -56,3 +56,24 @@ k8s/*.tmp
 # Monitoring Environment
 k8s/monitoring/.env.monitoring
 *.env.monitoring
+
+
+# GitOps Secrets
+gitops/environments/development/secrets.yaml
+
+
+
+**/secrets.yaml
+
+
+# Lokale Terraform-Dateien
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform.lock.hcl
+.terraform/
+secrets.tfvars
+
+terraform.tfvars
+*.auto.tfvars
+*.auto.tfvars.json

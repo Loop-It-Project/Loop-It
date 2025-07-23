@@ -1,0 +1,27 @@
+config:
+  target: 'http://localhost'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 30
+      name: "Ramp-up"
+    - duration: 120
+      arrivalRate: 40
+      name: "Sustained Load"
+
+scenarios:
+  - name: "Backend Load"
+    weight: 50
+    flow:
+      - get:
+          url: "/api/health"
+  - name: "Frontend Load"
+    weight: 30
+    flow:
+      - get:
+          url: "/"
+  - name: "Metrics Load"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/metrics"

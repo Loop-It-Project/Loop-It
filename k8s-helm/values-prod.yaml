@@ -1,0 +1,243 @@
+# values-terraform-prod.yaml
+# Optimiert für dein bestehendes Terraform EKS Setup
+
+environment: production
+
+# ECR Integration (exakt deine URLs)
+backend:
+  enabled: true
+  replicaCount: 1  # Wie in deinem Terraform
+  image:
+    repository: 390402575145.dkr.ecr.eu-central-1.amazonaws.com/loop-it/backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  # Ressourcen wie in k8s-apps.tf
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  
+  # Exakt deine Health Check Konfiguration
+  probes:
+    startup:
+      enabled: true
+      httpGet:
+        path: /api/health
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 20
+      timeoutSeconds: 3
+    
+    liveness:
+      enabled: true
+      httpGet:
+        path: /api/health
+        port: 3000
+      initialDelaySeconds: 0
+      periodSeconds: 30
+      failureThreshold: 3
+      timeoutSeconds: 5
+    
+    readiness:
+      enabled: true
+      httpGet:
+        path: /api/health
+        port: 3000
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      failureThreshold: 2
+      timeoutSeconds: 3
+
+frontend:
+  enabled: true
+  replicaCount: 1  # Wie in deinem Terraform
+  image:
+    repository: 390402575145.dkr.ecr.eu-central-1.amazonaws.com/loop-it/frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  # Service Port Fix aus deinem Terraform
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080  # ✅ Dein Fix aus k8s-apps.tf
+  
+  # Ressourcen wie in k8s-apps.tf
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+  
+  # Nginx Health Check Fix
+  probes:
+    liveness:
+      enabled: true
+      httpGet:
+        path: /
+        port: 8080  # ✅ Angepasst an dein Setup
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      failureThreshold: 3
+      timeoutSeconds: 5
+    
+    readiness:
+      enabled: true
+      httpGet:
+        path: /health  # ✅ Wie in deinem Terraform
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 2
+      timeoutSeconds: 3
+
+# PostgreSQL exakt wie in deinem Setup
+postgresql:
+  enabled: true
+  external: false
+  image:
+    repository: postgres
+    tag: "17-alpine"  # ✅ Wie in k8s-apps.tf
+    pullPolicy: IfNotPresent
+  
+  auth:
+    username: "loop_user"
+    database: "loop-it"
+  
+  # Ressourcen wie in k8s-apps.tf
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Storage wie in deinem Terraform
+  persistence:
+    enabled: true
+    storageClass: "gp3"
+    size: "2Gi"  # Deine Terraform Variable
+    accessModes:
+      - ReadWriteOnce
+  
+  # Health Checks exakt übernommen
+  probes:
+    liveness:
+      enabled: true
+      exec:
+        command: ["pg_isready", "-U", "loop_user", "-d", "loop-it"]
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    readiness:
+      enabled: true
+      exec:
+        command: ["pg_isready", "-U", "loop_user", "-d", "loop-it"]
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+# Ingress exakt wie in deinem Terraform
+ingress:
+  enabled: true
+  className: "nginx"
+  
+  annotations:
+    # Deine Terraform Annotations übernommen
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization, X-Requested-With"
+  
+  hosts:
+    - host: ""  # Leer = AWS Load Balancer URL
+      paths:
+        # ✅ Exakt deine Terraform Routing-Regeln
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /health
+          pathType: Exact
+          service: backend
+        - path: /metrics
+          pathType: Exact
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+
+# Autoscaling deaktiviert (wie dein aktuelles Setup)
+autoscaling:
+  backend:
+    enabled: false  # Erstmal wie Terraform
+  frontend:
+    enabled: false  # Erstmal wie Terraform
+
+# Pod Disruption Budgets deaktiviert
+podDisruptionBudget:
+  backend:
+    enabled: false
+  frontend:
+    enabled: false
+  postgresql:
+    enabled: false
+
+# Monitoring bereit für dein Monitoring-Setup
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false  # Falls du Prometheus Operator hast
+  external:
+    grafana:
+      enabled: true
+      namespace: monitoring
+    prometheus:
+      enabled: true
+      namespace: monitoring
+    loki:
+      enabled: true
+      namespace: monitoring
+
+# AWS Spezifika aus deinem Setup
+aws:
+  region: "eu-central-1"
+  ecr:
+    enabled: true
+    registryId: "390402575145"
+    backendRepository: "loop-it/backend"
+    frontendRepository: "loop-it/frontend"
+  eks:
+    clusterName: "loop-it-cluster"
+  storageClasses:
+    gp3:
+      enabled: true
+
+# Secrets - Nutze deine bestehenden
+secrets:
+  create: false  # ✅ Nutze Terraform Secrets
+  external:
+    enabled: true
+    postgresqlSecretName: "loopit-secrets"  # ✅ Wie in Terraform
+    jwtSecretName: "loopit-secrets"  # ✅ Gleicher Secret
+
+# Global Settings
+global:
+  imageRegistry: ""
+  storageClass: "gp3"
+
+# Namespace Override (falls du anderen Namen willst)
+namespaceOverride: "loop-it"  # ✅ Wie in Terraform

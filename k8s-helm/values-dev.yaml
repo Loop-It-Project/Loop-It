@@ -1,0 +1,101 @@
+# Development values for Loop-It
+# Override for development environment
+
+environment: development
+
+# Reduced resources for development
+backend:
+  replicaCount: 1
+  image:
+    tag: "dev"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  env:
+    NODE_ENV: "development"
+    FRONTEND_URL: "http://localhost:3000"
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: "dev"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+postgresql:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
+    size: 1Gi
+
+# Disable autoscaling in development
+autoscaling:
+  backend:
+    enabled: false
+  frontend:
+    enabled: false
+
+# Simplified PDB for development
+podDisruptionBudget:
+  backend:
+    enabled: false
+  frontend:
+    enabled: false
+  postgresql:
+    enabled: false
+
+# Local development ingress
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: localhost
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /health
+          pathType: Exact
+          service: backend
+        - path: /metrics
+          pathType: Exact
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+
+# Enable monitoring for development
+monitoring:
+  enabled: true
+  external:
+    grafana:
+      enabled: true
+    prometheus:
+      enabled: true
+    loki:
+      enabled: true
+
+# AWS settings for development
+aws:
+  ecr:
+    enabled: false  # Use local images in dev
+  
+# Development secrets (will be auto-generated)
+secrets:
+  create: true
+  external:
+    enabled: false

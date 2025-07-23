@@ -1,0 +1,242 @@
+# Loop-It Backend with Production-Ready Configuration + All Fixes Integrated
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: loop-it
+  labels:
+    app: backend
+    version: v1
+spec:
+  replicas: 2 # Basis-Anzahl (wird von HPA überschrieben)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25% # Zero-Downtime Updates
+      maxSurge: 25%
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: v1
+      annotations:
+        # Automatische Prometheus Integration
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: backend
+          image: loopit/backend:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+
+          # Optimierte Health Checks für Production
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10 # Reduziert von 30s
+            periodSeconds: 5 # Häufigere Checks
+            failureThreshold: 20 # 100s total startup time
+            timeoutSeconds: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 0 # Startup Probe übernimmt
+            periodSeconds: 30 # Weniger häufig nach Startup
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 0
+            periodSeconds: 5 # Schnelle Traffic-Reaktion
+            failureThreshold: 2
+            timeoutSeconds: 3
+
+          # HPA-optimierte Resource Configuration
+          resources:
+            requests:
+              cpu: 200m # Höhere Basis für akkurate HPA-Metriken
+              memory: 256Mi
+            limits:
+              cpu: 1000m # Erlaubt Bursts während Traffic-Spitzen
+              memory: 512Mi
+
+          # ✅ FIX: Volume Mounts für Upload-Verzeichnis
+          volumeMounts:
+            - name: uploads-volume
+              mountPath: /app/uploads
+
+          # ✅ FIX: Vollständige Environment Variables inkl. DATABASE_URL
+          env:
+            - name: PORT
+              value: "3000"
+            - name: NODE_ENV
+              value: "production"
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: loopit-secrets
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loopit-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: "loop-it"
+
+            # ✅ FIX: DATABASE_URL für Drizzle ORM
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(POSTGRES_DB)"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: loopit-secrets
+                  key: jwt-secret
+            - name: JWT_REFRESH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: loopit-secrets
+                  key: jwt-refresh-secret
+            - name: JWT_EXPIRES_IN
+              value: "7d"
+            - name: FRONTEND_URL
+              value: "http://localhost"
+
+          # Security Context
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop:
+                - ALL
+            # Kein readOnlyRootFilesystem wegen Upload-Directory
+
+          # Graceful Shutdown
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+
+      # ✅ FIX: Volumes für Upload-Verzeichnis
+      volumes:
+        - name: uploads-volume
+          emptyDir: {}
+
+---
+# Backend Service (unverändert)
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: loop-it
+  labels:
+    app: backend
+  annotations:
+    # ✅ FIX: Korrekte Prometheus Scraping Annotations
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics" # KORRIGIERT: war /api/metrics
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app: backend
+
+---
+# ✅ FIX: Production-Ready HPA für Backend (realistische Schwellenwerte)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: loop-it
+  labels:
+    app: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2 # High Availability
+  maxReplicas: 20 # Cost Control
+
+  # Production-optimierte Metriken
+  metrics:
+    # CPU-basierte Skalierung
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70 # Production Standard
+
+    # Memory-basierte Skalierung
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80 # OOM-Schutz
+
+  # Skalierungs-Verhalten
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100 # Aggressive Scale-Up bei Traffic
+          periodSeconds: 60
+        - type: Pods
+          value: 3
+          periodSeconds: 60
+      selectPolicy: Max
+
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10 # Sanftes Scale-Down
+          periodSeconds: 60
+      selectPolicy: Min
+
+---
+# Backend Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend-pdb
+  namespace: loop-it
+  labels:
+    app: backend
+spec:
+  minAvailable: 50% # Mindestens 50% verfügbar während Updates
+  selector:
+    matchLabels:
+      app: backend
+  unhealthyPodEvictionPolicy: AlwaysAllow

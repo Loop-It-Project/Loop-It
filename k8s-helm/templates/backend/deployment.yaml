@@ -1,0 +1,168 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "loop-it.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.backend.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  selector:
+    matchLabels:
+      {{- include "loop-it.backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "loop-it.backend.selectorLabels" . | nindent 8 }}
+        version: {{ .Values.backend.image.tag | default .Chart.AppVersion | quote }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- if .Values.monitoring.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+        {{- end }}
+        {{- with .Values.backend.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: backend
+          image: {{ include "loop-it.backend.ecrImage" . }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            # Application configuration
+            {{- range $key, $value := .Values.backend.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            
+            # Database configuration
+            - name: DB_HOST
+              value: {{ printf "%s-postgresql" (include "loop-it.fullname" .) | quote }}
+            - name: DB_PORT
+              value: {{ .Values.postgresql.service.port | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "loop-it.postgresql.secretName" . }}
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "loop-it.postgresql.secretName" . }}
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: DATABASE_URL
+              value: {{ include "loop-it.databaseUrl" . | quote }}
+            
+            # JWT configuration
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "loop-it.jwt.secretName" . }}
+                  key: jwt-secret
+            - name: JWT_REFRESH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "loop-it.jwt.secretName" . }}
+                  key: jwt-refresh-secret
+          
+          {{- if .Values.backend.probes.startup.enabled }}
+          startupProbe:
+            {{- with .Values.backend.probes.startup.httpGet }}
+            httpGet:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.backend.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.backend.probes.startup.failureThreshold }}
+            timeoutSeconds: {{ .Values.backend.probes.startup.timeoutSeconds }}
+          {{- end }}
+          
+          {{- if .Values.backend.probes.liveness.enabled }}
+          livenessProbe:
+            {{- with .Values.backend.probes.liveness.httpGet }}
+            httpGet:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.backend.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.backend.probes.liveness.failureThreshold }}
+            timeoutSeconds: {{ .Values.backend.probes.liveness.timeoutSeconds }}
+          {{- end }}
+          
+          {{- if .Values.backend.probes.readiness.enabled }}
+          readinessProbe:
+            {{- with .Values.backend.probes.readiness.httpGet }}
+            httpGet:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.backend.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.backend.probes.readiness.failureThreshold }}
+            timeoutSeconds: {{ .Values.backend.probes.readiness.timeoutSeconds }}
+          {{- end }}
+          
+          {{- with .Values.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          
+          {{- with .Values.backend.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          
+          volumeMounts:
+            - name: uploads-volume
+              mountPath: /app/uploads
+          
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+      
+      volumes:
+        - name: uploads-volume
+          emptyDir: {}
+      
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,22 @@
+{{- if and .Values.postgresql.enabled (not .Values.postgresql.external) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "loop-it.fullname" . }}-postgresql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "loop-it.postgresql.labels" . | nindent 4 }}
+  {{- with (include "loop-it.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.postgresql.service.type }}
+  ports:
+    - port: {{ .Values.postgresql.service.port }}
+      targetPort: {{ .Values.postgresql.service.targetPort }}
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "loop-it.postgresql.selectorLabels" . | nindent 4 }}
+{{- end }}
