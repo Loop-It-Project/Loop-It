@@ -21,6 +21,7 @@ import universeChatRoutes from './routes/universeChatRoutes';
 import bugReportRoutes from './routes/bugReportRoutes';
 import accountRoutes from './routes/accountRoutes';
 import mediaRoutes from './routes/mediaRoutes';
+import swipeRoutes from './routes/swipeRoutes';
 
 // Services
 import { initializeWebSocketService } from './services/websocketService';
@@ -200,6 +201,10 @@ try {
   console.log('  - Account routes at /api/account');
   app.use('/api/account', accountRoutes);
   console.log('  ✅ Account routes loaded successfully');
+
+  console.log('  - Swipe routes at /api/swipe');
+  app.use('/api/swipe', swipeRoutes);
+  console.log('  ✅ Swipe routes loaded successfully');
   
   console.log('✅ All routes registered successfully');
 } catch (error) {
@@ -328,7 +333,6 @@ httpServer.listen(PORT, async () => {
     await seedAdminData();
     console.log("✅ Admin data seeding completed");
   } catch (error) {
-    // ✅ Verwende die bereits definierten Helper-Funktionen
     console.error(
       "⚠️ Admin data seeding failed (this is normal if tables don't exist yet):",
       getErrorMessage(error)

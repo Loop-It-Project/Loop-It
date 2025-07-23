@@ -1,6 +1,7 @@
 import { db } from '../db/connection';
-import { universesTable, postsTable, usersTable } from '../db/Schemas';
+import { universesTable, postsTable, usersTable, searchHistoryTable } from '../db/Schemas';
 import { eq, and, desc, sql, ilike, or } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 
 // Interfaces für die Typisierung
 interface UniverseResult {
@@ -21,8 +22,127 @@ interface HashtagResult {
   type: string;
 }
 
+interface SearchHistoryItem {
+  id: string;
+  query: string;
+  queryType: string;
+  resultCount: number;
+  createdAt: Date;
+}
+
 export class SearchService {
-  static async searchContent(searchQuery: any) {
+
+  // Search History speichern
+  static async saveSearchHistory(userId: string, query: string, queryType: string, resultCount: number) {
+    try {
+      const normalizedQuery = query.toLowerCase().trim();
+      
+      // Prüfe ob identische Suche bereits existiert (in letzten 24h)
+      const existingSearch = await db
+        .select()
+        .from(searchHistoryTable)
+        .where(
+          and(
+            eq(searchHistoryTable.userId, userId),
+            eq(searchHistoryTable.normalizedQuery, normalizedQuery),
+            sql`${searchHistoryTable.createdAt} > NOW() - INTERVAL '24 hours'`
+          )
+        )
+        .limit(1);
+
+      if (existingSearch.length > 0) {
+        // Update existing entry mit neuem Timestamp
+        await db
+          .update(searchHistoryTable)
+          .set({
+            resultCount,
+            createdAt: new Date()
+          })
+          .where(eq(searchHistoryTable.id, existingSearch[0].id));
+        
+        return existingSearch[0].id;
+      } else {
+        // Neue History-Entry erstellen
+        const historyId = uuidv4();
+        await db
+          .insert(searchHistoryTable)
+          .values({
+            id: historyId,
+            userId,
+            query,
+            normalizedQuery,
+            queryType,
+            resultCount,
+            searchSource: 'header_search',
+            createdAt: new Date()
+          });
+        
+        return historyId;
+      }
+    } catch (error) {
+      console.error('❌ Error saving search history:', error);
+      // Fehler nicht weiterwerfen - Search History ist optional
+      return null;
+    }
+  }
+
+  // Search History abrufen
+  static async getSearchHistory(userId: string, limit: number = 10) {
+    try {
+      const history = await db
+        .select({
+          id: searchHistoryTable.id,
+          query: searchHistoryTable.query,
+          queryType: searchHistoryTable.queryType,
+          resultCount: searchHistoryTable.resultCount,
+          createdAt: searchHistoryTable.createdAt
+        })
+        .from(searchHistoryTable)
+        .where(eq(searchHistoryTable.userId, userId))
+        .orderBy(desc(searchHistoryTable.createdAt))
+        .limit(limit);
+
+      return history;
+    } catch (error) {
+      console.error('❌ Error fetching search history:', error);
+      return [];
+    }
+  }
+
+  // Search History Item löschen
+  static async deleteSearchHistoryItem(userId: string, historyId: string) {
+    try {
+      await db
+        .delete(searchHistoryTable)
+        .where(
+          and(
+            eq(searchHistoryTable.id, historyId),
+            eq(searchHistoryTable.userId, userId)
+          )
+        );
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error deleting search history item:', error);
+      return { success: false, error: 'Failed to delete search history item' };
+    }
+  }
+
+  // Komplette Search History löschen
+  static async clearSearchHistory(userId: string) {
+    try {
+      await db
+        .delete(searchHistoryTable)
+        .where(eq(searchHistoryTable.userId, userId));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error clearing search history:', error);
+      return { success: false, error: 'Failed to clear search history' };
+    }
+  }
+
+  static async searchContent(searchQuery: any, userId?: string) {
     try {
       const { query, page = 1, pageSize = 20 } = searchQuery;
       const offset = (page - 1) * pageSize;
@@ -61,7 +181,7 @@ export class SearchService {
         .limit(pageSize)
         .offset(offset);
 
-      // ✅ KORRIGIERT - Expliziter Typ:
+      // Suche nach Hashtags
       let hashtags: HashtagResult[] = [];
       
       if (query.startsWith('#')) {
@@ -88,6 +208,12 @@ export class SearchService {
 
       // Kombiniere Ergebnisse
       const results = [...universes, ...hashtags];
+
+      // Search History speichern (falls User eingeloggt)
+      if (userId && results.length > 0) {
+        const queryType = query.startsWith('#') ? 'hashtag' : 'text';
+        await this.saveSearchHistory(userId, query, queryType, results.length);
+      }
 
       return {
         results,

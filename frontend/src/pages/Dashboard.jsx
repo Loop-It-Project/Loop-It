@@ -7,6 +7,7 @@ import HashtagService from '../services/hashtagService';
 import UniverseService from '../services/universeService';
 import CreateUniverse from '../components/CreateUniverse';
 import useEscapeKey from '../hooks/useEscapeKey';
+import DiscoverUniverses from '../components/DiscoverUniverses';
 
 // Dashboard Component
 // Zeigt den Haupt-Dashboard-Bereich mit Feed, Universes und Navigation
@@ -378,129 +379,6 @@ const Dashboard = ({ user, onLogout, refreshTrigger }) => {
           onClose={() => setShowCreateUniverse(false)}
           onUniverseCreated={handleUniverseCreated}
         />
-      )}
-    </div>
-  );
-};
-
-// Discover Universes Component
-const DiscoverUniverses = ({ onUniverseClick }) => {
-  const [universes, setUniverses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    const loadUniverses = async () => {
-      try {
-        setLoading(true);
-        const response = await FeedService.getDiscoverUniverses();
-        
-        if (response.success) {
-          setUniverses(response.data.universes || []);
-        }
-      } catch (error) {
-        console.error('Error loading discover universes:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUniverses();
-  }, []);
-
-  const filteredUniverses = universes.filter(universe =>
-    universe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    universe.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleJoinUniverse = async (universeSlug) => {
-    try {
-      await FeedService.joinUniverse(universeSlug);
-      // Update UI
-      setUniverses(prev => 
-        prev.map(universe => 
-          universe.slug === universeSlug 
-            ? { ...universe, isMember: true, memberCount: universe.memberCount + 1 }
-            : universe
-        )
-      );
-    } catch (error) {
-      console.error('Error joining universe:', error);
-      alert('Fehler beim Beitreten des Universe');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex items-center space-x-2 text-tertiary">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-          <span>Universes werden geladen...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-red-500">
-          <p className="font-semibold">Fehler beim Laden</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-primary mb-4">Universes entdecken</h2>
-        
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={20} />
-          <input
-            type="text"
-            placeholder="Universes durchsuchen..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-card border border-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4">
-        {filteredUniverses.map((universe) => (
-          <div key={universe.id} className="bg-card rounded-lg border p-4 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="font-semibold text-primary mb-1">#{universe.slug}</h3>
-                <p className="text-sm text-secondary mb-2">{universe.description}</p>
-                <div className="flex items-center space-x-4 text-sm text-tertiary">
-                  <span>{universe.memberCount} Mitglieder</span>
-                  <span>{universe.postCount} Posts</span>
-                </div>
-              </div>
-              <button
-                onClick={() => onUniverseClick(universe.slug)}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm font-medium"
-              >
-                Besuchen
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredUniverses.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-tertiary">
-            <p className="text-lg font-medium mb-2">Keine Universes gefunden</p>
-            <p className="text-sm">
-              {searchTerm ? 'Versuche einen anderen Suchbegriff.' : 'Momentan sind keine Universes verfügbar.'}
-            </p>
-          </div>
-        </div>
       )}
     </div>
   );

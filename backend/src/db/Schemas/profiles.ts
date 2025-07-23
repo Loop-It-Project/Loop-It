@@ -63,6 +63,7 @@ export const friendshipsTable = pgTable("friendships", {
   requestedAt: timestamp().defaultNow().notNull(),
   respondedAt: timestamp(),
   notes: text(),
+  metadata: json().$type<{[key: string]: any} | null>(),
 }, (table) => ({
   requesterAddresseeUnique: unique().on(table.requesterId, table.addresseeId),
   requesterIdx: index("friendships_requester_idx").on(table.requesterId),

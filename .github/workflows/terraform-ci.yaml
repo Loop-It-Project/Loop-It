@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Loop-It CI/CD Pipeline
 
 on:
   push:
@@ -6,16 +6,82 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
+      - 'terraform-eks/**'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even without changes'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
   contents: read
 
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
+  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'loop-it-cluster' }}
+
 jobs:
-  build-and-deploy:
-    name: 🏗️ Build & Deploy
+  # ============================================================================
+  # PRE-FLIGHT CHECKS
+  # ============================================================================
+  preflight:
+    name: 🔍 Pre-flight Checks
     runs-on: ubuntu-latest
+    outputs:
+      backend-changed: ${{ steps.changes.outputs.backend }}
+      frontend-changed: ${{ steps.changes.outputs.frontend }}
+      terraform-changed: ${{ steps.changes.outputs.terraform }}
+      deploy-needed: ${{ steps.deploy-check.outputs.deploy-needed }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check Changed Files
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            terraform:
+              - 'terraform-eks/**'
+
+      - name: Determine Deployment Need
+        id: deploy-check
+        run: |
+          if [[ "${{ steps.changes.outputs.backend }}" == "true" || 
+                "${{ steps.changes.outputs.frontend }}" == "true" || 
+                "${{ steps.changes.outputs.terraform }}" == "true" || 
+                "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+            echo "deploy-needed=true" >> $GITHUB_OUTPUT
+            echo "🚀 Deployment needed"
+          else
+            echo "deploy-needed=false" >> $GITHUB_OUTPUT
+            echo "⏭️ No deployment needed"
+          fi
+
+  # ============================================================================
+  # INFRASTRUCTURE CHECK & SETUP
+  # ============================================================================
+  infrastructure:
+    name: 🏗️ Infrastructure Setup
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.deploy-needed == 'true'
+    outputs:
+      cluster-exists: ${{ steps.cluster-check.outputs.exists }}
+      ecr-backend-url: ${{ steps.ecr-setup.outputs.backend-url }}
+      ecr-frontend-url: ${{ steps.ecr-setup.outputs.frontend-url }}
     
     steps:
       - name: Checkout Code
@@ -25,84 +91,408 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      # 🔨 Build Backend
-      - name: Build Backend Image
+      - name: Check EKS Cluster
+        id: cluster-check
+        run: |
+          if aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ EKS cluster exists: ${{ env.EKS_CLUSTER_NAME }}"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "❌ EKS cluster not found: ${{ env.EKS_CLUSTER_NAME }}"
+          fi
+
+      - name: Setup ECR Repositories
+        id: ecr-setup
+        run: |
+          # Get AWS Account ID
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REGISTRY="$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          
+          # Create Backend ECR Repository if it doesn't exist
+          if ! aws ecr describe-repositories --repository-names "loop-it/backend" --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            echo "Creating backend ECR repository..."
+            aws ecr create-repository --repository-name "loop-it/backend" --region ${{ env.AWS_REGION }}
+            
+            # Set lifecycle policy
+            aws ecr put-lifecycle-policy --repository-name "loop-it/backend" --region ${{ env.AWS_REGION }} --lifecycle-policy-text '{
+              "rules": [{
+                "rulePriority": 1,
+                "description": "Keep last 10 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {"type": "expire"}
+              }]
+            }'
+          fi
+          
+          # Create Frontend ECR Repository if it doesn't exist
+          if ! aws ecr describe-repositories --repository-names "loop-it/frontend" --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            echo "Creating frontend ECR repository..."
+            aws ecr create-repository --repository-name "loop-it/frontend" --region ${{ env.AWS_REGION }}
+            
+            # Set lifecycle policy
+            aws ecr put-lifecycle-policy --repository-name "loop-it/frontend" --region ${{ env.AWS_REGION }} --lifecycle-policy-text '{
+              "rules": [{
+                "rulePriority": 1,
+                "description": "Keep last 10 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {"type": "expire"}
+              }]
+            }'
+          fi
+          
+          # Output ECR URLs
+          echo "backend-url=$ECR_REGISTRY/loop-it/backend" >> $GITHUB_OUTPUT
+          echo "frontend-url=$ECR_REGISTRY/loop-it/frontend" >> $GITHUB_OUTPUT
+          
+          echo "✅ ECR repositories ready"
+
+      - name: Deploy Infrastructure (if needed)
+        if: steps.cluster-check.outputs.exists == 'false' && needs.preflight.outputs.terraform-changed == 'true'
+        run: |
+          echo "🚧 Infrastructure deployment needed but cluster doesn't exist"
+          echo "Please run: terraform apply in terraform-eks/ directory first"
+          exit 1
+
+  # ============================================================================
+  # PARALLEL IMAGE BUILDS
+  # ============================================================================
+  build-backend:
+    name: 🔨 Build Backend
+    runs-on: ubuntu-latest
+    needs: [preflight, infrastructure]
+    if: needs.preflight.outputs.deploy-needed == 'true' && needs.preflight.outputs.backend-changed == 'true'
+    outputs:
+      image-tag: ${{ steps.build.outputs.image-tag }}
+      image-url: ${{ steps.build.outputs.image-url }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build and Push Backend
+        id: build
         working-directory: ./backend
         run: |
-          IMAGE_TAG=${{ github.sha }}
-          ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+          # Generate image tag
+          IMAGE_TAG="${{ github.sha }}-$(date +%Y%m%d-%H%M%S)"
+          IMAGE_URL="${{ needs.infrastructure.outputs.ecr-backend-url }}:$IMAGE_TAG"
+          
+          echo "🔨 Building backend image: $IMAGE_URL"
           
           # ECR Login
-          aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+            docker login --username AWS --password-stdin ${{ needs.infrastructure.outputs.ecr-backend-url }}
           
-          # Build & Push
-          docker build -t $ECR_REGISTRY/loop-it/backend:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/loop-it/backend:$IMAGE_TAG
+          # Build with multi-stage caching
+          docker build \
+            --cache-from ${{ needs.infrastructure.outputs.ecr-backend-url }}:latest \
+            -t $IMAGE_URL \
+            -t ${{ needs.infrastructure.outputs.ecr-backend-url }}:latest \
+            .
           
-          echo "BACKEND_IMAGE=$ECR_REGISTRY/loop-it/backend:$IMAGE_TAG" >> $GITHUB_ENV
+          # Push both tags
+          docker push $IMAGE_URL
+          docker push ${{ needs.infrastructure.outputs.ecr-backend-url }}:latest
+          
+          # Output for next jobs
+          echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image-url=$IMAGE_URL" >> $GITHUB_OUTPUT
+          
+          echo "✅ Backend image built and pushed"
 
-      # 🎨 Build Frontend  
-      - name: Build Frontend Image
+  build-frontend:
+    name: 🎨 Build Frontend
+    runs-on: ubuntu-latest
+    needs: [preflight, infrastructure]
+    if: needs.preflight.outputs.deploy-needed == 'true' && needs.preflight.outputs.frontend-changed == 'true'
+    outputs:
+      image-tag: ${{ steps.build.outputs.image-tag }}
+      image-url: ${{ steps.build.outputs.image-url }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get Load Balancer URL
+        id: lb-url
+        run: |
+          # Configure kubectl
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+          
+          # Get LB URL with retry logic
+          for i in {1..10}; do
+            LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            
+            if [[ -n "$LB_URL" && "$LB_URL" != "null" ]]; then
+              echo "lb-url=$LB_URL" >> $GITHUB_OUTPUT
+              echo "✅ Load Balancer URL: $LB_URL"
+              break
+            fi
+            
+            echo "⏳ Waiting for Load Balancer (attempt $i/10)..."
+            sleep 15
+          done
+          
+          # Fallback if LB not ready
+          if [[ -z "$LB_URL" || "$LB_URL" == "null" ]]; then
+            echo "⚠️ Load Balancer not ready, using placeholder"
+            echo "lb-url=api.loop-it.placeholder" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and Push Frontend
+        id: build
         working-directory: ./frontend
         run: |
-          IMAGE_TAG=${{ github.sha }}
-          ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+          # Generate image tag
+          IMAGE_TAG="${{ github.sha }}-$(date +%Y%m%d-%H%M%S)"
+          IMAGE_URL="${{ needs.infrastructure.outputs.ecr-frontend-url }}:$IMAGE_TAG"
           
-          # Get LoadBalancer URL for Frontend API Config
-          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name ${{ vars.EKS_CLUSTER_NAME }}
-          LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' || echo "localhost")
+          echo "🎨 Building frontend image: $IMAGE_URL"
+          echo "🌐 API URL: http://${{ steps.lb-url.outputs.lb-url }}"
+          
+          # ECR Login
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+            docker login --username AWS --password-stdin ${{ needs.infrastructure.outputs.ecr-frontend-url }}
           
           # Build with API URL
-          docker build --build-arg VITE_API_URL=http://$LB_URL -t $ECR_REGISTRY/loop-it/frontend:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/loop-it/frontend:$IMAGE_TAG
+          docker build \
+            --build-arg VITE_API_URL=http://${{ steps.lb-url.outputs.lb-url }} \
+            --cache-from ${{ needs.infrastructure.outputs.ecr-frontend-url }}:latest \
+            -t $IMAGE_URL \
+            -t ${{ needs.infrastructure.outputs.ecr-frontend-url }}:latest \
+            .
           
-          echo "FRONTEND_IMAGE=$ECR_REGISTRY/loop-it/frontend:$IMAGE_TAG" >> $GITHUB_ENV
+          # Push both tags
+          docker push $IMAGE_URL
+          docker push ${{ needs.infrastructure.outputs.ecr-frontend-url }}:latest
+          
+          # Output for next jobs
+          echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image-url=$IMAGE_URL" >> $GITHUB_OUTPUT
+          
+          echo "✅ Frontend image built and pushed"
 
-      # 🚀 Deploy to EKS
-      - name: Deploy to Kubernetes
+  # ============================================================================
+  # DEPLOYMENT
+  # ============================================================================
+  deploy:
+    name: 🚀 Deploy to EKS
+    runs-on: ubuntu-latest
+    needs: [preflight, infrastructure, build-backend, build-frontend]
+    if: |
+      always() && 
+      needs.preflight.outputs.deploy-needed == 'true' && 
+      needs.infrastructure.outputs.cluster-exists == 'true' &&
+      (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
+      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
         run: |
-          # Update kubeconfig
-          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name ${{ vars.EKS_CLUSTER_NAME }}
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
           
-          # Check cluster
+          # Verify cluster connection
+          kubectl cluster-info
           kubectl get nodes
-          
-          # Update Backend Image
-          kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }} -n loop-it
-          kubectl rollout status deployment/backend -n loop-it --timeout=300s
-          
-          # Update Frontend Image  
-          kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }} -n loop-it
-          kubectl rollout status deployment/frontend -n loop-it --timeout=300s
 
-      # 🧪 Health Check
-      - name: Health Check
+      - name: Check Namespace and Resources
         run: |
-          # Wait for deployment
-          sleep 30
+          # Create namespace if it doesn't exist
+          kubectl create namespace loop-it --dry-run=client -o yaml | kubectl apply -f -
           
-          # Get LoadBalancer URL
-          LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          # Check if deployments exist
+          if kubectl get deployment backend -n loop-it >/dev/null 2>&1; then
+            echo "backend-exists=true" >> $GITHUB_ENV
+          else
+            echo "backend-exists=false" >> $GITHUB_ENV
+            echo "⚠️ Backend deployment doesn't exist yet"
+          fi
           
-          echo "🌐 Application URL: http://$LB_URL"
-          
-          # Test Backend Health
-          curl -f "http://$LB_URL/api/health" || echo "Backend health check failed"
-          
-          # Test Frontend
-          curl -f "http://$LB_URL/" || echo "Frontend check failed"
-          
-          echo "✅ Deployment Complete!"
+          if kubectl get deployment frontend -n loop-it >/dev/null 2>&1; then
+            echo "frontend-exists=true" >> $GITHUB_ENV
+          else
+            echo "frontend-exists=false" >> $GITHUB_ENV
+            echo "⚠️ Frontend deployment doesn't exist yet"
+          fi
 
-      # 📊 Summary
+      - name: Deploy Backend
+        if: needs.build-backend.outputs.image-url != ''
+        run: |
+          if [[ "${{ env.backend-exists }}" == "true" ]]; then
+            echo "🔄 Updating existing backend deployment"
+            kubectl set image deployment/backend backend=${{ needs.build-backend.outputs.image-url }} -n loop-it
+            kubectl rollout status deployment/backend -n loop-it --timeout=300s
+          else
+            echo "❌ Backend deployment doesn't exist. Please run terraform apply first."
+            exit 1
+          fi
+          
+          echo "✅ Backend deployed successfully"
+
+      - name: Deploy Frontend
+        if: needs.build-frontend.outputs.image-url != ''
+        run: |
+          if [[ "${{ env.frontend-exists }}" == "true" ]]; then
+            echo "🔄 Updating existing frontend deployment"
+            kubectl set image deployment/frontend frontend=${{ needs.build-frontend.outputs.image-url }} -n loop-it
+            kubectl rollout status deployment/frontend -n loop-it --timeout=300s
+          else
+            echo "❌ Frontend deployment doesn't exist. Please run terraform apply first."
+            exit 1
+          fi
+          
+          echo "✅ Frontend deployed successfully"
+
+      - name: Post-Deployment Status
+        run: |
+          echo "📊 Deployment Status:"
+          kubectl get pods -n loop-it -o wide
+          echo ""
+          kubectl get services -n loop-it
+          echo ""
+          kubectl get ingress -n loop-it
+
+  # ============================================================================
+  # HEALTH CHECKS & TESTING
+  # ============================================================================
+  health-check:
+    name: 🔍 Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy, infrastructure]
+    if: needs.deploy.result == 'success'
+    
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Wait for Pods to be Ready
+        run: |
+          echo "⏳ Waiting for pods to be ready..."
+          kubectl wait --for=condition=Ready pod -l app=backend -n loop-it --timeout=300s
+          kubectl wait --for=condition=Ready pod -l app=frontend -n loop-it --timeout=300s
+          echo "✅ All pods are ready"
+
+      - name: Get Load Balancer URL
+        id: get-url
+        run: |
+          # Wait for load balancer to be ready
+          for i in {1..20}; do
+            LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            
+            if [[ -n "$LB_URL" && "$LB_URL" != "null" ]]; then
+              echo "lb-url=$LB_URL" >> $GITHUB_OUTPUT
+              echo "🌐 Load Balancer URL: $LB_URL"
+              break
+            fi
+            
+            echo "⏳ Waiting for Load Balancer (attempt $i/20)..."
+            sleep 15
+          done
+          
+          if [[ -z "$LB_URL" || "$LB_URL" == "null" ]]; then
+            echo "❌ Could not get Load Balancer URL"
+            exit 1
+          fi
+
+      - name: Health Check Tests
+        run: |
+          LB_URL="${{ steps.get-url.outputs.lb-url }}"
+          
+          echo "🧪 Running health checks..."
+          
+          # Backend Health Check
+          echo "Testing backend health..."
+          for i in {1..10}; do
+            if curl -f --max-time 10 "http://$LB_URL/api/health" >/dev/null 2>&1; then
+              echo "✅ Backend health check passed"
+              curl "http://$LB_URL/api/health" | jq . || echo "Response received"
+              break
+            fi
+            echo "⏳ Backend not ready, attempt $i/10..."
+            sleep 15
+          done
+          
+          # Frontend Check
+          echo "Testing frontend..."
+          if curl -I --max-time 10 "http://$LB_URL/" 2>/dev/null | head -1 | grep -q "200"; then
+            echo "✅ Frontend accessible"
+          else
+            echo "⚠️ Frontend check failed (may be normal during initial deployment)"
+          fi
+          
+          echo "🎉 Health checks completed!"
+
       - name: Deployment Summary
         run: |
-          LB_URL=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          LB_URL="${{ steps.get-url.outputs.lb-url }}"
           
-          echo "### 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Backend Image:** \`${{ env.BACKEND_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Frontend Image:** \`${{ env.FRONTEND_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Application URL:** http://$LB_URL" >> $GITHUB_STEP_SUMMARY
-          echo "**Deployed by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## 🚀 Deployment Summary
+          
+          **Status:** ✅ Successfully deployed
+          
+          **Images Deployed:**
+          - Backend: \`${{ needs.build-backend.outputs.image-url || 'No changes' }}\`
+          - Frontend: \`${{ needs.build-frontend.outputs.image-url || 'No changes' }}\`
+          
+          **Application URLs:**
+          - 🌐 **Main App:** http://$LB_URL
+          - 🔍 **Health Check:** http://$LB_URL/api/health
+          - 📊 **Metrics:** http://$LB_URL/api/metrics
+          
+          **Deployed by:** @${{ github.actor }}
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          
+          **Quick Access Commands:**
+          \`\`\`bash
+          # View pods
+          kubectl get pods -n loop-it
+          
+          # Check logs
+          kubectl logs -n loop-it -l app=backend --tail=50
+          kubectl logs -n loop-it -l app=frontend --tail=50
+          
+          # Port forward for monitoring
+          kubectl port-forward -n monitoring svc/grafana 3000:3000
+          \`\`\`
+          EOF

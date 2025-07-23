@@ -229,7 +229,7 @@ const ReportsTab = ({ onRefresh }) => {
                       {report.status === 'resolved' ? (
                         <CheckCircle size={16} className="text-green-600" />
                       ) : (
-                        <XCircle size={16} className="text-gray-600" />
+                        <XCircle size={16} className="text-tertiary" />
                       )}
                       <span className="text-secondary dark:text-muted">
                         {report.status === 'resolved' ? 'Bearbeitet' : 'Abgelehnt'} von {report.reviewer?.username || 'System'}

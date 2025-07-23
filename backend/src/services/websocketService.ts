@@ -191,8 +191,13 @@ export class WebSocketService {
       socket.on('disconnect', (reason) => {
         console.log(`🔌 User ${username} disconnected: ${reason}`);
         
-        // ✅ VERBESSERT: Comprehensive cleanup
+        // Comprehensive cleanup
         this.handleComprehensiveDisconnect(userId, socket.id, username);
+      });
+
+      // Match-Notification Handler
+      socket.on('match_notification_received', (data) => {
+        console.log('📱 Match notification received by user:', userId);
       });
 
       // Error Handler
@@ -376,6 +381,19 @@ export class WebSocketService {
         }
       });
     });
+  }
+
+  // Match-Notification senden
+  public sendMatchNotification(userId: string, data: any) {
+    if (!this.io) return;
+  
+    this.io.to(`user_${userId}`).emit('match_notification', {
+      type: 'match',
+      timestamp: new Date().toISOString(),
+      ...data
+    });
+  
+    console.log('📱 Match notification sent to user:', userId);
   }
 
   // User Socket Management

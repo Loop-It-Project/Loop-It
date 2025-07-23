@@ -6,6 +6,7 @@ class WebSocketService {
     this.isConnected = false;
     this.eventHandlers = new Map();
     this.currentUser = null;
+    this.listeners = new Map();
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
   }
@@ -58,6 +59,12 @@ class WebSocketService {
     this.socket.on('connect_error', (error) => {
       console.error('❌ WebSocket connection error:', error);
       this.handleReconnect();
+    });
+
+    // Match Notification Handler
+    this.socket.on('match_notification', (data) => {
+      console.log('🎉 Match notification received:', data);
+      this.handleMatchNotification(data);
     });
 
     // Chat Events
@@ -238,6 +245,71 @@ class WebSocketService {
       this.isConnected = false;
       this.currentUser = null;
     }
+  }
+
+  // Match Notification Handler
+  handleMatchNotification(data) {
+    // Browser-Benachrichtigung anzeigen
+    if (Notification.permission === 'granted') {
+      new Notification('Neues Match! 🎉', {
+        body: `Du hast ein Match mit ${data.data.otherUser.displayName || data.data.otherUser.username}!`,
+        icon: '/logo.png',
+        tag: 'match-notification'
+      });
+    }
+
+    // Toast-Benachrichtigung (falls Toast-System vorhanden)
+    if (window.showToast) {
+      window.showToast({
+        type: 'success',
+        title: 'Neues Match! 🎉',
+        message: `Du hast ein Match mit ${data.data.otherUser.displayName || data.data.otherUser.username}!`,
+        duration: 5000
+      });
+    }
+
+    // Custom Event für App-weite Benachrichtigung
+    window.dispatchEvent(new CustomEvent('match_notification', {
+      detail: data
+    }));
+  }
+
+  // Event Listener hinzufügen
+  on(event, callback) {
+    this.listeners.set(event, callback);
+    if (this.socket) {
+      this.socket.on(event, callback);
+    }
+  }
+
+  // Event Listener entfernen
+  off(event) {
+    this.listeners.delete(event);
+    if (this.socket) {
+      this.socket.off(event);
+    }
+  }
+
+  // Event senden
+  emit(event, data) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit(event, data);
+    }
+  }
+
+  // Notification Permission anfordern
+  static async requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      console.log('This browser does not support notifications');
+      return false;
+    }
+
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+
+    return Notification.permission === 'granted';
   }
 
   // Reconnect manuell
