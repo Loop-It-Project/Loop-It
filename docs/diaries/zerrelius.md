@@ -1,3 +1,26 @@
+# Projekttagebuch – 23.07.2025 – Zerrelius aka JD
+
+## Heutige Hauptaufgabe(n)
+Was war das Ziel heute?
+Bug Fixes, versucht zu deployen
+
+## Fortschritt & Ergebnisse
+Was habe ich konkret geschafft?
+Ging so
+
+## Herausforderungen & Blockaden
+Wo hing ich fest?
+Beim Bug Fixing
+
+## Was ich heute gelernt habe
+Eine kleine, konkrete Erkenntnis oder neues Wissen:
+Wie upgefuckt man sein kann wenn Team einige Teammitglieder einfach NICHTS machen!
+
+## Plan für morgen
+Was ist der nächste logische Schritt?
+Trending Universes in der Searchbar einbauen und Analytics der Search Funktion tracken, Real-Verifizierung, Blockierungsfunktion
+
+___
 # Projekttagebuch – 22.07.2025 – Zerrelius aka JD
 
 ## Heutige Hauptaufgabe(n)
