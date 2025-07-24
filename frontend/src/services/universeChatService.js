@@ -7,7 +7,7 @@ class UniverseChatService extends BaseService {
   // Chat Room beitreten
   static async joinUniverseChat(universeId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/universe-chat/${universeId}/join`, {
+      const response = await BaseService.fetchWithAuth(`/universe-chat/${universeId}/join`, {
         method: 'POST'
       });
 
@@ -27,7 +27,7 @@ class UniverseChatService extends BaseService {
   // Chat Room verlassen
   static async leaveUniverseChat(universeId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/universe-chat/${universeId}/leave`, {
+      const response = await BaseService.fetchWithAuth(`/universe-chat/${universeId}/leave`, {
         method: 'POST'
       });
 
@@ -47,7 +47,7 @@ class UniverseChatService extends BaseService {
   // Nachricht senden
   static async sendMessage(universeId, content) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/universe-chat/${universeId}/messages`, {
+      const response = await BaseService.fetchWithAuth(`/universe-chat/${universeId}/messages`, {
         method: 'POST',
         body: JSON.stringify({ content })
       });
@@ -68,8 +68,8 @@ class UniverseChatService extends BaseService {
   // Nachrichten abrufen
   static async getMessages(universeId, page = 1, limit = 50) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/universe-chat/${universeId}/messages?page=${page}&limit=${limit}`
+      const response = await BaseService.fetchWithAuth(
+        `/universe-chat/${universeId}/messages?page=${page}&limit=${limit}`
       );
 
       const data = await response.json();
@@ -83,7 +83,7 @@ class UniverseChatService extends BaseService {
   // Teilnehmer abrufen
   static async getParticipants(universeId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/universe-chat/${universeId}/participants`);
+      const response = await BaseService.fetchWithAuth(`/universe-chat/${universeId}/participants`);
 
       const data = await response.json();
       return response.ok ? { success: true, participants: data.participants } : { success: false, error: data.error };
@@ -96,7 +96,7 @@ class UniverseChatService extends BaseService {
   // Nachricht löschen (Moderation)
   static async deleteMessage(messageId, reason) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/universe-chat/messages/${messageId}`, {
+      const response = await BaseService.fetchWithAuth(`/universe-chat/messages/${messageId}`, {
         method: 'DELETE',
         body: JSON.stringify({ reason })
       });

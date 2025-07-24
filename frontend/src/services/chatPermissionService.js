@@ -1,13 +1,11 @@
 import BaseService from './baseService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
 class ChatPermissionService extends BaseService {
   
   // Prüfe ob User angeschrieben werden kann
   static async canMessageUser(targetUserId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/can-message/${targetUserId}`, {
+      const response = await BaseService.fetchWithAuth(`/users/can-message/${targetUserId}`, {
         method: 'GET'
       });
 

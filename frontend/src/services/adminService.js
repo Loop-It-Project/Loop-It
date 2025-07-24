@@ -54,7 +54,7 @@ class AdminService {
   // Dashboard Metriken abrufen
   static async getDashboardMetrics() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/admin/dashboard/metrics`, {
+      const response = await BaseService.fetchWithAuth(`/admin/dashboard/metrics`, {
         method: 'GET'
       });
 
@@ -76,7 +76,7 @@ class AdminService {
         ...(role && { role })
       });
 
-      const response = await this.fetchWithAuth(`${API_URL}/api/admin/users?${params}`, {
+      const response = await BaseService.fetchWithAuth(`/admin/users?${params}`, {
         method: 'GET'
       });
 
@@ -97,7 +97,7 @@ class AdminService {
         status
       });
 
-      const response = await this.fetchWithAuth(`${API_URL}/api/admin/moderation/reports?${params}`, {
+      const response = await BaseService.fetchWithAuth(`/admin/moderation/reports?${params}`, {
         method: 'GET'
       });
 
@@ -112,7 +112,7 @@ class AdminService {
   // Universe Moderator zuweisen
   static async assignUniverseModerator(universeId, targetUserId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/admin/users/${targetUserId}/assign-moderator`, {
+      const response = await BaseService.fetchWithAuth(`/admin/users/${targetUserId}/assign-moderator`, {
         method: 'POST',
         body: JSON.stringify({ universeId, targetUserId })
       });
@@ -128,7 +128,7 @@ class AdminService {
   // Pending Approvals abrufen
   static async getPendingApprovals() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/admin/moderation/approvals`, {
+      const response = await BaseService.fetchWithAuth(`/admin/moderation/approvals`, {
         method: 'GET'
       });
 
@@ -145,7 +145,7 @@ class AdminService {
     // console.log('🔍 AdminService: Checking admin permissions...');
     
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/admin/dashboard/metrics`, {
+      const response = await BaseService.fetchWithAuth(`/admin/dashboard/metrics`, {
         method: 'GET'
       });
 
@@ -208,7 +208,7 @@ class AdminService {
     
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`${API_URL}/api/admin/universes?${params}`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes?${params}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -230,12 +230,8 @@ class AdminService {
   // Universe Status ändern (Schließen/Öffnen)
   static async toggleUniverseStatus(universeId, isClosed) {
     try {
-      const response = await fetch(`${API_URL}/admin/universes/${universeId}/status`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes/${universeId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${this.getToken()}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ isClosed }),
       });
 
@@ -249,12 +245,8 @@ class AdminService {
   // Universe aktivieren/deaktivieren
   static async toggleUniverseActive(universeId, isActive) {
     try {
-      const response = await fetch(`${API_URL}/admin/universes/${universeId}/active`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes/${universeId}/active`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${this.getToken()}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ isActive }),
       });
 
@@ -268,12 +260,8 @@ class AdminService {
   // Universe Ownership übertragen
   static async transferUniverseOwnership(universeId, newCreatorId) {
     try {
-      const response = await fetch(`${API_URL}/admin/universes/${universeId}/transfer`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes/${universeId}/transfer`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${this.getToken()}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ newCreatorId }),
       });
 
@@ -287,12 +275,8 @@ class AdminService {
   // Universe löschen (Soft Delete)
   static async deleteUniverse(universeId) {
     try {
-      const response = await fetch(`${API_URL}/admin/universes/${universeId}`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes/${universeId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${this.getToken()}`,
-          'Content-Type': 'application/json',
-        },
       });
 
       return await response.json();
@@ -305,12 +289,8 @@ class AdminService {
   // Universe wiederherstellen (Soft Delete)
   static async restoreUniverse(universeId) {
     try {
-      const response = await fetch(`${API_URL}/admin/universes/${universeId}/restore`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes/${universeId}/restore`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${this.getToken()}`,
-          'Content-Type': 'application/json',
-        },
       });
 
       return await response.json();
@@ -330,7 +310,7 @@ class AdminService {
         status
       });
 
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports?${params}`, {
+      const response = await BaseService.fetchWithAuth(`/reports?${params}`, {
         method: 'GET'
       });
 
@@ -344,7 +324,7 @@ class AdminService {
 
   static async processReport(reportId, actionData) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports/${reportId}/process`, {
+      const response = await BaseService.fetchWithAuth(`/reports/${reportId}/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -368,7 +348,7 @@ class AdminService {
 
   static async getPendingApprovals() {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/approvals`, {
+      const response = await BaseService.fetchWithAuth(`/admin/approvals`, {
         method: 'GET'
       });
 
@@ -382,7 +362,7 @@ class AdminService {
 
   static async assignUniverseModerator(universeId, userId) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/universes/${universeId}/moderators`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes/${universeId}/moderators`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -400,7 +380,7 @@ class AdminService {
 
   static async updateUserRole(userId, roleData) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/users/${userId}/role`, {
+      const response = await BaseService.fetchWithAuth(`/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -418,7 +398,7 @@ class AdminService {
 
   static async suspendUser(userId, reason, duration) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/admin/users/${userId}/suspend`, {
+      const response = await BaseService.fetchWithAuth(`/admin/users/${userId}/suspend`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -445,7 +425,7 @@ class AdminService {
         }
       });
 
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports?${params}`);
+      const response = await BaseService.fetchWithAuth(`/bug-reports?${params}`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
@@ -457,7 +437,7 @@ class AdminService {
 
   static async updateBugReportStatus(id, updates) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/${id}`, {
+      const response = await BaseService.fetchWithAuth(`/bug-reports/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates)
       });
@@ -472,7 +452,7 @@ class AdminService {
 
   static async deleteBugReport(id) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/${id}`, {
+      const response = await BaseService.fetchWithAuth(`/bug-reports/${id}`, {
         method: 'DELETE'
       });
 
@@ -486,7 +466,7 @@ class AdminService {
 
   static async getBugReportStats() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/admin/stats`);
+      const response = await BaseService.fetchWithAuth(`/bug-reports/admin/stats`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
@@ -498,7 +478,7 @@ class AdminService {
 
   static async recalculateUniverseCounters() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/admin/universes/recalculate-counters`, {
+      const response = await BaseService.fetchWithAuth(`/admin/universes/recalculate-counters`, {
         method: 'POST'
       });
     

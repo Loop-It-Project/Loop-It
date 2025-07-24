@@ -24,16 +24,44 @@ class WebSocketService {
       username: user.username 
     });
 
-    this.socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
+     // WebSocket URL für Production Environment
+    const wsUrl = this.getWebSocketUrl();
+    console.log('🔗 WebSocket URL:', wsUrl);
+
+    this.socket = io(wsUrl, {
       auth: {
         token: token
       },
       transports: ['websocket', 'polling'],
       upgrade: true,
-      rememberUpgrade: true
+      rememberUpgrade: true,
+      timeout: 10000,
+      forceNew: false,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: this.maxReconnectAttempts,
+      extraHeaders: {
+        'Origin': window.location.origin
+      }
     });
 
     this.setupEventHandlers();
+  }
+
+  // WebSocket URL basierend auf Environment
+  getWebSocketUrl() {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    
+    // Für Production, entferne /api suffix für WebSocket
+    const wsUrl = baseUrl.replace('/api', '');
+    
+    console.log('🔗 WebSocket URL calculation:', {
+      originalBaseUrl: baseUrl,
+      finalWsUrl: wsUrl,
+      environment: import.meta.env.MODE
+    });
+    
+    return wsUrl;
   }
 
   // Event-Handler für Socket.IO Events
@@ -46,18 +74,34 @@ class WebSocketService {
       this.isConnected = true;
       this.reconnectAttempts = 0;
       
-      // Triggere connect Event für andere Components
-      this.emit('connected');
+      // Clear any pending reconnect timeout
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = null;
+      }
+      
+      // Trigger connect event for components
+      this.emitToHandlers('connected');
     });
 
     this.socket.on('disconnect', (reason) => {
       console.log('❌ WebSocket disconnected:', reason);
       this.isConnected = false;
-      this.emit('disconnected', reason);
+      this.emitToHandlers('disconnected', reason);
+      
+      // Auto-reconnect nur bei unerwarteten Disconnects
+      if (reason !== 'io client disconnect') {
+        this.handleReconnect();
+      }
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('❌ WebSocket connection error:', error);
+      console.error('❌ WebSocket connection error:', {
+        error: error.message,
+        type: error.type,
+        description: error.description,
+        url: this.socket.io.uri
+      });
       this.handleReconnect();
     });
 
@@ -70,7 +114,7 @@ class WebSocketService {
     // Chat Events
     this.socket.on('message_received', (data) => {
       console.log('📨 New message received:', data);
-      this.emit('message_received', data);
+      this.emitToHandlers('message_received', data);
     });
 
     this.socket.on('conversation_refresh', () => {
@@ -125,11 +169,18 @@ class WebSocketService {
     
     console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
     
-    setTimeout(() => {
+    // Clear any existing timeout
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    
+    this.reconnectTimeout = setTimeout(() => {
       if (this.currentUser) {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');
         if (token) {
           this.connect(token, this.currentUser);
+        } else {
+          console.error('❌ No access token available for reconnection');
         }
       }
     }, delay);
@@ -202,28 +253,38 @@ class WebSocketService {
   }
 
   // Event Listener Management
-  on(event, handler) {
+  addEventListener(event, handler) {
     if (!this.eventHandlers.has(event)) {
       this.eventHandlers.set(event, new Set());
     }
     this.eventHandlers.get(event).add(handler);
   }
 
-  off(event, handler) {
+  removeEventListener(event, handler) {
     if (this.eventHandlers.has(event)) {
       this.eventHandlers.get(event).delete(handler);
     }
   }
 
-  emit(event, data) {
+  // Emit zu Event Handlers (nicht Socket.IO)
+  emitToHandlers(event, data) {
     if (this.eventHandlers.has(event)) {
       this.eventHandlers.get(event).forEach(handler => {
         try {
           handler(data);
         } catch (error) {
-          console.error(`Error in event handler for ${event}:`, error);
+          console.error(`❌ Error in event handler for ${event}:`, error);
         }
       });
+    }
+  }
+
+  // Socket.IO Event senden
+  emitToSocket(event, data) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit(event, data);
+    } else {
+      console.warn(`❌ Cannot emit ${event}: WebSocket not connected`);
     }
   }
 
@@ -237,13 +298,20 @@ class WebSocketService {
     if (this.socket) {
       console.log('🔌 Disconnecting WebSocket...');
       
+      // Clear reconnect timeout
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = null;
+      }
+      
       // Cleanup für alle aktiven Universe Chats
-      this.emit('before_disconnect'); // Ermögliche Components cleanup
+      this.emitToHandlers('before_disconnect');
       
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
       this.currentUser = null;
+      this.reconnectAttempts = 0;
     }
   }
 
@@ -274,29 +342,6 @@ class WebSocketService {
     }));
   }
 
-  // Event Listener hinzufügen
-  on(event, callback) {
-    this.listeners.set(event, callback);
-    if (this.socket) {
-      this.socket.on(event, callback);
-    }
-  }
-
-  // Event Listener entfernen
-  off(event) {
-    this.listeners.delete(event);
-    if (this.socket) {
-      this.socket.off(event);
-    }
-  }
-
-  // Event senden
-  emit(event, data) {
-    if (this.socket && this.isConnected) {
-      this.socket.emit(event, data);
-    }
-  }
-
   // Notification Permission anfordern
   static async requestNotificationPermission() {
     if (!('Notification' in window)) {
@@ -315,10 +360,12 @@ class WebSocketService {
   // Reconnect manuell
   reconnect() {
     if (this.currentUser) {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (token) {
         this.disconnect();
         this.connect(token, this.currentUser);
+      } else {
+        console.error('❌ No access token available for manual reconnection');
       }
     }
   }
@@ -357,6 +404,19 @@ class WebSocketService {
     
     console.log(`✏️ Stopped typing in universe chat ${universeId}`);
     this.socket.emit('universe_chat_typing_stop', universeId);
+  }
+
+  // Debugging Helper für Production
+  getConnectionInfo() {
+    return {
+      isConnected: this.isConnected,
+      socketId: this.socket?.id,
+      url: this.socket?.io?.uri,
+      transport: this.socket?.io?.engine?.transport?.name,
+      reconnectAttempts: this.reconnectAttempts,
+      hasCurrentUser: !!this.currentUser,
+      hasToken: !!localStorage.getItem('accessToken')
+    };
   }
 }
 

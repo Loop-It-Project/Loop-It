@@ -1,36 +1,30 @@
 import BaseService from './baseService';
 
-const API_URL = BaseService.getApiUrl();
-
 class MediaService {
   
   // Upload profile image
   static async uploadProfileImage(file) {
     try {
-      console.log('📤 MediaService: Uploading profile image...', {
-        name: file.name,
-        type: file.type,
-        size: file.size
-      });
+      // console.log('📤 MediaService: Uploading profile image...', {
+      //   name: file.name,
+      //   type: file.type,
+      //   size: file.size
+      // });
 
       const formData = new FormData();
       formData.append('profileImage', file); // ← Korrigiert: profileImage field name
 
-      console.log('📋 MediaService: FormData contents:', {
-        hasProfileImage: formData.has('profileImage'),
-        fileInfo: file ? { name: file.name, type: file.type, size: file.size } : null
-      });
+      // console.log('📋 MediaService: FormData contents:', {
+      //   hasProfileImage: formData.has('profileImage'),
+      //   fileInfo: file ? { name: file.name, type: file.type, size: file.size } : null
+      // });
 
-      const response = await fetch(`${BaseService.getApiUrl()}/api/media/upload/profile`, {
+      const response = await BaseService.fetchWithAuth(`/media/upload/profile`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${BaseService.getToken()}`
-          // ✅ WICHTIG: Kein Content-Type Header für FormData!
-        },
         body: formData
       });
 
-      console.log('📥 MediaService: Response status:', response.status);
+      // console.log('📥 MediaService: Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -39,7 +33,7 @@ class MediaService {
       }
 
       const result = await response.json();
-      console.log('✅ MediaService: Profile image uploaded successfully:', result);
+      // console.log('✅ MediaService: Profile image uploaded successfully:', result);
       return result;
 
     } catch (error) {
@@ -54,35 +48,31 @@ class MediaService {
   // Upload post images
   static async uploadPostImages(files) {
     try {
-      console.log('📤 MediaService: Uploading post images...', {
-        count: files.length,
-        files: files.map(f => ({ name: f.name, type: f.type, size: f.size }))
-      });
+      // console.log('📤 MediaService: Uploading post images...', {
+      //   count: files.length,
+      //   files: files.map(f => ({ name: f.name, type: f.type, size: f.size }))
+      // });
 
       const formData = new FormData();
       
-      // ✅ WICHTIG: Dateien als Array anhängen mit korrektem field name
+      // Dateien als Array anhängen mit korrektem field name
       files.forEach((file, index) => {
-        formData.append('postImages', file); // ← Korrigiert: postImages field name
+        formData.append('postImages', file);
         console.log(`📎 Added file ${index + 1}:`, file.name);
       });
 
-      console.log('📋 MediaService: FormData contents:', {
-        hasPostImages: formData.has('postImages'),
-        fileCount: files.length,
-        formDataEntries: Array.from(formData.entries()).length
-      });
+      // console.log('📋 MediaService: FormData contents:', {
+      //   hasPostImages: formData.has('postImages'),
+      //   fileCount: files.length,
+      //   formDataEntries: Array.from(formData.entries()).length
+      // });
 
-      const response = await fetch(`${BaseService.getApiUrl()}/api/media/upload/post`, {
+      const response = await BaseService.fetchWithAuth(`/media/upload/post`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${BaseService.getToken()}`
-          // ✅ WICHTIG: Kein Content-Type Header für FormData!
-        },
         body: formData
       });
 
-      console.log('📥 MediaService: Response status:', response.status);
+      // console.log('📥 MediaService: Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -91,7 +81,7 @@ class MediaService {
       }
 
       const result = await response.json();
-      console.log('✅ MediaService: Post images uploaded successfully:', result);
+      // console.log('✅ MediaService: Post images uploaded successfully:', result);
       return result;
 
     } catch (error) {
@@ -106,14 +96,10 @@ class MediaService {
   // Delete media
   static async deleteMedia(mediaId) {
     try {
-      console.log('🗑️ MediaService: Deleting media:', mediaId);
+      // console.log('🗑️ MediaService: Deleting media:', mediaId);
 
-      const response = await fetch(`${BaseService.getApiUrl()}/api/media/${mediaId}`, {
+      const response = await BaseService.fetchWithAuth(`/media/${mediaId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${BaseService.getToken()}`
-        }
       });
 
       if (!response.ok) {
@@ -123,7 +109,7 @@ class MediaService {
       }
 
       const result = await response.json();
-      console.log('✅ MediaService: Media deleted successfully');
+      // console.log('✅ MediaService: Media deleted successfully');
       return result;
 
     } catch (error) {
@@ -138,14 +124,10 @@ class MediaService {
   // Get user media
   static async getUserMedia(page = 1, limit = 20) {
     try {
-      console.log('📋 MediaService: Getting user media...', { page, limit });
+      // console.log('📋 MediaService: Getting user media...', { page, limit });
 
-      const response = await fetch(`${BaseService.getApiUrl()}/api/media/my-media?page=${page}&limit=${limit}`, {
+      const response = await BaseService.fetchWithAuth(`/media/my-media?page=${page}&limit=${limit}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${BaseService.getToken()}`
-        }
       });
 
       if (!response.ok) {
@@ -155,7 +137,7 @@ class MediaService {
       }
 
       const result = await response.json();
-      console.log('✅ MediaService: User media retrieved successfully');
+      // console.log('✅ MediaService: User media retrieved successfully');
       return result;
 
     } catch (error) {
@@ -169,12 +151,14 @@ class MediaService {
 
   // Get media URL
   static getMediaUrl(filename) {
-    return `${BaseService.getApiUrl()}/api/media/serve/${filename}`;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return `${baseUrl}/api/media/serve/${filename}`;
   }
 
   // Get thumbnail URL
   static getThumbnailUrl(filename) {
-    return `${BaseService.getApiUrl()}/api/media/thumbnail/${filename}`;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return `${baseUrl}/api/media/thumbnail/${filename}`;
   }
 }
 

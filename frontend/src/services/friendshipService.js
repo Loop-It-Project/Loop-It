@@ -1,13 +1,11 @@
 import BaseService from './baseService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
 class FriendshipService extends BaseService {
   
   // Freundschaftsanfrage senden
   static async sendFriendRequest(username) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/friendships/request`, {
+      const response = await BaseService.fetchWithAuth(`/friendships/request`, {
         method: 'POST',
         body: JSON.stringify({ username })
       });
@@ -23,7 +21,7 @@ class FriendshipService extends BaseService {
   // Freundschaftsanfrage annehmen
   static async acceptFriendRequest(requestId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/friendships/request/${requestId}/accept`, {
+      const response = await BaseService.fetchWithAuth(`/friendships/request/${requestId}/accept`, {
         method: 'PUT'
       });
 
@@ -38,7 +36,7 @@ class FriendshipService extends BaseService {
   // Freundschaftsanfrage ablehnen
   static async declineFriendRequest(requestId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/friendships/request/${requestId}/decline`, {
+      const response = await BaseService.fetchWithAuth(`/friendships/request/${requestId}/decline`, {
         method: 'PUT'
       });
 
@@ -53,7 +51,7 @@ class FriendshipService extends BaseService {
   // Freund entfernen
   static async removeFriend(username) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/friendships/${username}`, {
+      const response = await BaseService.fetchWithAuth(`/friendships/${username}`, {
         method: 'DELETE'
       });
 
@@ -68,8 +66,8 @@ class FriendshipService extends BaseService {
   // Freunde eines Users abrufen
   static async getUserFriends(username, page = 1, limit = 20) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/friendships/user/${username}?page=${page}&limit=${limit}`
+      const response = await BaseService.fetchWithAuth(
+        `/friendships/user/${username}?page=${page}&limit=${limit}`
       );
 
       const data = await response.json();
@@ -83,7 +81,7 @@ class FriendshipService extends BaseService {
   // Ausstehende Anfragen abrufen
   static async getPendingRequests() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/friendships/requests`);
+      const response = await BaseService.fetchWithAuth(`/friendships/requests`);
 
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -96,7 +94,7 @@ class FriendshipService extends BaseService {
   // Freundschaftsstatus prüfen
   static async getFriendshipStatus(username) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/friendships/status/${username}`);
+      const response = await BaseService.fetchWithAuth(`/friendships/status/${username}`);
 
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };

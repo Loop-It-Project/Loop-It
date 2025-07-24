@@ -4,7 +4,7 @@ const API_URL = BaseService.getApiUrl();
 
 class BugReportService extends BaseService {
 
-  // ✅ Create Bug Report
+  // Create Bug Report
   static async createBugReport(data) {
     try {
       // Automatically capture browser/system info
@@ -30,7 +30,7 @@ class BugReportService extends BaseService {
         currentUrl: browserInfo.url
       };
 
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports`, {
+      const response = await BaseService.fetchWithAuth(`/bug-reports`, {
         method: 'POST',
         body: JSON.stringify(requestData)
       });
@@ -43,7 +43,7 @@ class BugReportService extends BaseService {
     }
   }
 
-  // ✅ Get User's Bug Reports
+  // Get User's Bug Reports
   static async getUserBugReports(page = 1, limit = 10) {
     try {
       const params = new URLSearchParams({
@@ -51,7 +51,7 @@ class BugReportService extends BaseService {
         limit: limit.toString()
       });
 
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/my-reports?${params}`);
+      const response = await BaseService.fetchWithAuth(`/bug-reports/my-reports?${params}`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
@@ -61,10 +61,10 @@ class BugReportService extends BaseService {
     }
   }
 
-  // ✅ Get Bug Report by ID
+  // Get Bug Report by ID
   static async getBugReportById(id) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/${id}`);
+      const response = await BaseService.fetchWithAuth(`/bug-reports/${id}`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
@@ -74,7 +74,7 @@ class BugReportService extends BaseService {
     }
   }
 
-  // ✅ Admin: Get All Bug Reports
+  // Admin: Get All Bug Reports
   static async getAllBugReports(filters = {}) {
     try {
       const params = new URLSearchParams();
@@ -85,7 +85,7 @@ class BugReportService extends BaseService {
         }
       });
 
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports?${params}`);
+      const response = await BaseService.fetchWithAuth(`/bug-reports?${params}`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
@@ -95,10 +95,10 @@ class BugReportService extends BaseService {
     }
   }
 
-  // ✅ Admin: Update Bug Report Status
+  // Admin: Update Bug Report Status
   static async updateBugReportStatus(id, updates) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/${id}`, {
+      const response = await BaseService.fetchWithAuth(`/bug-reports/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates)
       });
@@ -111,10 +111,10 @@ class BugReportService extends BaseService {
     }
   }
 
-  // ✅ Admin: Delete Bug Report
+  // Admin: Delete Bug Report
   static async deleteBugReport(id) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/${id}`, {
+      const response = await BaseService.fetchWithAuth(`/bug-reports/${id}`, {
         method: 'DELETE'
       });
 
@@ -126,10 +126,10 @@ class BugReportService extends BaseService {
     }
   }
 
-  // ✅ Admin: Get Bug Report Statistics
+  // Admin: Get Bug Report Statistics
   static async getBugReportStats() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/bug-reports/admin/stats`);
+      const response = await BaseService.fetchWithAuth(`/bug-reports/admin/stats`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
