@@ -1,18 +1,14 @@
 import BaseService from './baseService';
 
-const API_URL = BaseService.getApiUrl();
-
 class UniverseService {
   // User's Universes abrufen
   static async getUserUniverses(page = 1, limit = 20) {
     try {
-      console.log('📡 UniverseService.getUserUniverses:', { page, limit });
+      // console.log('📡 UniverseService.getUserUniverses:', { page, limit });
       
-      const response = await BaseService.fetchWithAuth(
-        `${API_URL}/api/universes/user/my-universes?page=${page}&limit=${limit}`
-      );
+      const response = await BaseService.fetchWithAuth(`/universes/user/my-universes?page=${page}&limit=${limit}`);
 
-      console.log('getUserUniverses response status:', response.status);
+      // console.log('getUserUniverses response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -20,8 +16,8 @@ class UniverseService {
       }
 
       const data = await response.json();
-      console.log('✅ getUserUniverses response:', data);
-      
+      // console.log('✅ getUserUniverses response:', data);
+
       return {
         success: true,
         data: data.data || data
@@ -38,13 +34,11 @@ class UniverseService {
   // Owned Universes abrufen
   static async getOwnedUniverses(page = 1, limit = 20) {
     try {
-      console.log('📡 UniverseService.getOwnedUniverses:', { page, limit });
+      // console.log('📡 UniverseService.getOwnedUniverses:', { page, limit });
       
-      const response = await BaseService.fetchWithAuth(
-        `${API_URL}/api/universes/user/owned?page=${page}&limit=${limit}`
-      );
+      const response = await BaseService.fetchWithAuth(`/universes/user/owned?page=${page}&limit=${limit}`);
 
-      console.log('getOwnedUniverses response status:', response.status);
+      // console.log('getOwnedUniverses response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -52,7 +46,7 @@ class UniverseService {
       }
 
       const data = await response.json();
-      console.log('✅ getOwnedUniverses response:', data);
+      // console.log('✅ getOwnedUniverses response:', data);
       
       return {
         success: true,
@@ -70,16 +64,13 @@ class UniverseService {
   // Universe beitreten
   static async joinUniverse(universeSlug) {
     try {
-      console.log('🚀 Joining universe:', universeSlug);
+      // console.log('🚀 Joining universe:', universeSlug);
 
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/universes/${universeSlug}/join`, {
+      const response = await BaseService.fetchWithAuth(`/universes/${universeSlug}/join`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
       });
 
-      console.log('Join response status:', response.status);
+      // console.log('Join response status:', response.status);
 
       if (!response.ok) {
         let errorMessage;
@@ -96,14 +87,14 @@ class UniverseService {
       }
 
       const data = await response.json();
-      console.log('✅ Join universe success:', data);
+      // console.log('✅ Join universe success:', data);
 
       return { 
         success: true, 
         data: {
           membership: data.data?.membership || data.membership,
           universe: data.data?.universe || data.universe,
-          // ✅ Membership status für UI
+          // Membership status für UI
           isMember: true,
           membershipStatus: 'member'
         },
@@ -127,16 +118,13 @@ class UniverseService {
   // Universe verlassen
   static async leaveUniverse(universeSlug) {
     try {
-      console.log('🚪 Leaving universe:', universeSlug);
+      // console.log('🚪 Leaving universe:', universeSlug);
 
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/universes/${universeSlug}/leave`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const response = await BaseService.fetchWithAuth(`/universes/${universeSlug}/leave`, {
+        method: 'POST'
       });
 
-      console.log('Leave response status:', response.status);
+      // console.log('Leave response status:', response.status);
 
       if (!response.ok) {
         let errorMessage;
@@ -153,14 +141,14 @@ class UniverseService {
       }
 
       const data = await response.json();
-      console.log('✅ Leave universe success:', data);
+      // console.log('✅ Leave universe success:', data);
 
       return { 
         success: true, 
         data: {
           removedMembership: data.data?.removedMembership || data.removedMembership,
           universe: data.data?.universe || data.universe,
-          // ✅ Membership status für UI
+          // Membership status für UI
           isMember: false,
           membershipStatus: 'none'
         },
@@ -194,9 +182,7 @@ class UniverseService {
         params.append('category', category);
       }
     
-      const response = await BaseService.fetchWithAuth(
-        `${API_URL}/api/universes/discover?${params}`
-      );
+      const response = await BaseService.fetchWithAuth(`/universes/discover?${params}`);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -213,9 +199,8 @@ class UniverseService {
   // Universe erstellen
   static async createUniverse(universeData) {
     try {
-      const response = await fetch(`${API_URL}/api/universes`, {
+      const response = await BaseService.fetchWithAuth(`/universes`, {
         method: 'POST',
-        headers: BaseService.getAuthHeaders(),
         body: JSON.stringify(universeData)
       });
 
@@ -235,22 +220,8 @@ class UniverseService {
   // Universe Details abrufen
   static async getUniverseDetails(universeSlug) {
     try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Content-Type': 'application/json',
-      };
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/universes/${universeSlug}/details`,
-        { 
-          method: 'GET',
-          headers 
-        }
-      );
+      const response = await BaseService.fetchWithAuth(`/universes/${universeSlug}/details`);
 
       const data = await response.json();
 
@@ -268,13 +239,7 @@ class UniverseService {
   // Universe Members abrufen
   static async getUniverseMembers(universeSlug, page = 1, limit = 20) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/universes/${universeSlug}/members?page=${page}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers: BaseService.getAuthHeaders(),
-        }
-      );
+      const response = await BaseService.fetchWithAuth(`/universes/${universeSlug}/members?page=${page}&limit=${limit}`);
 
       const data = await response.json();
 
@@ -292,11 +257,9 @@ class UniverseService {
   // Universe löschen
   static async deleteUniverse(universeSlug) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/universes/${universeSlug}`,
+      const response = await BaseService.fetchWithAuth(`/universes/${universeSlug}`,
         {
           method: 'DELETE',
-          headers: BaseService.getAuthHeaders(),
         }
       );
 
@@ -316,11 +279,9 @@ class UniverseService {
   // Eigentümerschaft übertragen
   static async transferUniverseOwnership(universeSlug, newOwnerId) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/universes/${universeSlug}/transfer-ownership`,
+      const response = await BaseService.fetchWithAuth(`/universes/${universeSlug}/transfer-ownership`,
         {
           method: 'POST',
-          headers: BaseService.getAuthHeaders(),
           body: JSON.stringify({ newOwnerId })
         }
       );
@@ -341,13 +302,7 @@ class UniverseService {
   // Universe-Name prüfen
   static async checkUniverseName(name) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/universes/check-name?name=${encodeURIComponent(name)}`,
-        {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+      const response = await BaseService.fetchWithAuth(`/universes/check-name?name=${encodeURIComponent(name)}`);
     
       const data = await response.json();
       return response.ok ? { success: true, data } : { success: false, error: data.error };

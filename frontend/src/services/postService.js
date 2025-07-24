@@ -6,9 +6,8 @@ class PostService {
   // Post erstellen
   static async createPost(postData) {
     try {
-      const response = await fetch(`${API_URL}/api/posts`, {
+      const response = await BaseService.fetchWithAuth('/posts', {
         method: 'POST',
-        headers: BaseService.getAuthHeaders(),
         body: JSON.stringify(postData)
       });
 
@@ -23,9 +22,8 @@ class PostService {
   // Post löschen
   static async deletePost(postId) {
     try {
-      const response = await fetch(`${API_URL}/api/posts/${postId}`, {
-        method: 'DELETE',
-        headers: BaseService.getAuthHeaders(),
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}`, {
+        method: 'DELETE'
       });
 
       const data = await response.json();
@@ -40,32 +38,10 @@ class PostService {
   static async toggleLike(postId) {
     try {
       console.log('🔍 Frontend toggleLike called for postId:', postId);
-    
-    // ERWEITERTE NETWORK DEBUG-INFO
-    const token = localStorage.getItem('token');
-    const url = `${API_URL}/api/posts/${postId}/like`;
-    
-    console.log('🔍 Frontend: Request details:', {
-      url,
-      method: 'POST',
-      hasToken: !!token,
-      tokenPreview: token ? token.substring(0, 30) + '...' : 'none',
-      API_URL
-    });
       
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/${postId}/like`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}/like`, {
+        method: 'POST'
       });
-
-      console.log('🔍 Frontend: Raw response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries())
-    });
 
       const result = await response.json();
       console.log('🔍 Frontend toggleLike response:', result);
@@ -97,7 +73,7 @@ class PostService {
   // Like-Status abrufen
   static async getLikeStatus(postId) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/${postId}/like-status`);
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}/like-status`);
 
       const data = await response.json();
       return response.ok ? { success: true, data } : { success: false, error: data.error };
@@ -110,11 +86,8 @@ class PostService {
   // Post Share tracken
   static async sharePost(postId, shareType, metadata = {}) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/${postId}/share`, {
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}/share`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ shareType, metadata })
       });
 
@@ -129,7 +102,7 @@ class PostService {
   // Share Statistics abrufen
   static async getShareStatistics(postId) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/${postId}/share-statistics`);
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}/share-statistics`);
       const data = await response.json();
       
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -142,7 +115,7 @@ class PostService {
   // Trending Shares abrufen
   static async getTrendingShares(timeframe = '24h', limit = 20) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/posts/trending-shares?timeframe=${timeframe}&limit=${limit}`);
+      const response = await BaseService.fetchWithAuth(`/posts/trending-shares?timeframe=${timeframe}&limit=${limit}`);
       const data = await response.json();
       
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };

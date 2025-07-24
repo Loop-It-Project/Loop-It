@@ -1,22 +1,13 @@
 import BaseService from './baseService';
 
-const API_URL = BaseService.getApiUrl();
-
 class ShareService {
   // Post Share tracken
   static async sharePost(postId, shareType, metadata = {}) {
     try {
       // console.log('🔄 Sharing post:', { postId, shareType, metadata });
 
-      const response = await fetch(`${API_URL}/api/posts/${postId}/share`, {
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}/share`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Optional auth header
-          ...(localStorage.getItem('token') && {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          })
-        },
         body: JSON.stringify({ shareType, metadata })
       });
 
@@ -111,7 +102,7 @@ class ShareService {
   // Share Statistics abrufen
   static async getShareStatistics(postId) {
     try {
-      const response = await fetch(`${API_URL}/api/posts/${postId}/share-statistics`);
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}/share-statistics`);
       const data = await response.json();
       
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -124,7 +115,7 @@ class ShareService {
   // Trending Shares abrufen
   static async getTrendingShares(timeframe = '24h', limit = 20) {
     try {
-      const response = await fetch(`${API_URL}/api/posts/trending-shares?timeframe=${timeframe}&limit=${limit}`);
+      const response = await BaseService.fetchWithAuth(`/posts/trending-shares?timeframe=${timeframe}&limit=${limit}`);
       const data = await response.json();
       
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };

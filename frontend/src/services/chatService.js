@@ -1,13 +1,11 @@
 import BaseService from './baseService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
 class ChatService extends BaseService {
   
   // Conversation erstellen oder abrufen
   static async getOrCreateConversation(targetUserId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/chats/conversations`, {
+      const response = await BaseService.fetchWithAuth(`/chats/conversations`, {
         method: 'POST',
         body: JSON.stringify({ targetUserId })
       });
@@ -23,9 +21,7 @@ class ChatService extends BaseService {
   // User's Conversations abrufen
   static async getUserConversations(page = 1, limit = 20) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/chats/conversations?page=${page}&limit=${limit}`
-      );
+      const response = await BaseService.fetchWithAuth(`/chats/conversations?page=${page}&limit=${limit}`);
 
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -38,8 +34,8 @@ class ChatService extends BaseService {
   // Nachrichten einer Conversation abrufen
   static async getMessages(conversationId, page = 1, limit = 50) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/chats/conversations/${conversationId}/messages?page=${page}&limit=${limit}`
+      const response = await BaseService.fetchWithAuth(
+        `/chats/conversations/${conversationId}/messages?page=${page}&limit=${limit}`
       );
 
       const data = await response.json();
@@ -53,8 +49,8 @@ class ChatService extends BaseService {
   // Nachricht senden
   static async sendMessage(conversationId, content, replyToId = null) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/chats/conversations/${conversationId}/messages`,
+      const response = await BaseService.fetchWithAuth(
+        `/chats/conversations/${conversationId}/messages`,
         {
           method: 'POST',
           body: JSON.stringify({ content, replyToId })
@@ -72,8 +68,8 @@ class ChatService extends BaseService {
   // Nachrichten als gelesen markieren
   static async markMessagesAsRead(conversationId) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/chats/conversations/${conversationId}/read`,
+      const response = await BaseService.fetchWithAuth(
+        `/chats/conversations/${conversationId}/read`,
         {
           method: 'PUT'
         }
@@ -90,8 +86,8 @@ class ChatService extends BaseService {
   // Typing Indicator setzen
   static async setTyping(conversationId) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/chats/conversations/${conversationId}/typing`,
+      const response = await BaseService.fetchWithAuth(
+        `/chats/conversations/${conversationId}/typing`,
         {
           method: 'POST'
         }
@@ -108,8 +104,8 @@ class ChatService extends BaseService {
   // Typing Users abrufen
   static async getTypingUsers(conversationId) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/chats/conversations/${conversationId}/typing`
+      const response = await BaseService.fetchWithAuth(
+        `/chats/conversations/${conversationId}/typing`
       );
 
       const data = await response.json();
@@ -123,8 +119,8 @@ class ChatService extends BaseService {
   // Chat blockieren
   static async blockConversation(conversationId) {
     try {
-      const response = await this.fetchWithAuth(
-        `${API_URL}/api/chats/conversations/${conversationId}/block`,
+      const response = await BaseService.fetchWithAuth(
+        `/chats/conversations/${conversationId}/block`,
         {
           method: 'PUT'
         }

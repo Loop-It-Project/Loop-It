@@ -1,3 +1,5 @@
+import AuthInterceptor from '../utils/authInterceptor';
+
 class BaseService {
   static getApiUrl() {
     // Base URL from environment (should be http://loadbalancer without /api)
@@ -8,6 +10,20 @@ class BaseService {
     
     console.log('BaseService API URL:', apiUrl);
     return apiUrl;
+  }
+
+  // Auth Headers für Legacy-Services die noch direct fetch verwenden
+  static getAuthHeaders() {
+    const token = localStorage.getItem('accessToken');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : '',
+    };
+  }
+
+  // Token Helper
+  static getToken() {
+    return localStorage.getItem('accessToken');
   }
 
   // Fix Media URLs vom Backend

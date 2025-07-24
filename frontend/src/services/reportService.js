@@ -1,13 +1,11 @@
 import BaseService from './baseService';
 
-const API_URL = BaseService.getApiUrl();
-
 class ReportService {
   
   // Post melden
   static async reportPost(postId, reason, description = '') {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports/posts/${postId}`, {
+      const response = await BaseService.fetchWithAuth(`/reports/posts/${postId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -35,7 +33,7 @@ class ReportService {
         status
       });
 
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports?${params}`, {
+      const response = await BaseService.fetchWithAuth(`/reports?${params}`, {
         method: 'GET'
       });
 
@@ -50,7 +48,7 @@ class ReportService {
   // Report verarbeiten (Admin)
   static async processReport(reportId, actionData) {
     try {
-      const response = await BaseService.fetchWithAuth(`${API_URL}/api/reports/${reportId}/process`, {
+      const response = await BaseService.fetchWithAuth(`/reports/${reportId}/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
