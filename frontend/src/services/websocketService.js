@@ -9,6 +9,7 @@ class WebSocketService {
     this.listeners = new Map();
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
+    this.reconnectTimeout = null;
   }
 
   // WebSocket-Verbindung initialisieren
@@ -20,8 +21,8 @@ class WebSocketService {
 
     this.currentUser = user;
     console.log('🔌 Connecting to WebSocket...', { 
-      userId: user.id, 
-      username: user.username 
+      userId: user?.id, 
+      username: user?.username 
     });
 
      // WebSocket URL für Production Environment
@@ -119,40 +120,40 @@ class WebSocketService {
 
     this.socket.on('conversation_refresh', () => {
       console.log('🔄 Conversation refresh requested');
-      this.emit('conversation_refresh');
+      this.emitToHandlers('conversation_refresh');
     });
 
     this.socket.on('new_conversation_created', (data) => {
       console.log('💬 New conversation created:', data);
-      this.emit('new_conversation_created', data);
+      this.emitToHandlers('new_conversation_created', data);
     });
 
     // Typing Events
     this.socket.on('user_typing', (data) => {
       console.log(`✏️ User typing: ${data.username} in ${data.conversationId}`);
-      this.emit('user_typing', data);
+      this.emitToHandlers('user_typing', data);
     });
 
     this.socket.on('user_stopped_typing', (data) => {
       console.log(`✏️ User stopped typing: ${data.userId} in ${data.conversationId}`);
-      this.emit('user_stopped_typing', data);
+      this.emitToHandlers('user_stopped_typing', data);
     });
 
     // Read Status Events
     this.socket.on('message_read_by', (data) => {
       console.log(`👁️ Message read by: ${data.readBy.username}`);
-      this.emit('message_read_by', data);
+      this.emitToHandlers('message_read_by', data);
     });
 
     // Conversation Events
     this.socket.on('conversation_joined', (data) => {
       console.log(`🏠 Successfully joined conversation: ${data.conversationId}`);
-      this.emit('conversation_joined', data);
+      this.emitToHandlers('conversation_joined', data);
     });
 
     this.socket.on('conversation_left', (data) => {
       console.log(`🚪 Successfully left conversation: ${data.conversationId}`);
-      this.emit('conversation_left', data);
+      this.emitToHandlers('conversation_left', data);
     });
   }
 
@@ -160,7 +161,7 @@ class WebSocketService {
   handleReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('❌ Max reconnection attempts reached');
-      this.emit('max_reconnect_attempts_reached');
+      this.emitToHandlers('max_reconnect_attempts_reached');
       return;
     }
 
@@ -310,7 +311,6 @@ class WebSocketService {
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
-      this.currentUser = null;
       this.reconnectAttempts = 0;
     }
   }
@@ -359,14 +359,17 @@ class WebSocketService {
 
   // Reconnect manuell
   reconnect() {
-    if (this.currentUser) {
+    const userToReconnect = this.currentUser;
+    if (userToReconnect) {
       const token = localStorage.getItem('accessToken');
       if (token) {
         this.disconnect();
-        this.connect(token, this.currentUser);
+        this.connect(token, userToReconnect);
       } else {
         console.error('❌ No access token available for manual reconnection');
       }
+    } else {
+      console.error('❌ No current user available for reconnection');
     }
   }
 
