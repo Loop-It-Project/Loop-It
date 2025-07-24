@@ -7,7 +7,7 @@ class AccountService extends BaseService {
   // Account deaktivieren
   static async deactivateAccount(reason) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/account/deactivate`, {
+      const response = await BaseService.fetchWithAuth(`/account/deactivate`, {
         method: 'POST',
         body: JSON.stringify({ reason })
       });
@@ -23,7 +23,7 @@ class AccountService extends BaseService {
   // Account reaktivieren
   static async reactivateAccount() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/account/reactivate`, {
+      const response = await BaseService.fetchWithAuth(`/account/reactivate`, {
         method: 'POST'
       });
 
@@ -38,7 +38,7 @@ class AccountService extends BaseService {
   // Account löschen
   static async deleteAccount(confirmPassword, reason) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/account/delete`, {
+      const response = await BaseService.fetchWithAuth(`/account/delete`, {
         method: 'DELETE',
         body: JSON.stringify({ confirmPassword, reason })
       });
@@ -54,7 +54,7 @@ class AccountService extends BaseService {
   // Account Status abrufen
   static async getAccountStatus() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/account/status`);
+      const response = await BaseService.fetchWithAuth(`/account/status`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };
@@ -67,7 +67,7 @@ class AccountService extends BaseService {
   // Deletion Impact Report
   static async getDeletionImpactReport() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/account/deletion-impact`);
+      const response = await BaseService.fetchWithAuth(`/account/deletion-impact`);
 
       const result = await response.json();
       return response.ok ? { success: true, data: result.data } : { success: false, error: result.error };

@@ -73,15 +73,11 @@ class FeedService {
     try {
       console.log('📸 FeedService: Requesting personal feed...', { page, limit, sortBy });
 
-      const response = await fetch(
-        `${API_URL}/api/feed/personal?page=${page}&limit=${limit}&sortBy=${sortBy}`,
-        {
-          method: 'GET',
-          headers: BaseService.getAuthHeaders(),
-        }
+      const response = await BaseService.fetchWithAuth(
+        `/feed/personal?page=${page}&limit=${limit}&sortBy=${sortBy}`,
       );
 
-      console.log('📸 FeedService: Personal feed response status:', response.status);
+      // console.log('📸 FeedService: Personal feed response status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -89,40 +85,40 @@ class FeedService {
 
       const result = await response.json();
       
-      console.log('📸 FeedService: Personal feed RAW response:', result);
+      // console.log('📸 FeedService: Personal feed RAW response:', result);
       
-      // ✅ ERWEITERT: Flexible Response-Struktur
+      // Flexible Response-Struktur
       const posts = result.posts || result.data?.posts || [];
       
-      console.log('📸 FeedService: Personal feed processed:', {
-        success: result.success,
-        postsCount: posts.length,
-        hasResultPosts: !!result.posts,
-        hasDataPosts: !!result.data?.posts,
-        resultStructure: Object.keys(result),
-        samplePost: posts[0] ? {
-          id: posts[0].id,
-          title: posts[0].title,
-          hasMedia: !!posts[0].media,
-          mediaCount: posts[0].media?.length || 0,
-          mediaIds: posts[0].mediaIds,
-          mediaData: posts[0].media
-        } : null
-      });
+      // console.log('📸 FeedService: Personal feed processed:', {
+      //   success: result.success,
+      //   postsCount: posts.length,
+      //   hasResultPosts: !!result.posts,
+      //   hasDataPosts: !!result.data?.posts,
+      //   resultStructure: Object.keys(result),
+      //   samplePost: posts[0] ? {
+      //     id: posts[0].id,
+      //     title: posts[0].title,
+      //     hasMedia: !!posts[0].media,
+      //     mediaCount: posts[0].media?.length || 0,
+      //     mediaIds: posts[0].mediaIds,
+      //     mediaData: posts[0].media
+      //   } : null
+      // });
 
-      // ✅ ERWEITERT: Jeder Post mit Media-Daten loggen
-      if (posts && posts.length > 0) {
-        posts.forEach((post, index) => {
-          if (post.media && post.media.length > 0) {
-            console.log(`📸 FeedService: Post ${index + 1} (${post.id}) has media:`, {
-              mediaCount: post.media.length,
-              mediaUrls: post.media.map(m => ({ id: m.id, url: m.url, thumbnailUrl: m.thumbnailUrl }))
-            });
-          }
-        });
-      }
+      // Jeder Post mit Media-Daten loggen
+      // if (posts && posts.length > 0) {
+      //   posts.forEach((post, index) => {
+      //     if (post.media && post.media.length > 0) {
+      //       console.log(`📸 FeedService: Post ${index + 1} (${post.id}) has media:`, {
+      //         mediaCount: post.media.length,
+      //         mediaUrls: post.media.map(m => ({ id: m.id, url: m.url, thumbnailUrl: m.thumbnailUrl }))
+      //       });
+      //     }
+      //   });
+      // }
 
-      // ✅ KORRIGIERT: Return normalisierte Response
+      // Return normalisierte Response
       return {
         success: result.success,
         posts: posts,
@@ -142,17 +138,13 @@ class FeedService {
   // Universe Feed laden
   static async getUniverseFeed(slug, page = 1, limit = 20, sortBy = 'newest') {
     try {
-      console.log('📸 FeedService: Requesting universe feed...', { slug, page, limit, sortBy });
+      // console.log('📸 FeedService: Requesting universe feed...', { slug, page, limit, sortBy });
 
-      const response = await fetch(
-        `${API_URL}/api/feed/universe/${slug}?page=${page}&limit=${limit}&sortBy=${sortBy}`,
-        {
-          method: 'GET',
-          headers: BaseService.getAuthHeaders(),
-        }
+      const response = await BaseService.fetchWithAuth(
+        `/feed/universe/${slug}?page=${page}&limit=${limit}&sortBy=${sortBy}`,
       );
 
-      console.log('📸 FeedService: Universe feed response status:', response.status);
+      // console.log('📸 FeedService: Universe feed response status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -160,24 +152,23 @@ class FeedService {
 
       const result = await response.json();
       
-      console.log('📸 FeedService: Universe feed RAW response:', result);
+      // console.log('📸 FeedService: Universe feed RAW response:', result);
       
-      // ✅ ERWEITERT: Flexible Response-Struktur
+      // Flexible Response-Struktur
       const posts = result.posts || result.data?.posts || [];
       
-      console.log('📸 FeedService: Universe feed processed:', {
-        success: result.success,
-        postsCount: posts.length,
-        slug,
-        samplePost: posts[0] ? {
-          id: posts[0].id,
-          title: posts[0].title,
-          hasMedia: !!posts[0].media,
-          mediaCount: posts[0].media?.length || 0
-        } : null
-      });
+      // console.log('📸 FeedService: Universe feed processed:', {
+      //   success: result.success,
+      //   postsCount: posts.length,
+      //   slug,
+      //   samplePost: posts[0] ? {
+      //     id: posts[0].id,
+      //     title: posts[0].title,
+      //     hasMedia: !!posts[0].media,
+      //     mediaCount: posts[0].media?.length || 0
+      //   } : null
+      // });
 
-      // ✅ KORRIGIERT: Return normalisierte Response
       return {
         success: result.success,
         posts: posts,
@@ -197,17 +188,13 @@ class FeedService {
   // Trending Feed abrufen
   static async getTrendingFeed(timeframe = '7d', page = 1, limit = 20) {
     try {
-      console.log('📸 FeedService: Requesting trending feed...', { timeframe, page, limit });
+      // console.log('📸 FeedService: Requesting trending feed...', { timeframe, page, limit });
 
-      const response = await fetch(
-        `${API_URL}/api/feed/trending?timeframe=${timeframe}&page=${page}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers: BaseService.getAuthHeaders(),
-        }
+      const response = await BaseService.fetchWithAuth(
+        `/feed/trending?timeframe=${timeframe}&page=${page}&limit=${limit}`,
       );
 
-      console.log('📸 FeedService: Trending feed response status:', response.status);
+      // console.log('📸 FeedService: Trending feed response status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -215,24 +202,23 @@ class FeedService {
 
       const result = await response.json();
       
-      console.log('📸 FeedService: Trending feed RAW response:', result);
+      // console.log('📸 FeedService: Trending feed RAW response:', result);
       
-      // ✅ ERWEITERT: Flexible Response-Struktur
+      // Flexible Response-Struktur
       const posts = result.posts || result.data?.posts || [];
       
-      console.log('📸 FeedService: Trending feed processed:', {
-        success: result.success,
-        postsCount: posts.length,
-        timeframe,
-        samplePost: posts[0] ? {
-          id: posts[0].id,
-          title: posts[0].title,
-          hasMedia: !!posts[0].media,
-          mediaCount: posts[0].media?.length || 0
-        } : null
-      });
+      // console.log('📸 FeedService: Trending feed processed:', {
+      //   success: result.success,
+      //   postsCount: posts.length,
+      //   timeframe,
+      //   samplePost: posts[0] ? {
+      //     id: posts[0].id,
+      //     title: posts[0].title,
+      //     hasMedia: !!posts[0].media,
+      //     mediaCount: posts[0].media?.length || 0
+      //   } : null
+      // });
 
-      // ✅ KORRIGIERT: Return normalisierte Response
       return {
         success: result.success,
         posts: posts,
@@ -252,14 +238,8 @@ class FeedService {
   // Legacy method for backward compatibility
   static async getTrendingFeedLegacy(timeframe = '24h', limit = 10) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/feed/trending?timeframe=${timeframe}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+      const response = await BaseService.fetchWithAuth(
+        `/feed/trending?timeframe=${timeframe}&limit=${limit}`,
       );
 
       if (!response.ok) {
@@ -276,10 +256,7 @@ class FeedService {
   // Suche nach Universes und Hashtags
   static async searchUniversesAndHashtags(query) {
     try {
-      const response = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(query)}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await BaseService.fetchWithAuth(`/search?q=${encodeURIComponent(query)}`);
 
       const data = await response.json();
       return response.ok ? { success: true, data: data.results || [] } : { success: false, error: data.error };

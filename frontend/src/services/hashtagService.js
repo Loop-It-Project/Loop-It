@@ -6,20 +6,12 @@ class HashtagService {
   // Universe für Hashtag finden
   static async findUniverseByHashtag(hashtag) {
     try {
-      // console.log('🔄 Looking for universe with hashtag:', hashtag);
       
       // # entfernen falls vorhanden
       const cleanHashtag = hashtag.replace('#', '').toLowerCase();
-      // console.log('🔍 Clean hashtag:', cleanHashtag);
       
-      const url = `${API_URL}/api/hashtags/${cleanHashtag}/universe`;
-      // console.log('🌐 Making request to:', url);
-      
-      const response = await fetch(url, {
+      const response = await BaseService.fetchWithAuth(`/hashtags/${cleanHashtag}/universe`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
 
       // console.log('📡 Response status:', response.status);
@@ -53,13 +45,9 @@ class HashtagService {
   // Hashtag-Suche für Autocomplete
   static async searchHashtags(query) {
     try {
-      const response = await fetch(
-        `${API_URL}/api/hashtags/search?q=${encodeURIComponent(query)}`,
+      const response = await BaseService.fetchWithAuth(`/hashtags/search?q=${encodeURIComponent(query)}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
         }
       );
 

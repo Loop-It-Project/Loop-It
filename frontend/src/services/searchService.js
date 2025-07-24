@@ -7,9 +7,7 @@ class SearchService extends BaseService {
   // Search History abrufen
   static async getSearchHistory(limit = 10) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/search/history?limit=${limit}`, {
-        method: 'GET'
-      });
+      const response = await BaseService.fetchWithAuth(`/search/history?limit=${limit}`);
 
       const data = await response.json();
       return response.ok 
@@ -24,7 +22,7 @@ class SearchService extends BaseService {
   // Search History Item löschen
   static async deleteSearchHistoryItem(historyId) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/search/history/${historyId}`, {
+      const response = await BaseService.fetchWithAuth(`/search/history/${historyId}`, {
         method: 'DELETE'
       });
 
@@ -41,7 +39,7 @@ class SearchService extends BaseService {
   // Komplette Search History löschen
   static async clearSearchHistory() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/search/history`, {
+      const response = await BaseService.fetchWithAuth(`/search/history`, {
         method: 'DELETE'
       });
 
@@ -58,13 +56,7 @@ class SearchService extends BaseService {
   // Search with History (verwendet existing FeedService.searchUniversesAndHashtags)
   static async searchWithHistory(query) {
     try {
-      const response = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(query)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await BaseService.fetchWithAuth(`/search?q=${encodeURIComponent(query)}`);
 
       const data = await response.json();
       return response.ok 

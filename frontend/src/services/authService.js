@@ -5,7 +5,6 @@ class AuthService {
     try {
       console.log('🔐 Attempting registration with data:', userData);
       
-      // ✅ CORRECT: endpoint WITHOUT /api prefix
       const response = await BaseService.fetchWithAuth('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
@@ -32,7 +31,6 @@ class AuthService {
     try {
       console.log('🔐 Attempting login for:', credentials.email);
       
-      // ✅ CORRECT: endpoint WITHOUT /api prefix
       const response = await BaseService.fetchWithAuth('/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials),

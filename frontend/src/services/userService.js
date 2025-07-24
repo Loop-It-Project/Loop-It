@@ -1,64 +1,11 @@
 import BaseService from './baseService';
-import AuthInterceptor from '../utils/authInterceptor';
-
-const API_URL = BaseService.getApiUrl();
 
 class UserService {
-  
-  // Auth Headers mit Token-Validation
-  static getAuthHeaders() {
-    const token = localStorage.getItem('token');
-    
-    // Prüfe Token vor jeder Request
-    if (AuthInterceptor.isTokenExpired(token)) {
-      console.warn('🔒 Token ist abgelaufen - initiiere Logout');
-      AuthInterceptor.handleLogout?.();
-      throw new Error('Session abgelaufen');
-    }
-    
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
-    };
-  }
-
-  // Wrapper für fetch mit automatischem Token-Handling (wie im FeedService)
-  static async fetchWithAuth(url, options = {}) {
-    try {
-      let token = localStorage.getItem('token');
-      
-      // Prüfe ob Token erneuert werden muss
-      if (AuthInterceptor.isTokenExpired(token)) {
-        console.log('🔄 Token läuft bald ab - erneuere präventiv...');
-        try {
-          token = await AuthInterceptor.refreshTokens();
-        } catch (refreshError) {
-          console.error('Preventive token refresh failed:', refreshError);
-          // Verwende alten Token und lass Backend entscheiden
-        }
-      }
-
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-          ...options.headers
-        }
-      });
-
-      // Response durch Interceptor leiten
-      return await AuthInterceptor.handleResponse(response, { url, options });
-    } catch (error) {
-      console.error('UserService request error:', error);
-      throw error;
-    }
-  }
 
   // Eigenes Profil abrufen
   static async getUserProfile() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/profile`);
+      const response = await BaseService.fetchWithAuth(`/users/profile`);
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {
@@ -70,7 +17,7 @@ class UserService {
   // Öffentliches Profil abrufen
   static async getPublicUserProfile(username) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/profile/${username}`);
+      const response = await BaseService.fetchWithAuth(`/users/profile/${username}`);
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
     } catch (error) {
@@ -82,9 +29,7 @@ class UserService {
   // User Settings abrufen
   static async getUserSettings() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/settings`, {
-        method: 'GET'
-      });
+      const response = await BaseService.fetchWithAuth(`/users/settings`);
 
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -97,7 +42,7 @@ class UserService {
   // Profil aktualisieren
   static async updateUserProfile(profileData) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/profile`, {
+      const response = await BaseService.fetchWithAuth(`/users/profile`, {
         method: 'PUT',
         body: JSON.stringify(profileData)
       });
@@ -113,7 +58,7 @@ class UserService {
   // Settings aktualisieren
   static async updateUserSettings(settingsData) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/settings`, {
+      const response = await BaseService.fetchWithAuth(`/users/settings`, {
         method: 'PUT',
         body: JSON.stringify(settingsData)
       });
@@ -129,7 +74,7 @@ class UserService {
   // Password ändern
   static async changePassword(currentPassword, newPassword) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/change-password`, {
+      const response = await BaseService.fetchWithAuth(`/users/change-password`, {
         method: 'PUT',
         body: JSON.stringify({ currentPassword, newPassword })
       });
@@ -145,9 +90,7 @@ class UserService {
   // Geo-Tracking Settings abrufen
   static async getGeoTrackingSettings() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/geo-settings`, {
-        method: 'GET'
-      });
+      const response = await BaseService.fetchWithAuth(`/users/geo-settings`);
 
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -160,7 +103,7 @@ class UserService {
   // Geo-Tracking Settings aktualisieren
   static async updateGeoTrackingSettings(settingsData) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/geo-settings`, {
+      const response = await BaseService.fetchWithAuth(`/users/geo-settings`, {
         method: 'PUT',
         body: JSON.stringify(settingsData)
       });
@@ -176,7 +119,7 @@ class UserService {
   // Standort aktualisieren
   static async updateUserLocation(locationData) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/location`, {
+      const response = await BaseService.fetchWithAuth(`/users/location`, {
         method: 'PUT',
         body: JSON.stringify(locationData)
       });
@@ -221,9 +164,7 @@ class UserService {
   // Message Settings abrufen
   static async getMessageSettings() {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/message-settings`, {
-        method: 'GET'
-      });
+      const response = await BaseService.fetchWithAuth(`/users/message-settings`);
 
       const data = await response.json();
       return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -236,7 +177,7 @@ class UserService {
   // Message Settings aktualisieren
   static async updateMessageSettings(allowMessagesFrom) {
     try {
-      const response = await this.fetchWithAuth(`${API_URL}/api/users/message-settings`, {
+      const response = await BaseService.fetchWithAuth(`/users/message-settings`, {
         method: 'PUT',
         body: JSON.stringify({ allowMessagesFrom })
       });
