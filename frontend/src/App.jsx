@@ -104,11 +104,11 @@ function App() {
     };
 
     // WebSocket Event Listener hinzufügen
-    WebSocketService.on('match_notification', handleWebSocketMatch);
+    WebSocketService.addEventListener('match_notification', handleWebSocketMatch);
 
     return () => {
       window.removeEventListener('match_notification', handleMatchNotification);
-      WebSocketService.off('match_notification', handleWebSocketMatch);
+      WebSocketService.removeEventListener('match_notification', handleWebSocketMatch);
     };
   }, []);
 

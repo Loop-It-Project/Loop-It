@@ -1,8 +1,31 @@
+# Projekttagebuch Marc Droit - 24.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+frontend styling, datenschutz/impressum,webSocketServices und baseServices debuggen
+
+## *Fortschritte & Ergebnisse:*
+
+für datenschutz recherchiert, baseService debugged
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+webSocketServices debuggen, Präsi vorbereiten
+
 # Projekttagebuch Marc Droit - 23.07.2025
 
 ## *Heutige Hauptaufgabe(n):*
 
 firstUniverses anpassen / Deployment (Gruppe)
+
 ## *Fortschritte & Ergebnisse:*
 
 firstUniverses editiert und darkmode hinzugefügt
