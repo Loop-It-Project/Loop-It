@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from './contexts/ThemeContext';
 import AuthInterceptor from './utils/authInterceptor';
-import UserService from './services/userService';
 import WebSocketService from './services/websocketService';
 
 import Settings from './pages/Settings';
@@ -14,12 +12,13 @@ import UniversePage from './pages/UniversePage';
 import AdminPanel from './pages/AdminPanelDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
-import Hobbies from './pages/Hobbies';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Imprint from './pages/Imprint';
+import Hobbies from './pages/Hobbies';
 import UserProfile from './pages/UserProfile';
+import FirstUniverses from './components/FirstUniverses';
 import ChatWidget from './components/chat/ChatWidget';
 
 // API_URL für die gesamte App definieren
@@ -307,35 +306,27 @@ function App() {
             } 
           />
           <Route 
-            path="/register" 
+            path="/register"
             element={
-              <PublicRoute user={user}>
+              !user ?(
                 <Register onLogin={handleLogin} />
-              </PublicRoute>
-            } 
-          />
-          <Route 
-            path="/hobbies"
-            element={
-              <PublicRoute user={user}>
-                <Hobbies />
-              </PublicRoute>
+              ) : (
+                <Navigate to="/firstuniverses" replace />
+              )
             }
           />
+
+          {/* Allgemeine Routes - für alle aufrufbar */}
           <Route 
             path="/privacypolicy"
             element={
-              <PublicRoute user={user}>
-                <PrivacyPolicy />
-              </PublicRoute>
-            }
+            <PrivacyPolicy />
+          }
           />
           <Route 
             path="/imprint"
             element={
-              <PublicRoute user={user}>
                 <Imprint />
-              </PublicRoute>
             }
           />
 
@@ -348,6 +339,15 @@ function App() {
                 <Dashboard user={user} onLogout={() => handleLogout('manual')} />
               </ProtectedRoute>
             } 
+          />
+          {/* Hobbies Route */}
+          <Route
+            path="/hobbies"
+            element={
+              <ProtectedRoute user={user}>
+                <Hobbies user={user}/>
+              </ProtectedRoute>
+            }
           />
           {/* User Profile Route */}
           <Route 
@@ -374,10 +374,18 @@ function App() {
             }
           />
           <Route 
-            path="/settings" 
+            path="/settings"
             element={
               <ProtectedRoute user={user}>
                 <Settings user={user} onLogout={() => handleLogout('manual')} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/firstuniverses"
+            element={
+              <ProtectedRoute user={user}>
+                <FirstUniverses user={user} onLogout={() => handleLogout('manual')} />
               </ProtectedRoute>
             } 
           />
