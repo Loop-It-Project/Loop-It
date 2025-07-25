@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Filter, Users, MessageSquare, Calendar, X, Check, Hash, Crown } from 'lucide-react';
 import UniverseService from '../services/universeService';
 
-const DiscoverUniverses = ({ onUniverseClick }) => {
+const DiscoverUniverses = ({ onUniverseClick, onUniverseJoined }) => {
   const [universes, setUniverses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -67,25 +67,33 @@ const DiscoverUniverses = ({ onUniverseClick }) => {
   };
 
   // Handle join universe
-  const handleJoinUniverse = async (universeSlug, e) => {
-    e.stopPropagation(); // Prevent clicking through to the universe page
-    
+  const handleJoinUniverse = async (universeId) => {
     try {
-      const result = await UniverseService.joinUniverse(universeSlug);
+      setJoiningUniverse(universeId);
       
-      if (result.success) {
-        // Update UI state
-        setUniverses(prev => 
-          prev.map(universe => 
-            universe.slug === universeSlug 
-              ? { ...universe, isMember: true, memberCount: universe.memberCount + 1 }
-              : universe
-          )
-        );
+      const response = await UniverseService.joinUniverse(universeId);
+      
+      if (response.success) {
+        // Update local state
+        setUniverses(prev => prev.map(universe => 
+          universe.id === universeId 
+            ? { ...universe, isMember: true, memberCount: universe.memberCount + 1 }
+            : universe
+        ));
+
+        // Callback an Dashboard weiterleiten
+        if (onUniverseJoined) {
+          onUniverseJoined(response.data.universe.slug);
+        }
+
+        console.log('✅ Successfully joined universe');
+      } else {
+        console.error('❌ Failed to join universe:', response.error);
       }
     } catch (error) {
       console.error('Error joining universe:', error);
-      alert('Fehler beim Beitreten des Universe');
+    } finally {
+      setJoiningUniverse(null);
     }
   };
 

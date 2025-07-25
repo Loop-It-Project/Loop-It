@@ -1,20 +1,21 @@
+// baseService.js
 import AuthInterceptor from '../utils/authInterceptor';
 
 class BaseService {
   static getApiUrl() {
-    // Base URL from environment (should be http://loadbalancer without /api)
+    // Base URL from environment (should be http://localhost:3000 without /api)
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     
     // Add /api suffix here
     const apiUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
     
-    console.log('BaseService API URL:', apiUrl);
+    // console.log('BaseService API URL:', apiUrl);
     return apiUrl;
   }
 
   // Auth Headers für Legacy-Services die noch direct fetch verwenden
   static getAuthHeaders() {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('token'); // KORRIGIERT: 'token' statt 'accessToken'
     return {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',
@@ -23,22 +24,19 @@ class BaseService {
 
   // Token Helper
   static getToken() {
-    return localStorage.getItem('accessToken');
+    return localStorage.getItem('token'); // KORRIGIERT: 'token' statt 'accessToken'
   }
 
   // Fix Media URLs vom Backend
   static fixMediaUrl(url) {
     if (!url) return null;
     
-    // Falls URL localhost:3000 enthält, ersetze mit korrekter Base URL
-    if (url.includes('localhost:3000')) {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const correctedUrl = url.replace('http://localhost:3000', baseUrl);
-      console.log('🔧 Fixed media URL:', { original: url, corrected: correctedUrl });
-      return correctedUrl;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
     }
     
-    return url;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
   }
 
   // Process Media Object
@@ -48,46 +46,88 @@ class BaseService {
     return {
       ...mediaItem,
       url: this.fixMediaUrl(mediaItem.url),
-      thumbnailUrl: this.fixMediaUrl(mediaItem.thumbnailUrl)
+      thumbnailUrl: mediaItem.thumbnailUrl ? this.fixMediaUrl(mediaItem.thumbnailUrl) : null
     };
   }
 
+  // KORRIGIERTE fetchWithAuth Methode
   static async fetchWithAuth(endpoint, options = {}) {
-    // endpoint should NOT include /api prefix
-    // e.g., endpoint = '/auth/register'
-    const baseApiUrl = this.getApiUrl();
-    const url = `${baseApiUrl}${endpoint}`;
+    const apiUrl = this.getApiUrl();
+    const url = endpoint.startsWith('http') ? endpoint : `${apiUrl}${endpoint}`;
     
-    console.log('🔗 API Request URL:', url);
+    // Token aus localStorage holen
+    let token = localStorage.getItem('token');
     
-    const defaultHeaders = {
-      'Content-Type': 'application/json',
-    };
-
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      defaultHeaders.Authorization = `Bearer ${token}`;
+    // Prüfe ob Token existiert
+    if (!token) {
+      console.error('❌ Kein Token gefunden - User muss eingeloggt sein');
+      throw new Error('Authentication required');
     }
 
+    // Prüfe Token-Ablauf
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...defaultHeaders,
-          ...options.headers,
-        },
-      });
+      if (AuthInterceptor.isTokenExpired(token)) {
+        // console.log('🔄 Token abgelaufen - versuche Refresh...');
+        token = await AuthInterceptor.refreshTokens();
+      }
+    } catch (refreshError) {
+      console.error('❌ Token refresh fehlgeschlagen:', refreshError);
+      // Logout triggern
+      if (AuthInterceptor.handleLogout) {
+        AuthInterceptor.handleLogout();
+      }
+      throw new Error('Authentication failed');
+    }
+
+    // Content-Type nur setzen wenn nicht FormData
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      ...options.headers
+    };
+
+    // Nur Content-Type setzen wenn kein FormData
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const requestOptions = {
+      ...options,
+      headers
+    };
+
+    // console.log('🚀 BaseService Request:', {
+    //   url,
+    //   method: requestOptions.method || 'GET',
+    //   hasToken: !!token,
+    //   isFormData: options.body instanceof FormData,
+    //   hasContentType: !!headers['Content-Type'],
+    //   headersKeys: Object.keys(headers)
+    // });
+
+    try {
+      const response = await fetch(url, requestOptions);
       
-      console.log('📡 API Response:', response.status, response.url);
-      return response;
+      // AuthInterceptor für Response-Handling verwenden
+      return await AuthInterceptor.handleResponse(response, { url, options: requestOptions });
     } catch (error) {
-      console.error('❌ API Request Error:', error);
+      console.error('❌ BaseService Request Error:', error);
       throw error;
     }
   }
 
   static async fetch(endpoint, options = {}) {
-    return this.fetchWithAuth(endpoint, options);
+    const apiUrl = this.getApiUrl();
+    const url = endpoint.startsWith('http') ? endpoint : `${apiUrl}${endpoint}`;
+    
+    const requestOptions = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    };
+
+    return fetch(url, requestOptions);
   }
 }
 

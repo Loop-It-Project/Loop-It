@@ -119,22 +119,22 @@ const UniverseChatWidget = ({
         }
       };
 
-      WebSocketService.on('universe_chat_message', handleUniverseChatMessage);
-      WebSocketService.on('universe_chat_user_typing', handleUserTyping);
-      WebSocketService.on('universe_chat_user_stopped_typing', handleUserStoppedTyping);
-      WebSocketService.on('universe_chat_message_deleted', handleMessageDeleted);
-      WebSocketService.on('universe_chat_system', handleSystemMessage);
-      WebSocketService.on('universe_chat_joined', handleUniverseChatJoined);
-      WebSocketService.on('universe_chat_left', handleUniverseChatLeft);
+      WebSocketService.addEventListener('universe_chat_message', handleUniverseChatMessage);
+      WebSocketService.addEventListener('universe_chat_user_typing', handleUserTyping);
+      WebSocketService.addEventListener('universe_chat_user_stopped_typing', handleUserStoppedTyping);
+      WebSocketService.addEventListener('universe_chat_message_deleted', handleMessageDeleted);
+      WebSocketService.addEventListener('universe_chat_system', handleSystemMessage);
+      WebSocketService.addEventListener('universe_chat_joined', handleUniverseChatJoined);
+      WebSocketService.addEventListener('universe_chat_left', handleUniverseChatLeft);
 
     return () => {
-      WebSocketService.off('universe_chat_message', handleUniverseChatMessage);
-      WebSocketService.off('universe_chat_user_typing', handleUserTyping);
-      WebSocketService.off('universe_chat_user_stopped_typing', handleUserStoppedTyping);
-      WebSocketService.off('universe_chat_message_deleted', handleMessageDeleted);
-      WebSocketService.off('universe_chat_system', handleSystemMessage);
-      WebSocketService.off('universe_chat_joined', handleUniverseChatJoined);
-      WebSocketService.off('universe_chat_left', handleUniverseChatLeft);
+      WebSocketService.removeEventListener('universe_chat_message', handleUniverseChatMessage);
+      WebSocketService.removeEventListener('universe_chat_user_typing', handleUserTyping);
+      WebSocketService.removeEventListener('universe_chat_user_stopped_typing', handleUserStoppedTyping);
+      WebSocketService.removeEventListener('universe_chat_message_deleted', handleMessageDeleted);
+      WebSocketService.removeEventListener('universe_chat_system', handleSystemMessage);
+      WebSocketService.removeEventListener('universe_chat_joined', handleUniverseChatJoined);
+      WebSocketService.removeEventListener('universe_chat_left', handleUniverseChatLeft);
     };
     }, [currentUser, universe]);
 
@@ -161,7 +161,7 @@ const UniverseChatWidget = ({
         // WebSocket beitreten
         if (WebSocketService.isWebSocketConnected()) {
           console.log(`🔌 Joining WebSocket room: universe_chat:${universe.id}`);
-          WebSocketService.socket.emit('join_universe_chat', { universeId: universe.id });
+          WebSocketService.joinUniverseChat(universe.id);
         }
 
         // Nachrichten und Teilnehmer laden
@@ -196,12 +196,29 @@ const UniverseChatWidget = ({
         // WebSocket verlassen
         if (WebSocketService.isWebSocketConnected()) {
           console.log(`🔌 Leaving WebSocket room: universe_chat:${universe.id}`);
-          WebSocketService.socket.emit('leave_universe_chat', { universeId: universe.id });
+          WebSocketService.leaveUniverseChat(universe.id);
         }
       }
     } catch (error) {
       console.error('Error leaving chat:', error);
     }
+  };
+
+  // Typing Handler
+  const handleTyping = () => {
+    if (!universe?.id || !WebSocketService.isWebSocketConnected()) return;
+
+    // Start typing
+    WebSocketService.startUniverseChatTyping(universe.id);
+
+    // Stop typing nach 3 Sekunden
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      WebSocketService.stopUniverseChatTyping(universe.id);
+    }, 3000);
   };
 
   // Load Messages
@@ -254,7 +271,7 @@ const UniverseChatWidget = ({
         sender: {
           id: currentUser.id,
           username: currentUser.username,
-          displayName: currentUser.displayName || currentUser.username
+          displayName: currentUser.username
         },
         senderRole: universe.userRole || 'member',
         isOptimistic: true // Flag für optimistische Nachricht
@@ -269,7 +286,9 @@ const UniverseChatWidget = ({
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      WebSocketService.socket?.emit('universe_chat_typing_stop', universe.id);
+      if (WebSocketService.isWebSocketConnected()) {
+        WebSocketService.stopUniverseChatTyping(universe.id);
+      }
 
       try {
         const response = await UniverseChatService.sendMessage(universe.id, messageContent);
@@ -462,7 +481,7 @@ const UniverseChatWidget = ({
                               {/* Avatar */}
                               <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
                                 <span className="text-white text-xs font-semibold">
-                                  {(participant.displayName || participant.username || 'U').charAt(0).toUpperCase()}
+                                  {(participant.username || 'U').charAt(0).toUpperCase()}
                                 </span>
                               </div>
 
@@ -470,7 +489,7 @@ const UniverseChatWidget = ({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2">
                                   <span className="text-sm font-medium text-primary truncate">
-                                    {participant.displayName || participant.username}
+                                    {participant.username}
                                   </span>
                                   {getRoleBadge(participant.role)}
                                 </div>
@@ -538,7 +557,7 @@ const UniverseChatWidget = ({
                       >
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                         <span className="text-primary">
-                          {participant.displayName || participant.username}
+                          {participant.username}
                         </span>
                         {getRoleBadge(participant.role)}
                       </div>
@@ -578,14 +597,14 @@ const UniverseChatWidget = ({
                         <div className="flex items-start space-x-2">
                           <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs font-semibold">
-                              {(message.sender?.displayName || message.sender?.username || 'U').charAt(0).toUpperCase()}
+                              {(message.sender?.username || 'U').charAt(0).toUpperCase()}
                             </span>
                           </div>
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2 mb-1">
                               <span className="font-medium text-sm text-primary">
-                                {message.sender?.displayName || message.sender?.username}
+                                {message.sender?.username}
                               </span>
                               {getRoleBadge(message.senderRole)}
                               <span className="text-xs text-tertiary">

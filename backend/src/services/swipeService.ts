@@ -721,6 +721,12 @@ export class SwipeService {
   // New service method to get pending likes
   static async getPendingLikes(userId: string) {
     try {
+      console.log('🔍 SwipeService: Getting pending likes for user:', userId);
+    
+      // Check if swipe tables exist
+      const tableCheck = await db.$count(swipeActionsTable);
+      console.log('📊 SwipeService: Table check passed, actions count:', tableCheck);
+    
       // Get users who liked the current user but haven't been swiped on yet
       const pendingLikes = await db
         .select({
@@ -752,18 +758,26 @@ export class SwipeService {
             // Und keine Swipe-Aktion in die andere Richtung vorhanden
             sql`NOT EXISTS (
               SELECT 1 FROM ${swipeActionsTable} AS sa2
-              WHERE sa2.swiperId = ${userId}
-              AND sa2.targetId = ${swipeActionsTable.swiperId}
+              WHERE sa2.swiper_id = ${userId}
+              AND sa2.target_id = ${swipeActionsTable.swiperId}
             )`
           )
         )
         .orderBy(desc(swipeActionsTable.timestamp))
         .limit(50);
-
+      
+      console.log('✅ SwipeService: Found pending likes:', pendingLikes.length);
       return pendingLikes;
+      
     } catch (error) {
-      console.error('❌ SwipeService: Error getting pending likes:', error);
-      throw error;
+      console.error('❌ SwipeService: Error getting pending likes:', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      // Return empty array instead of throwing
+      return [];
     }
   }
 }

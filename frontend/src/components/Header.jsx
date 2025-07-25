@@ -222,11 +222,11 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
 
     // Listen for both custom events and WebSocket events
     window.addEventListener('match_notification', handleMatchNotification);
-    WebSocketService.on('match_notification', handleMatchNotification);
+    WebSocketService.addEventListener('match_notification', handleMatchNotification);
 
     return () => {
       window.removeEventListener('match_notification', handleMatchNotification);
-      WebSocketService.off('match_notification', handleMatchNotification);
+      WebSocketService.removeEventListener('match_notification', handleMatchNotification);
     };
   }, []);
 
@@ -542,7 +542,7 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <User size={20} className="text-muted" />
-                <span className="text-secondary">Hallo, {user.displayName || user.username}!</span>
+                <span className="text-secondary">Hallo, {user.username}!</span>
                 <button
                   onClick={() => navigate("/dashboard")}
                   className="flex items-center space-x-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:opacity-80 hover:cursor-pointer transition-opacity"
@@ -730,7 +730,7 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
                                     Neues Match! 🎉
                                   </p>
                                   <p className="text-tertiary text-sm">
-                                    Du hast ein Match mit {notification.data?.otherUser?.displayName || notification.data?.otherUser?.username || 'jemandem'}!
+                                    Du hast ein Match mit {notification.data?.otherUser?.username || 'jemandem'}!
                                   </p>
                                   <p className="text-xs text-tertiary mt-1">
                                     {new Date(notification.timestamp).toLocaleString()}

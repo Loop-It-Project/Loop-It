@@ -136,19 +136,19 @@ const ChatWidget = ({ currentUser }) => {
     };
 
     // Event Listener registrieren
-    WebSocketService.on('message_received', handleMessageReceived);
-    WebSocketService.on('conversation_refresh', handleConversationRefresh);
-    WebSocketService.on('new_conversation_created', handleNewConversation);
-    WebSocketService.on('user_typing', handleUserTyping);
-    WebSocketService.on('user_stopped_typing', handleUserStoppedTyping);
+    WebSocketService.addEventListener('message_received', handleMessageReceived);
+    WebSocketService.addEventListener('conversation_refresh', handleConversationRefresh);
+    WebSocketService.addEventListener('new_conversation_created', handleNewConversation);
+    WebSocketService.addEventListener('user_typing', handleUserTyping);
+    WebSocketService.addEventListener('user_stopped_typing', handleUserStoppedTyping);
 
     return () => {
       console.log('🧹 Cleaning up WebSocket event listeners...');
-      WebSocketService.off('message_received', handleMessageReceived);
-      WebSocketService.off('conversation_refresh', handleConversationRefresh);
-      WebSocketService.off('new_conversation_created', handleNewConversation);
-      WebSocketService.off('user_typing', handleUserTyping);
-      WebSocketService.off('user_stopped_typing', handleUserStoppedTyping);
+      WebSocketService.removeEventListener('message_received', handleMessageReceived);
+      WebSocketService.removeEventListener('conversation_refresh', handleConversationRefresh);
+      WebSocketService.removeEventListener('new_conversation_created', handleNewConversation);
+      WebSocketService.removeEventListener('user_typing', handleUserTyping);
+      WebSocketService.removeEventListener('user_stopped_typing', handleUserStoppedTyping);
     };
   }, [currentUser, activeConversation, processedMessageIds, shouldAutoScroll]);
 
@@ -456,7 +456,7 @@ const ChatWidget = ({ currentUser }) => {
         }`}>
           {!message.isFromMe && (
             <div className="text-xs text-gray-500 mb-1">
-              {message.sender?.displayName || message.sender?.username || 'Unknown'}
+              {message.sender?.username || 'Unknown'}
             </div>
           )}
           <div className="text-sm">{message.content}</div>
@@ -534,7 +534,7 @@ const ChatWidget = ({ currentUser }) => {
           <div className="flex items-center space-x-2">
             <MessageCircle size={20} />
             <h3 className="font-semibold">
-              {activeConversation ? activeConversation.chatPartner?.displayName || activeConversation.chatPartner?.username : 'Chats'}
+              {activeConversation ? activeConversation.chatPartner?.username : 'Chats'}
             </h3>
           </div>
           <div className="flex items-center space-x-2">
@@ -587,7 +587,7 @@ const ChatWidget = ({ currentUser }) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="font-medium text-primary truncate">
-                            {conversation.chatPartner?.displayName || conversation.chatPartner?.username}
+                            {conversation.chatPartner?.username}
                           </p>
                           {conversation.lastMessage && (
                             <span className="text-xs text-tertiary">

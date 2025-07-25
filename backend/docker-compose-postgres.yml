@@ -1,0 +1,55 @@
+# docker-compose.postgres.yml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: loop-it-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: loop_it_dev
+      POSTGRES_USER: loop_it_user
+      POSTGRES_PASSWORD: loop_it_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-EXEC", "pg_isready -U loop_it_user -d loop_it_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - loop-it-network
+
+  # Optional: pgAdmin für GUI-Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: loop-it-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@loop-it.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - loop-it-network
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  loop-it-network:
+    driver: bridge

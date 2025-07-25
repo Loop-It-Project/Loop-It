@@ -215,7 +215,7 @@ const Dashboard = ({ user, onLogout, refreshTrigger }) => {
                   <User className="text-white" size={24} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-primary">{user?.displayName || user?.username}</h3>
+                  <h3 className="font-semibold text-primary">{user?.username}</h3>
                   <p className="text-sm text-tertiary">@{user?.username}</p>
                 </div>
               </div>
@@ -366,7 +366,13 @@ const Dashboard = ({ user, onLogout, refreshTrigger }) => {
             {activeTab === 'discover' && (
               <DiscoverUniverses 
                 key="discover-universes"
-                onUniverseClick={handleUniverseClick} 
+                onUniverseClick={handleUniverseClick}
+                onUniverseJoined={async (universeSlug) => {
+                  console.log('🚀 Dashboard: Universe joined from Discover:', universeSlug);
+
+                  // Sofort Universe-Liste neu laden
+                  await loadUserUniverses();
+                }}
               />
             )}
           </div>

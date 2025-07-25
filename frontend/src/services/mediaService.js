@@ -50,21 +50,48 @@ class MediaService {
     try {
       // console.log('📤 MediaService: Uploading post images...', {
       //   count: files.length,
-      //   files: files.map(f => ({ name: f.name, type: f.type, size: f.size }))
+      //   files: files.map(f => ({ 
+      //     name: f.name, 
+      //     type: f.type, 
+      //     size: f.size,
+      //     constructor: f.constructor.name
+      //   }))
       // });
 
+      // Validierung der Files
+      if (!files || !Array.isArray(files) || files.length === 0) {
+        throw new Error('No valid files provided');
+      }
+
       const formData = new FormData();
+
+      // Debug: FormData vor dem Hinzufügen der Dateien
+      // console.log('📋 MediaService: Creating FormData...');
       
       // Dateien als Array anhängen mit korrektem field name
       files.forEach((file, index) => {
-        formData.append('postImages', file);
-        console.log(`📎 Added file ${index + 1}:`, file.name);
+        // console.log(`📎 Adding file ${index + 1}:`, {
+        //   name: file.name,
+        //   type: file.type,
+        //   size: file.size,
+        //   lastModified: file.lastModified,
+        //   isFile: file instanceof File,
+        //   isBlob: file instanceof Blob
+        // });
+
+        formData.append('postImages', file, file.name);
       });
 
-      // console.log('📋 MediaService: FormData contents:', {
+      // Debug: FormData nach dem Hinzufügen
+      // console.log('📋 MediaService: FormData created:', {
       //   hasPostImages: formData.has('postImages'),
-      //   fileCount: files.length,
-      //   formDataEntries: Array.from(formData.entries()).length
+      //   entriesCount: Array.from(formData.entries()).length,
+      //   entries: Array.from(formData.entries()).map(([key, value]) => ({
+      //     key,
+      //     valueType: value.constructor.name,
+      //     fileName: value.name || 'no-name',
+      //     fileSize: value.size || 'no-size'
+      //   }))
       // });
 
       const response = await BaseService.fetchWithAuth(`/media/upload/post`, {
@@ -72,11 +99,19 @@ class MediaService {
         body: formData
       });
 
-      // console.log('📥 MediaService: Response status:', response.status);
+      // console.log('📥 MediaService: Response received:', {
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   headers: Object.fromEntries(response.headers.entries())
+      // });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ MediaService: Upload failed:', errorText);
+        console.error('❌ MediaService: Upload failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
         throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
       }
 

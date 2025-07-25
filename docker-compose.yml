@@ -39,6 +39,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-loop-it}
     ports:
       - "3000:3000"
+    volumes:
+      # WICHTIG: Upload-Ordner mounten
+      - ./backend/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +64,7 @@ services:
         VITE_APP_NAME: ${VITE_APP_NAME:-Loop-It}
     container_name: loop-it-frontend
     ports:
-      - "80:80"
+      - "8080:8080"
     depends_on:
       backend:
         condition: service_healthy
