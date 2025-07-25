@@ -74,7 +74,7 @@ function App() {
       // Browser-Benachrichtigung anzeigen
       if (Notification.permission === 'granted') {
         new Notification('Neues Match! 🎉', {
-          body: `Du hast ein Match mit ${event.detail.data.otherUser.displayName || event.detail.data.otherUser.username}!`,
+          body: `Du hast ein Match mit ${event.detail.data.otherUser.username}!`,
           icon: '/logo.png',
           tag: 'match-notification'
         });
@@ -85,7 +85,7 @@ function App() {
         window.showToast({
           type: 'success',
           title: 'Neues Match! 🎉',
-          message: `Du hast ein Match mit ${event.detail.data.otherUser.displayName || event.detail.data.otherUser.username}!`,
+          message: `Du hast ein Match mit ${event.detail.data.otherUser.username}!`,
           duration: 5000
         });
       }
@@ -105,11 +105,11 @@ function App() {
     };
 
     // WebSocket Event Listener hinzufügen
-    WebSocketService.on('match_notification', handleWebSocketMatch);
+    WebSocketService.addEventListener('match_notification', handleWebSocketMatch);
 
     return () => {
       window.removeEventListener('match_notification', handleMatchNotification);
-      WebSocketService.off('match_notification', handleWebSocketMatch);
+      WebSocketService.removeEventListener('match_notification', handleWebSocketMatch);
     };
   }, []);
 

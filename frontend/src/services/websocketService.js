@@ -320,7 +320,7 @@ class WebSocketService {
     // Browser-Benachrichtigung anzeigen
     if (Notification.permission === 'granted') {
       new Notification('Neues Match! 🎉', {
-        body: `Du hast ein Match mit ${data.data.otherUser.displayName || data.data.otherUser.username}!`,
+        body: `Du hast ein Match mit ${data.data.otherUser.username}!`,
         icon: '/logo.png',
         tag: 'match-notification'
       });
@@ -331,7 +331,7 @@ class WebSocketService {
       window.showToast({
         type: 'success',
         title: 'Neues Match! 🎉',
-        message: `Du hast ein Match mit ${data.data.otherUser.displayName || data.data.otherUser.username}!`,
+        message: `Du hast ein Match mit ${data.data.otherUser.username}!`,
         duration: 5000
       });
     }

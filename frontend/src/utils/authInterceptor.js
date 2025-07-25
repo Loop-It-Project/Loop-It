@@ -1,69 +1,68 @@
+// authInterceptor.js
 class AuthInterceptor {
-  static handleLogout = null;
-  static isRefreshing = false;
-  static refreshPromise = null;
+  static handleLogout = null; // Wird von App.jsx gesetzt
 
-  // API_URL korrekt definieren
-  static get API_URL() {
-    return import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  // Check if token is expired
+  static isTokenExpired(token) {
+    if (!token) return true;
+    
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Date.now() / 1000;
+      
+      // Token läuft in den nächsten 5 Minuten ab
+      return payload.exp < (currentTime + 300);
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return true;
+    }
   }
 
-    // Token automatisch erneuern
+  // Refresh tokens
   static async refreshTokens() {
-    if (this.isRefreshing) {
-      return this.refreshPromise;
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
     }
 
-    this.isRefreshing = true;
-    
-    this.refreshPromise = new Promise(async (resolve, reject) => {
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
 
-        const response = await fetch(`${this.API_URL}/api/auth/refresh`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ refreshToken })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Neue Tokens speichern
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('refreshToken', data.refreshToken);
-          
-          console.log('✅ Tokens erfolgreich erneuert');
-          resolve(data.token);
-        } else {
-          throw new Error('Token refresh failed');
-        }
-      } catch (error) {
-        console.error('Token refresh error:', error);
-        
-        // Cleanup bei Fehler
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        
-        if (this.handleLogout) {
-          this.handleLogout();
-        }
-        
-        reject(error);
-      } finally {
-        this.isRefreshing = false;
-        this.refreshPromise = null;
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
       }
-    });
 
-    return this.refreshPromise;
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        // Update tokens
+        localStorage.setItem('token', data.token);
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
+        
+        console.log('✅ Token erfolgreich erneuert');
+        return data.token;
+      } else {
+        throw new Error(data.error || 'Token refresh failed');
+      }
+    } catch (error) {
+      console.error('❌ Token refresh error:', error);
+      
+      // Cleanup bei fehlgeschlagenem Refresh
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      throw error;
+    }
   }
 
   // Token-Validation und automatisches Logout
@@ -72,7 +71,7 @@ class AuthInterceptor {
       const data = await response.json().catch(() => ({}));
       
       // Wenn Token abgelaufen, versuche Refresh
-      if (data.errorCode === 'TOKEN_EXPIRED') {
+      if (data.errorCode === 'TOKEN_EXPIRED' || data.error?.includes('expired')) {
         try {
           console.log('🔄 Token abgelaufen - versuche Refresh...');
           const newToken = await this.refreshTokens();
@@ -91,14 +90,14 @@ class AuthInterceptor {
           console.error('Token refresh failed:', refreshError);
           // Fallback: User ausloggen
           if (this.handleLogout) {
-            this.handleLogout();
+            this.handleLogout('token_expired');
           }
           throw new Error('Session abgelaufen. Bitte melde dich erneut an.');
         }
       } else {
         // Anderer 401 Fehler
         if (this.handleLogout) {
-          this.handleLogout();
+          this.handleLogout('unauthorized');
         }
         throw new Error('Authentifizierung fehlgeschlagen.');
       }
@@ -107,23 +106,9 @@ class AuthInterceptor {
     return response;
   }
 
-  // Prüfe ob Token noch gültig ist (optional - für zusätzliche Sicherheit)
-  static isTokenExpired(token) {
-    if (!token) return true;
-    
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentTime = Date.now() / 1000;
-      
-      // Token läuft in den nächsten 2 Minuten ab
-      return payload.exp < (currentTime + 120);
-    } catch (error) {
-      return true;
-    }
-  }
-
-  static setLogoutHandler(logoutHandler) {
-    this.handleLogout = logoutHandler;
+  // Setup logout handler
+  static setLogoutHandler(logoutFunction) {
+    this.handleLogout = logoutFunction;
   }
 }
 
