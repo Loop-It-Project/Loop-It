@@ -9,7 +9,7 @@ class BaseService {
     // Add /api suffix here
     const apiUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
     
-    console.log('BaseService API URL:', apiUrl);
+    // console.log('BaseService API URL:', apiUrl);
     return apiUrl;
   }
 
@@ -67,7 +67,7 @@ class BaseService {
     // Prüfe Token-Ablauf
     try {
       if (AuthInterceptor.isTokenExpired(token)) {
-        console.log('🔄 Token abgelaufen - versuche Refresh...');
+        // console.log('🔄 Token abgelaufen - versuche Refresh...');
         token = await AuthInterceptor.refreshTokens();
       }
     } catch (refreshError) {
@@ -79,22 +79,30 @@ class BaseService {
       throw new Error('Authentication failed');
     }
 
-    // Request mit Token
-    const requestOptions = {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers
-      }
+    // Content-Type nur setzen wenn nicht FormData
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      ...options.headers
     };
 
-    console.log('🚀 BaseService Request:', {
-      url,
-      method: requestOptions.method || 'GET',
-      hasToken: !!token,
-      tokenPreview: token ? `${token.substring(0, 20)}...` : 'None'
-    });
+    // Nur Content-Type setzen wenn kein FormData
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const requestOptions = {
+      ...options,
+      headers
+    };
+
+    // console.log('🚀 BaseService Request:', {
+    //   url,
+    //   method: requestOptions.method || 'GET',
+    //   hasToken: !!token,
+    //   isFormData: options.body instanceof FormData,
+    //   hasContentType: !!headers['Content-Type'],
+    //   headersKeys: Object.keys(headers)
+    // });
 
     try {
       const response = await fetch(url, requestOptions);

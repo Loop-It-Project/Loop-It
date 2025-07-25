@@ -14,6 +14,7 @@ import {
   Hash
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import BaseService from '../../services/baseService';
 import HashtagService from '../../services/hashtagService';
 import PostService from '../../services/postService';
 import ShareButton from './ShareButton';
