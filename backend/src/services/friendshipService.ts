@@ -475,7 +475,7 @@ export class FriendshipService {
   // Direkte Freundschaft erstellen (z.B. bei Matches)
   static async createFriendship(user1Id: string, user2Id: string, source: string = 'match') {
     try {
-      console.log(`🤝 Creating direct friendship between users: ${user1Id} and ${user2Id} (source: ${source})`);
+      // console.log(`🤝 Creating direct friendship between users: ${user1Id} and ${user2Id} (source: ${source})`);
 
       // Check if users are already friends
       const existingFriendship = await db
@@ -498,7 +498,7 @@ export class FriendshipService {
       if (existingFriendship.length > 0) {
         const status = existingFriendship[0].status;
         if (status === 'accepted') {
-          console.log('⚠️ Users are already friends');
+          // console.log('⚠️ Users are already friends');
           return { success: true, message: 'Users are already friends', friendshipId: existingFriendship[0].id };
         }
 
@@ -512,7 +512,7 @@ export class FriendshipService {
           })
           .where(eq(friendshipsTable.id, existingFriendship[0].id));
 
-        console.log('✅ Existing friendship status updated to accepted');
+        // console.log('✅ Existing friendship status updated to accepted');
         return { 
           success: true, 
           message: 'Friendship status updated to accepted', 
@@ -534,7 +534,7 @@ export class FriendshipService {
           notes: `Match from ${source}`
         });
 
-      console.log('✅ New friendship created successfully');
+      // console.log('✅ New friendship created successfully');
       return { success: true, message: 'Friendship created', friendshipId };
     } catch (error) {
       console.error('❌ Error creating friendship:', error);

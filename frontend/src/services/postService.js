@@ -12,7 +12,8 @@ class PostService {
       });
 
       const data = await response.json();
-      return response.ok ? { success: true, data } : { success: false, error: data.error };
+      const responseData = data.data || data;
+      return response.ok ? { success: true, data: responseData } : { success: false, error: data.error };
     } catch (error) {
       console.error('Create post error:', error);
       return { success: false, error: 'Network error' };
@@ -27,7 +28,8 @@ class PostService {
       });
 
       const data = await response.json();
-      return response.ok ? { success: true, data } : { success: false, error: data.error };
+      const responseData = data.data || data;
+      return response.ok ? { success: true, data: responseData } : { success: false, error: data.error };
     } catch (error) {
       console.error('Delete post error:', error);
       return { success: false, error: 'Network error' };
@@ -48,12 +50,10 @@ class PostService {
       
       if (response.ok && result.success) {
         // Konsistente Response-Struktur
+        const responseData = result.data || result;
         return { 
           success: true, 
-          data: {
-            isLiked: result.data.isLiked,
-            likeCount: result.data.likeCount
-          }
+          data: responseData 
         };
       } else {
         return { 
@@ -76,7 +76,8 @@ class PostService {
       const response = await BaseService.fetchWithAuth(`/posts/${postId}/like-status`);
 
       const data = await response.json();
-      return response.ok ? { success: true, data } : { success: false, error: data.error };
+      const responseData = data.data || data;
+      return response.ok ? { success: true, data: responseData } : { success: false, error: data.error };
     } catch (error) {
       console.error('Get like status error:', error);
       return { success: false, error: 'Network error' };
@@ -92,7 +93,8 @@ class PostService {
       });
 
       const data = await response.json();
-      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+      const responseData = data.data || data;
+      return response.ok ? { success: true, data: responseData } : { success: false, error: data.error };
     } catch (error) {
       console.error('Share post error:', error);
       return { success: false, error: 'Network error' };
@@ -105,7 +107,8 @@ class PostService {
       const response = await BaseService.fetchWithAuth(`/posts/${postId}/share-statistics`);
       const data = await response.json();
       
-      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+      const responseData = data.data || data;
+      return response.ok ? { success: true, data: responseData } : { success: false, error: data.error };
     } catch (error) {
       console.error('Get share statistics error:', error);
       return { success: false, error: 'Network error' };
@@ -118,7 +121,8 @@ class PostService {
       const response = await BaseService.fetchWithAuth(`/posts/trending-shares?timeframe=${timeframe}&limit=${limit}`);
       const data = await response.json();
       
-      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
+      const responseData = data.data || data;
+      return response.ok ? { success: true, data: responseData } : { success: false, error: data.error };
     } catch (error) {
       console.error('Get trending shares error:', error);
       return { success: false, error: 'Network error' };
