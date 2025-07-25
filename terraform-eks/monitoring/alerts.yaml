@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: loop-it-alerts
+  namespace: monitoring
+spec:
+  groups:
+  - name: loop-it.rules
+    rules:
+    - alert: HighResponseTime
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+      for: 5m
+      annotations:
+        summary: "Loop-It Backend response time is high"
+        description: "95th percentile response time is {{ $value }}s"
+    
+    - alert: HighEventLoopLag
+      expr: nodejs_eventloop_lag_seconds > 0.1
+      for: 2m
+      annotations:
+        summary: "Node.js event loop lag is high"
+        description: "Event loop lag is {{ $value }}s"

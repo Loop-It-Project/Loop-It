@@ -1,6 +1,127 @@
 CREATE TYPE "public"."bug_category" AS ENUM('ui', 'functionality', 'performance', 'security', 'data', 'other');--> statement-breakpoint
 CREATE TYPE "public"."bug_priority" AS ENUM('low', 'medium', 'high', 'critical');--> statement-breakpoint
 CREATE TYPE "public"."bug_status" AS ENUM('open', 'in_progress', 'resolved', 'closed', 'duplicate', 'invalid');--> statement-breakpoint
+CREATE TABLE "search_filters" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"filterName" varchar(100) NOT NULL,
+	"filterType" varchar(20) NOT NULL,
+	"entityType" varchar(20) NOT NULL,
+	"options" json,
+	"defaultValue" json,
+	"isMultiSelect" boolean DEFAULT false NOT NULL,
+	"displayName" varchar(100) NOT NULL,
+	"description" text,
+	"sortOrder" integer DEFAULT 0 NOT NULL,
+	"isActive" boolean DEFAULT true NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "search_filters_filterName_unique" UNIQUE("filterName")
+);
+--> statement-breakpoint
+CREATE TABLE "search_history" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"userId" uuid,
+	"sessionId" varchar(255),
+	"query" text NOT NULL,
+	"normalizedQuery" text NOT NULL,
+	"queryType" varchar(20) NOT NULL,
+	"filters" json,
+	"sortBy" varchar(20),
+	"entityTypes" json,
+	"resultCount" integer NOT NULL,
+	"selectedResultId" uuid,
+	"selectedResultRank" integer,
+	"searchSource" varchar(50) DEFAULT 'header_search',
+	"userLocation" json,
+	"createdAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "search_index" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"entityType" varchar(50) NOT NULL,
+	"entityId" uuid NOT NULL,
+	"title" text,
+	"content" text,
+	"tags" json,
+	"hashtags" json,
+	"mentions" json,
+	"searchVector" text,
+	"language" varchar(10) DEFAULT 'english' NOT NULL,
+	"popularityScore" integer DEFAULT 0 NOT NULL,
+	"recentnessScore" integer DEFAULT 0 NOT NULL,
+	"qualityScore" integer DEFAULT 0 NOT NULL,
+	"isPublic" boolean DEFAULT true NOT NULL,
+	"isNsfw" boolean DEFAULT false NOT NULL,
+	"isActive" boolean DEFAULT true NOT NULL,
+	"universeId" uuid,
+	"authorId" uuid,
+	"location" json,
+	"searchRadius" integer,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "search_suggestions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"suggestionText" varchar(255) NOT NULL,
+	"suggestionType" varchar(20) NOT NULL,
+	"entityId" uuid,
+	"searchCount" integer DEFAULT 0 NOT NULL,
+	"clickCount" integer DEFAULT 0 NOT NULL,
+	"successRate" integer DEFAULT 0 NOT NULL,
+	"aliases" json,
+	"relatedTerms" json,
+	"category" varchar(50),
+	"isActive" boolean DEFAULT true NOT NULL,
+	"isPromoted" boolean DEFAULT false NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "search_suggestions_suggestionText_unique" UNIQUE("suggestionText")
+);
+--> statement-breakpoint
+CREATE TABLE "trending_topics" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"topic" varchar(100) NOT NULL,
+	"topicType" varchar(20) NOT NULL,
+	"mentionCount" integer DEFAULT 0 NOT NULL,
+	"userCount" integer DEFAULT 0 NOT NULL,
+	"postCount" integer DEFAULT 0 NOT NULL,
+	"engagementScore" integer DEFAULT 0 NOT NULL,
+	"hourlyMentions" json,
+	"dailyMentions" json,
+	"peakHour" timestamp,
+	"regions" json,
+	"isActive" boolean DEFAULT true NOT NULL,
+	"isFeatured" boolean DEFAULT false NOT NULL,
+	"category" varchar(50),
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "trending_topics_topic_unique" UNIQUE("topic")
+);
+--> statement-breakpoint
+CREATE TABLE "user_search_preferences" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"userId" uuid NOT NULL,
+	"defaultEntityTypes" json DEFAULT '["posts","users","universes"]'::json NOT NULL,
+	"defaultSortBy" varchar(20) DEFAULT 'relevance' NOT NULL,
+	"defaultFilters" json,
+	"includeNsfw" boolean DEFAULT false NOT NULL,
+	"preferredLanguages" json,
+	"blockedKeywords" json,
+	"hideBlockedUsers" boolean DEFAULT true NOT NULL,
+	"showOnlyFriends" boolean DEFAULT false NOT NULL,
+	"limitToVerifiedContent" boolean DEFAULT false NOT NULL,
+	"preferLocalContent" boolean DEFAULT false NOT NULL,
+	"maxDistance" integer,
+	"preferredRegions" json,
+	"searchHistory" boolean DEFAULT true NOT NULL,
+	"personalizedResults" boolean DEFAULT true NOT NULL,
+	"trendingNotifications" boolean DEFAULT true NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "user_search_preferences_userId_unique" UNIQUE("userId")
+);
+--> statement-breakpoint
 CREATE TABLE "refresh_tokens" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -101,6 +222,7 @@ CREATE TABLE "friendships" (
 	"requestedAt" timestamp DEFAULT now() NOT NULL,
 	"respondedAt" timestamp,
 	"notes" text,
+	"metadata" json,
 	CONSTRAINT "friendships_requesterId_addresseeId_unique" UNIQUE("requesterId","addresseeId")
 );
 --> statement-breakpoint
@@ -340,6 +462,82 @@ CREATE TABLE "universes" (
 	CONSTRAINT "universes_hashtag_unique" UNIQUE("hashtag")
 );
 --> statement-breakpoint
+CREATE TABLE "matches" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user1Id" uuid NOT NULL,
+	"user2Id" uuid NOT NULL,
+	"matchedAt" timestamp DEFAULT now() NOT NULL,
+	"isActive" boolean DEFAULT true NOT NULL,
+	"conversationId" uuid,
+	"matchQuality" integer DEFAULT 0 NOT NULL,
+	"commonInterests" json,
+	"lastInteraction" timestamp,
+	"status" varchar(20) DEFAULT 'active' NOT NULL,
+	CONSTRAINT "matches_user1Id_user2Id_unique" UNIQUE("user1Id","user2Id")
+);
+--> statement-breakpoint
+CREATE TABLE "swipe_actions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"swiperId" uuid NOT NULL,
+	"targetId" uuid NOT NULL,
+	"action" varchar(20) NOT NULL,
+	"timestamp" timestamp DEFAULT now() NOT NULL,
+	"isActive" boolean DEFAULT true NOT NULL,
+	"context" json,
+	CONSTRAINT "swipe_actions_swiperId_targetId_unique" UNIQUE("swiperId","targetId")
+);
+--> statement-breakpoint
+CREATE TABLE "swipe_preferences" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"userId" uuid NOT NULL,
+	"maxDistance" integer DEFAULT 50 NOT NULL,
+	"minAge" integer DEFAULT 18 NOT NULL,
+	"maxAge" integer DEFAULT 99 NOT NULL,
+	"showMe" varchar(20) DEFAULT 'everyone' NOT NULL,
+	"requireCommonInterests" boolean DEFAULT false NOT NULL,
+	"minCommonInterests" integer DEFAULT 1 NOT NULL,
+	"excludeAlreadySwiped" boolean DEFAULT true NOT NULL,
+	"onlyShowActiveUsers" boolean DEFAULT true NOT NULL,
+	"preferredHobbies" json,
+	"dealbreakers" json,
+	"isVisible" boolean DEFAULT true NOT NULL,
+	"isPremium" boolean DEFAULT false NOT NULL,
+	"lastUpdated" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "swipe_preferences_userId_unique" UNIQUE("userId")
+);
+--> statement-breakpoint
+CREATE TABLE "swipe_queue" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"userId" uuid NOT NULL,
+	"potentialMatchId" uuid NOT NULL,
+	"compatibilityScore" integer DEFAULT 0 NOT NULL,
+	"commonInterests" json,
+	"distance" integer,
+	"priority" integer DEFAULT 0 NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"expiresAt" timestamp NOT NULL,
+	"isShown" boolean DEFAULT false NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "swipe_stats" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"userId" uuid NOT NULL,
+	"totalSwipes" integer DEFAULT 0 NOT NULL,
+	"totalLikes" integer DEFAULT 0 NOT NULL,
+	"totalSkips" integer DEFAULT 0 NOT NULL,
+	"totalMatches" integer DEFAULT 0 NOT NULL,
+	"likesReceived" integer DEFAULT 0 NOT NULL,
+	"skipsReceived" integer DEFAULT 0 NOT NULL,
+	"matchesReceived" integer DEFAULT 0 NOT NULL,
+	"averageMatchQuality" integer DEFAULT 0 NOT NULL,
+	"lastSwipeAt" timestamp,
+	"swipeStreak" integer DEFAULT 0 NOT NULL,
+	"bestMatchQuality" integer DEFAULT 0 NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "swipe_stats_userId_unique" UNIQUE("userId")
+);
+--> statement-breakpoint
 CREATE TABLE "chat_participants" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"conversationId" uuid NOT NULL,
@@ -563,127 +761,6 @@ CREATE TABLE "user_strikes" (
 	"appealReviewedAt" timestamp,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "search_filters" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"filterName" varchar(100) NOT NULL,
-	"filterType" varchar(20) NOT NULL,
-	"entityType" varchar(20) NOT NULL,
-	"options" json,
-	"defaultValue" json,
-	"isMultiSelect" boolean DEFAULT false NOT NULL,
-	"displayName" varchar(100) NOT NULL,
-	"description" text,
-	"sortOrder" integer DEFAULT 0 NOT NULL,
-	"isActive" boolean DEFAULT true NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "search_filters_filterName_unique" UNIQUE("filterName")
-);
---> statement-breakpoint
-CREATE TABLE "search_history" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"userId" uuid,
-	"sessionId" varchar(255),
-	"query" text NOT NULL,
-	"normalizedQuery" text NOT NULL,
-	"queryType" varchar(20) NOT NULL,
-	"filters" json,
-	"sortBy" varchar(20),
-	"entityTypes" json,
-	"resultCount" integer NOT NULL,
-	"selectedResultId" uuid,
-	"selectedResultRank" integer,
-	"searchSource" varchar(50),
-	"userLocation" json,
-	"createdAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "search_index" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"entityType" varchar(50) NOT NULL,
-	"entityId" uuid NOT NULL,
-	"title" text,
-	"content" text,
-	"tags" json,
-	"hashtags" json,
-	"mentions" json,
-	"searchVector" text,
-	"language" varchar(10) DEFAULT 'english' NOT NULL,
-	"popularityScore" integer DEFAULT 0 NOT NULL,
-	"recentnessScore" integer DEFAULT 0 NOT NULL,
-	"qualityScore" integer DEFAULT 0 NOT NULL,
-	"isPublic" boolean DEFAULT true NOT NULL,
-	"isNsfw" boolean DEFAULT false NOT NULL,
-	"isActive" boolean DEFAULT true NOT NULL,
-	"universeId" uuid,
-	"authorId" uuid,
-	"location" json,
-	"searchRadius" integer,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "search_suggestions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"suggestionText" varchar(255) NOT NULL,
-	"suggestionType" varchar(20) NOT NULL,
-	"entityId" uuid,
-	"searchCount" integer DEFAULT 0 NOT NULL,
-	"clickCount" integer DEFAULT 0 NOT NULL,
-	"successRate" integer DEFAULT 0 NOT NULL,
-	"aliases" json,
-	"relatedTerms" json,
-	"category" varchar(50),
-	"isActive" boolean DEFAULT true NOT NULL,
-	"isPromoted" boolean DEFAULT false NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "search_suggestions_suggestionText_unique" UNIQUE("suggestionText")
-);
---> statement-breakpoint
-CREATE TABLE "trending_topics" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"topic" varchar(100) NOT NULL,
-	"topicType" varchar(20) NOT NULL,
-	"mentionCount" integer DEFAULT 0 NOT NULL,
-	"userCount" integer DEFAULT 0 NOT NULL,
-	"postCount" integer DEFAULT 0 NOT NULL,
-	"engagementScore" integer DEFAULT 0 NOT NULL,
-	"hourlyMentions" json,
-	"dailyMentions" json,
-	"peakHour" timestamp,
-	"regions" json,
-	"isActive" boolean DEFAULT true NOT NULL,
-	"isFeatured" boolean DEFAULT false NOT NULL,
-	"category" varchar(50),
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "trending_topics_topic_unique" UNIQUE("topic")
-);
---> statement-breakpoint
-CREATE TABLE "user_search_preferences" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"userId" uuid NOT NULL,
-	"defaultEntityTypes" json DEFAULT '["posts","users","universes"]'::json NOT NULL,
-	"defaultSortBy" varchar(20) DEFAULT 'relevance' NOT NULL,
-	"defaultFilters" json,
-	"includeNsfw" boolean DEFAULT false NOT NULL,
-	"preferredLanguages" json,
-	"blockedKeywords" json,
-	"hideBlockedUsers" boolean DEFAULT true NOT NULL,
-	"showOnlyFriends" boolean DEFAULT false NOT NULL,
-	"limitToVerifiedContent" boolean DEFAULT false NOT NULL,
-	"preferLocalContent" boolean DEFAULT false NOT NULL,
-	"maxDistance" integer,
-	"preferredRegions" json,
-	"searchHistory" boolean DEFAULT true NOT NULL,
-	"personalizedResults" boolean DEFAULT true NOT NULL,
-	"trendingNotifications" boolean DEFAULT true NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "user_search_preferences_userId_unique" UNIQUE("userId")
 );
 --> statement-breakpoint
 CREATE TABLE "ab_test_participants" (
@@ -991,16 +1068,36 @@ CREATE TABLE "bug_reports" (
 	"is_deleted" boolean DEFAULT false
 );
 --> statement-breakpoint
+ALTER TABLE "search_history" ADD CONSTRAINT "search_history_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_search_preferences" ADD CONSTRAINT "user_search_preferences_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "profiles" ADD CONSTRAINT "profiles_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_roleId_roles_id_fk" FOREIGN KEY ("roleId") REFERENCES "public"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_assignedBy_users_id_fk" FOREIGN KEY ("assignedBy") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "universes" ADD CONSTRAINT "universes_creatorId_users_id_fk" FOREIGN KEY ("creatorId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_search_preferences" ADD CONSTRAINT "user_search_preferences_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "search_clicks" ADD CONSTRAINT "search_clicks_searchHistoryId_search_history_id_fk" FOREIGN KEY ("searchHistoryId") REFERENCES "public"."search_history"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bug_reports" ADD CONSTRAINT "bug_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bug_reports" ADD CONSTRAINT "bug_reports_assigned_to_users_id_fk" FOREIGN KEY ("assigned_to") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "filters_name_idx" ON "search_filters" USING btree ("filterName");--> statement-breakpoint
+CREATE INDEX "filters_type_idx" ON "search_filters" USING btree ("filterType");--> statement-breakpoint
+CREATE INDEX "filters_entity_idx" ON "search_filters" USING btree ("entityType");--> statement-breakpoint
+CREATE INDEX "search_history_user_idx" ON "search_history" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "search_history_query_idx" ON "search_history" USING btree ("normalizedQuery");--> statement-breakpoint
+CREATE INDEX "search_history_created_at_idx" ON "search_history" USING btree ("createdAt");--> statement-breakpoint
+CREATE INDEX "search_entity_idx" ON "search_index" USING btree ("entityType","entityId");--> statement-breakpoint
+CREATE INDEX "search_vector_idx" ON "search_index" USING btree ("searchVector");--> statement-breakpoint
+CREATE INDEX "search_universe_idx" ON "search_index" USING btree ("universeId");--> statement-breakpoint
+CREATE INDEX "search_author_idx" ON "search_index" USING btree ("authorId");--> statement-breakpoint
+CREATE INDEX "search_popularity_idx" ON "search_index" USING btree ("popularityScore");--> statement-breakpoint
+CREATE INDEX "search_created_at_idx" ON "search_index" USING btree ("createdAt");--> statement-breakpoint
+CREATE INDEX "suggestions_text_idx" ON "search_suggestions" USING btree ("suggestionText");--> statement-breakpoint
+CREATE INDEX "suggestions_type_idx" ON "search_suggestions" USING btree ("suggestionType");--> statement-breakpoint
+CREATE INDEX "suggestions_popularity_idx" ON "search_suggestions" USING btree ("searchCount");--> statement-breakpoint
+CREATE INDEX "trending_topics_topic_idx" ON "trending_topics" USING btree ("topic");--> statement-breakpoint
+CREATE INDEX "trending_topics_type_idx" ON "trending_topics" USING btree ("topicType");--> statement-breakpoint
+CREATE INDEX "trending_topics_engagement_idx" ON "trending_topics" USING btree ("engagementScore");--> statement-breakpoint
+CREATE INDEX "trending_topics_category_idx" ON "trending_topics" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "refresh_tokens_token_idx" ON "refresh_tokens" USING btree ("token");--> statement-breakpoint
 CREATE INDEX "refresh_tokens_expires_at_idx" ON "refresh_tokens" USING btree ("expires_at");--> statement-breakpoint
@@ -1058,6 +1155,20 @@ CREATE INDEX "universes_slug_idx" ON "universes" USING btree ("slug");--> statem
 CREATE INDEX "universes_creator_idx" ON "universes" USING btree ("creatorId");--> statement-breakpoint
 CREATE INDEX "universes_category_idx" ON "universes" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "universes_member_count_idx" ON "universes" USING btree ("memberCount");--> statement-breakpoint
+CREATE INDEX "matches_user1_idx" ON "matches" USING btree ("user1Id");--> statement-breakpoint
+CREATE INDEX "matches_user2_idx" ON "matches" USING btree ("user2Id");--> statement-breakpoint
+CREATE INDEX "matches_matched_at_idx" ON "matches" USING btree ("matchedAt");--> statement-breakpoint
+CREATE INDEX "matches_status_idx" ON "matches" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "swipe_actions_swiper_idx" ON "swipe_actions" USING btree ("swiperId");--> statement-breakpoint
+CREATE INDEX "swipe_actions_target_idx" ON "swipe_actions" USING btree ("targetId");--> statement-breakpoint
+CREATE INDEX "swipe_actions_action_idx" ON "swipe_actions" USING btree ("action");--> statement-breakpoint
+CREATE INDEX "swipe_actions_timestamp_idx" ON "swipe_actions" USING btree ("timestamp");--> statement-breakpoint
+CREATE INDEX "swipe_preferences_user_id_idx" ON "swipe_preferences" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "swipe_queue_user_id_idx" ON "swipe_queue" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "swipe_queue_potential_match_idx" ON "swipe_queue" USING btree ("potentialMatchId");--> statement-breakpoint
+CREATE INDEX "swipe_queue_priority_idx" ON "swipe_queue" USING btree ("priority");--> statement-breakpoint
+CREATE INDEX "swipe_queue_expires_at_idx" ON "swipe_queue" USING btree ("expiresAt");--> statement-breakpoint
+CREATE INDEX "swipe_stats_user_id_idx" ON "swipe_stats" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "chat_participants_conversation_idx" ON "chat_participants" USING btree ("conversationId");--> statement-breakpoint
 CREATE INDEX "chat_participants_user_idx" ON "chat_participants" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "conversations_participant1_idx" ON "conversations" USING btree ("participant1Id");--> statement-breakpoint
@@ -1106,25 +1217,6 @@ CREATE INDEX "user_strikes_report_idx" ON "user_strikes" USING btree ("reportId"
 CREATE INDEX "user_strikes_strike_type_idx" ON "user_strikes" USING btree ("strikeType");--> statement-breakpoint
 CREATE INDEX "user_strikes_is_active_idx" ON "user_strikes" USING btree ("isActive");--> statement-breakpoint
 CREATE INDEX "user_strikes_expires_at_idx" ON "user_strikes" USING btree ("expiresAt");--> statement-breakpoint
-CREATE INDEX "filters_name_idx" ON "search_filters" USING btree ("filterName");--> statement-breakpoint
-CREATE INDEX "filters_type_idx" ON "search_filters" USING btree ("filterType");--> statement-breakpoint
-CREATE INDEX "filters_entity_idx" ON "search_filters" USING btree ("entityType");--> statement-breakpoint
-CREATE INDEX "search_history_user_idx" ON "search_history" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "search_history_query_idx" ON "search_history" USING btree ("normalizedQuery");--> statement-breakpoint
-CREATE INDEX "search_history_created_at_idx" ON "search_history" USING btree ("createdAt");--> statement-breakpoint
-CREATE INDEX "search_entity_idx" ON "search_index" USING btree ("entityType","entityId");--> statement-breakpoint
-CREATE INDEX "search_vector_idx" ON "search_index" USING btree ("searchVector");--> statement-breakpoint
-CREATE INDEX "search_universe_idx" ON "search_index" USING btree ("universeId");--> statement-breakpoint
-CREATE INDEX "search_author_idx" ON "search_index" USING btree ("authorId");--> statement-breakpoint
-CREATE INDEX "search_popularity_idx" ON "search_index" USING btree ("popularityScore");--> statement-breakpoint
-CREATE INDEX "search_created_at_idx" ON "search_index" USING btree ("createdAt");--> statement-breakpoint
-CREATE INDEX "suggestions_text_idx" ON "search_suggestions" USING btree ("suggestionText");--> statement-breakpoint
-CREATE INDEX "suggestions_type_idx" ON "search_suggestions" USING btree ("suggestionType");--> statement-breakpoint
-CREATE INDEX "suggestions_popularity_idx" ON "search_suggestions" USING btree ("searchCount");--> statement-breakpoint
-CREATE INDEX "trending_topics_topic_idx" ON "trending_topics" USING btree ("topic");--> statement-breakpoint
-CREATE INDEX "trending_topics_type_idx" ON "trending_topics" USING btree ("topicType");--> statement-breakpoint
-CREATE INDEX "trending_topics_engagement_idx" ON "trending_topics" USING btree ("engagementScore");--> statement-breakpoint
-CREATE INDEX "trending_topics_category_idx" ON "trending_topics" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "ab_test_participants_test_user_idx" ON "ab_test_participants" USING btree ("testId","userId");--> statement-breakpoint
 CREATE INDEX "ab_test_participants_test_idx" ON "ab_test_participants" USING btree ("testId");--> statement-breakpoint
 CREATE INDEX "ab_test_participants_variant_idx" ON "ab_test_participants" USING btree ("variant");--> statement-breakpoint

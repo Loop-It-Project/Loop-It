@@ -11,7 +11,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-loop_user} -d ${POSTGRES_DB:-loop-it}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-loop_user} -d ${POSTGRES_DB:-loop-it}",
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -47,7 +51,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -64,17 +72,24 @@ services:
         VITE_APP_NAME: ${VITE_APP_NAME:-Loop-It}
     container_name: loop-it-frontend
     ports:
-      - "8080:8080"
+      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/",
+        ] # Port auch hier angepasst
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s  # Reduziert von 120s - nginx startet schnell
+      start_period: 30s
     networks:
       - loop-it-network
 

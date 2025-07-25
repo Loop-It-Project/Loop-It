@@ -616,8 +616,8 @@ resource "kubernetes_deployment" "frontend" {
     strategy {
       type = "RollingUpdate"
       rolling_update {
-        max_unavailable = "25%"
-        max_surge      = "25%"
+        max_unavailable = 1
+        max_surge      = 1
       }
     }
     selector {
