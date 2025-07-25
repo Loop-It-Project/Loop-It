@@ -570,14 +570,6 @@ const Header = ({ user, setUser, onLogout, refreshUserData }) => {
                 <span>Universe</span>
               </button>
 
-              {/* HobbiesPage */}
-              <button
-                onClick={() => {
-                  navigate('/hobbies')
-                }}              >
-                Hobbys
-              </button>
-
               {/* Admin Panel Button - NUR für Admins sichtbar */}
               {isAdmin && (
                 <button

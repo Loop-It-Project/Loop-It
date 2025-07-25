@@ -120,9 +120,7 @@ const FirstUniverses = () => {
   return (
     <div className={`flex justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gray-900'}`}>
       <div className="max-w-md w-full mt-4 mb-4">
-        <div className={`${
-          isDarkMode ? 'bg-gray-800' : 'bg-white'
-        } rounded-2xl p-8 shadow-2xl`}>
+        <div className={`bg-card rounded-2xl p-8 shadow-2xl`}>
           <div className="text-center mb-8">
             <h1 className={`text-3xl font-bold mb-2 ${
               isDarkMode ? 'text-white' : 'text-gray-800'
