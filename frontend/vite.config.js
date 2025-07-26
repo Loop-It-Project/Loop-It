@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss()
-  ]
-  // KEINE define-Sektion mehr!
+  ],
+  define: {
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL),
+    'import.meta.env.VITE_APP_NAME': JSON.stringify(process.env.VITE_APP_NAME),
+  }
 })

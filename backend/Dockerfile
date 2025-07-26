@@ -15,7 +15,6 @@ RUN cd ..
 COPY . .
 RUN npm run build
 
-# Setup entrypoint (keep dev dependencies for drizzle-kit)
 RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 3000

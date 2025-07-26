@@ -12,8 +12,8 @@ RUN npm ci --only=production --silent
 COPY . .
 
 # Build arguments
-ARG VITE_API_URL=http://localhost:3000
-ARG VITE_APP_NAME=Loop-It
+ARG VITE_API_URL
+ARG VITE_APP_NAME
 
 # Set environment variables from build args
 ENV VITE_API_URL=${VITE_API_URL}
