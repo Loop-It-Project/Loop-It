@@ -152,17 +152,39 @@ export const addComment = async (req: AuthRequest, res: Response): Promise<void>
 export const getPostComments = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { postId } = req.params;
-    const userId = req.user!.id; // ✅ User ID für Like-Status
+    const userId = req.user!.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
 
+    console.log('🔍 Controller: Getting comments for post:', { 
+      postId, 
+      userId, 
+      page, 
+      limit 
+    });
+
     const result = await PostService.getPostComments(postId, userId, page, limit);
     
-    res.status(200).json({
+    console.log('✅ Controller: Comments result:', {
+      success: result.success,
+      commentsCount: result.comments?.length || 0,
+      paginationTotal: result.pagination?.total,
+      paginationTotalType: typeof result.pagination?.total,
+      hasMore: result.pagination?.hasMore
+    });
+
+    const responseData = {
       success: true,
       data: result.comments,
-      pagination: result.pagination
-    });
+      pagination: {
+        ...result.pagination,
+        total: Number(result.pagination.total) // Stelle sicher dass es eine Number ist
+      },
+      total: Number(result.pagination.total) // Zusätzlich für backwards compatibility
+    };
+
+    // Response Format für Frontend
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Get comments error:', error);
     const message = error instanceof Error ? error.message : 'Failed to get comments';
@@ -197,22 +219,51 @@ export const getPostLikeStatus = async (req: AuthRequest, res: Response): Promis
 // Comment liken/unliken
 export const toggleCommentLike = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { commentId } = req.params;
-    const userId = req.user!.id;
-  
-    // console.log('🔄 Toggle comment like request:', { commentId, userId });
-  
+    const { postId, commentId } = req.params;
+    const userId = req.user?.id;
+
+    console.log('🔍 ToggleCommentLike called with:', { 
+      postId, 
+      commentId, 
+      userId,
+      paramsKeys: Object.keys(req.params)
+    });
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    if (!commentId) {
+      res.status(400).json({ success: false, error: 'Comment ID is required' });
+      return;
+    }
+
+    // Verify comment exists and belongs to the post
+    const commentExists = await PostService.verifyCommentExists(commentId, postId);
+    if (!commentExists.success) {
+      res.status(404).json({ success: false, error: 'Comment not found' });
+      return;
+    }
+
     const result = await PostService.toggleCommentLike(commentId, userId);
     
-    // console.log('✅ Toggle comment like result:', result);
+    console.log('✅ ToggleCommentLike result:', result);
   
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: result.isLiked ? 'Comment liked successfully' : 'Comment unliked successfully'
-    });
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: {
+          isLiked: result.isLiked,
+          likeCount: result.likeCount
+        },
+        message: result.isLiked ? 'Comment liked successfully' : 'Comment unliked successfully'
+      });
+    } else {
+      res.status(400).json({ success: false, error: result.error });
+    }
   } catch (error) {
-    console.error('Toggle comment like error:', error);
+    console.error('❌ Toggle comment like error:', error);
     const message = error instanceof Error ? error.message : 'Failed to toggle comment like';
     res.status(500).json({ 
       success: false, 

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import commentService from '../../services/commentService';
 
-const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
+const CommentSection = ({ postId, isOpen, onClose, onCommentAdded, currentUser, isInline = false }) => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -36,7 +36,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
       setLoading(true);
       setError('');
 
-      const response = await commentService.getPostComments(postId, pageNum, 10);
+      const response = await commentService.getPostComments(postId, pageNum, 20);
       
       if (response.success) {
         if (append) {
@@ -75,7 +75,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
           : comment
       ));
 
-      const response = await commentService.toggleCommentLike(commentId);
+      const response = await commentService.toggleCommentLike(commentId, postId);
 
       if (response.success) {
         // Server-Response anwenden
@@ -88,6 +88,8 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
               }
             : comment
         ));
+        
+        // console.log('✅ Comment like updated successfully');
       } else {
         // Revert bei Fehler
         setComments(prev => prev.map(comment => 
@@ -99,7 +101,11 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
               }
             : comment
         ));
-        console.error('Comment like failed:', response.error);
+        console.error('❌ Comment like failed:', response.error);
+        
+        // Optional: User feedback
+        setError(`Failed to ${currentIsLiked ? 'unlike' : 'like'} comment: ${response.error}`);
+        setTimeout(() => setError(''), 3000); // Clear error after 3 seconds
       }
     } catch (error) {
       // Revert bei Fehler
@@ -112,7 +118,9 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
             }
           : comment
       ));
-      console.error('Comment like error:', error);
+      console.error('❌ Comment like error:', error);
+      setError('Network error occurred while liking comment');
+      setTimeout(() => setError(''), 3000);
     } finally {
       setLikingComments(prev => {
         const newSet = new Set(prev);
@@ -250,7 +258,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
         return newStates;
       });
 
-      const response = await commentService.toggleCommentLike(replyId);
+      const response = await commentService.toggleCommentLike(replyId, postId);
 
       if (response.success) {
         // Server-Response anwenden
@@ -271,6 +279,8 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
           });
           return newStates;
         });
+        
+        // console.log('✅ Reply like updated successfully');
       } else {
         // Revert bei Fehler
         setReplyStates(prev => {
@@ -290,7 +300,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
           });
           return newStates;
         });
-        console.error('Reply like failed:', response.error);
+        console.error('❌ Reply like failed:', response.error);
       }
     } catch (error) {
       // Revert bei Fehler
@@ -311,7 +321,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
         });
         return newStates;
       });
-      console.error('Reply like error:', error);
+      console.error('❌ Reply like error:', error);
     } finally {
       setLikingReplies(prev => {
         const newSet = new Set(prev);
@@ -328,7 +338,6 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
     e.preventDefault();
     
     if (!newComment.trim()) {
-      console.log('❌ Empty comment content');
       return;
     }
 
@@ -336,29 +345,19 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
       setSubmitting(true);
       setError('');
 
-      console.log('🔄 Submitting comment:', { 
-        postId, 
-        content: newComment.trim(),
-        length: newComment.trim().length 
-      }); 
-
       const response = await commentService.addComment(postId, newComment.trim());
 
-      console.log('📥 Comment response:', response); 
-
       if (response.success) {
-        // Neuen Kommentar an den Anfang der Liste hinzufügen
         setComments(prev => [response.data, ...prev]);
         setNewComment('');
         
-        // Parent-Komponente über neuen Comment informieren
-        if (onCommentAdded && typeof onCommentAdded === 'function') {
+        // Nur callback, KEIN Modal öffnen
+        if (onCommentAdded) {
           onCommentAdded(postId);
         }
-        
-        console.log('✅ Comment added successfully'); 
+
+        // console.log('✅ CommentSection: Comment added - staying inline');
       } else {
-        console.error('❌ Comment failed:', response.error); 
         setError(response.error || 'Fehler beim Hinzufügen des Kommentars');
       }
     } catch (error) {
@@ -382,61 +381,62 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-primary flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-primary">Kommentare</h3>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-secondary hover:cursor-pointer p-1"
-          >
-            ✕
-          </button>
-        </div>
-
+  // NEW: Render different layouts based on isInline flag
+  if (isInline) {
+    // Inline layout for PostModal
+    return (
+      <div className="space-y-6">
         {/* Comment Form */}
-        <div className="p-4 border-b border-primary">
-          <form onSubmit={handleSubmitComment} className="flex space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="text-white" size={16} />
-            </div>
-            <div className="flex-1">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Schreibe einen Kommentar..."
-                className="w-full p-3 border border-secondary rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                rows={3}
-                maxLength={1000}
-                disabled={submitting}
-              />
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-tertiary">
-                  {newComment.length}/1000
-                </span>
-                <button
-                  type="submit"
-                  disabled={!newComment.trim() || submitting}
-                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Send size={16} />
-                  <span>{submitting ? 'Sende...' : 'Kommentieren'}</span>
-                </button>
+        {currentUser && (
+          <div>
+            <h4 className="text-lg font-semibold text-primary mb-4">Kommentare</h4>
+            <form onSubmit={handleSubmitComment} className="flex space-x-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="text-white" size={16} />
               </div>
-            </div>
-          </form>
+              <div className="flex-1">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Schreibe einen Kommentar..."
+                  className="w-full p-3 border border-secondary rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  rows={3}
+                  maxLength={1000}
+                  disabled={submitting}
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-tertiary">
+                    {newComment.length}/1000
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={!newComment.trim() || submitting}
+                    className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Send size={16} />
+                    <span>{submitting ? 'Sende...' : 'Kommentieren'}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
 
-          {error && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
-        </div>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Anzeige wenn nicht eingeloggt */}
+        {!currentUser && (
+          <div className="text-center py-4 text-tertiary">
+            <p className="text-sm">Du musst angemeldet sein, um zu kommentieren</p>
+          </div>
+        )}
 
         {/* Comments List */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div>
           {loading && comments.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-tertiary">Lade Kommentare...</div>
@@ -478,7 +478,7 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
                           </p>
                         </div>
                     
-                        {/* Enhanced Comment Actions */}
+                        {/* Comment Actions */}
                         <div className="flex items-center space-x-4 mt-2 ml-3">
                           {/* Like Button */}
                           <button 
@@ -499,7 +499,6 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
                             <span>{isLikingComment ? '...' : (comment.likeCount || 0)}</span>
                           </button>
                           
-                          {/* Reply Button */}
                           <button 
                             onClick={() => toggleReplyForm(comment.id)}
                             className="text-xs text-tertiary hover:text-blue-500 hover:cursor-pointer transition-colors"
@@ -507,7 +506,6 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
                             Antworten
                           </button>
                           
-                          {/* Show Replies Button */}
                           {comment.replyCount > 0 && (
                             <button 
                               onClick={() => toggleReplies(comment.id)}
@@ -560,58 +558,6 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
                             </div>
                           </div>
                         )}
-
-                        {/* Replies List */}
-                        {commentState.showReplies && commentState.replies && (
-                          <div className="mt-3 ml-6 space-y-3 border-l-2 border-gray-100 pl-3">
-                            {commentState.replies.map((reply) => (
-                              <div key={reply.id} className="flex space-x-3">
-                                <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <User className="text-white" size={12} />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="bg-hover border border-primary rounded-lg p-3 hover:bg-gray-700 transition-colors">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <span className="font-medium text-primary text-sm">
-                                        {reply.author?.displayName || reply.author?.username}
-                                      </span>
-                                      <span className="text-xs text-tertiary">
-                                        {formatTimeAgo(reply.createdAt)}
-                                      </span>
-                                      {reply.isEdited && (
-                                        <span className="text-xs text-tertiary">(bearbeitet)</span>
-                                      )}
-                                    </div>
-                                    <p className="text-secondary text-xs whitespace-pre-wrap leading-relaxed">
-                                      {reply.content}
-                                    </p>
-                                  </div>
-                                  
-                                  {/* Reply Actions (optional) */}
-                                  <div className="flex items-center space-x-3 mt-1 ml-2">
-                                    <button 
-                                      onClick={() => handleReplyLike(reply.id, reply.isLikedByUser, reply.likeCount)}
-                                      disabled={isLikingReply(reply.id)}
-                                      className={`flex items-center space-x-1 text-xs transition-colors hover:cursor-pointer ${
-                                        reply.isLikedByUser 
-                                          ? 'text-red-500 hover:text-red-600' 
-                                          : 'text-tertiary hover:text-red-500'
-                                      } ${isLikingReply(reply.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                      <Heart 
-                                        size={12} 
-                                        className={`transition-all duration-200 ${
-                                          reply.isLikedByUser ? 'fill-current' : ''
-                                        } ${isLikingReply(reply.id) ? 'animate-pulse' : ''}`}
-                                      />
-                                      <span>{isLikingReply(reply.id) ? '...' : (reply.likeCount || 0)}</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -634,8 +580,8 @@ const CommentSection = ({ postId, isOpen, onClose, onCommentAdded }) => {
           )}
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 };
 
 export default CommentSection;
