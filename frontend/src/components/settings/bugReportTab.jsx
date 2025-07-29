@@ -36,7 +36,7 @@ const BugReportSection = ({ user }) => {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowBugReportForm(true)}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+            className="bg-red-600 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-red-700 transition-colors flex items-center space-x-2"
           >
             <Bug size={16} />
             <span>Bug melden</span>
@@ -44,7 +44,7 @@ const BugReportSection = ({ user }) => {
           
           <button
             onClick={() => setShowUserReports(true)}
-            className="text-purple-600 hover:text-purple-700 transition-colors flex items-center space-x-2"
+            className="text-purple-600 cursor-pointer hover:text-purple-700 transition-colors flex items-center space-x-2"
           >
             <span>Meine Bug Reports</span>
             <ExternalLink size={16} />
