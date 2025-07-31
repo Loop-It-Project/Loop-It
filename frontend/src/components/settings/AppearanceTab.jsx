@@ -10,7 +10,7 @@ const AppearanceTab = ({ theme, onToggleTheme }) => {
         <h2 className="text-2xl font-semibold text-primary dark:text-white">Appearance</h2>
         <button
           onClick={() => navigate('/dashboard')}
-          className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-secondary dark:text-muted rounded-lg hover:bg-gray-200 hover:cursor-pointer dark:hover:bg-gray-600 transition-colors"
+          className="px-4 py-2 text-sm bg-card dark:bg-gray-700 text-secondary dark:text-muted rounded-lg hover:bg-gray-200 hover:cursor-pointer dark:hover:bg-gray-600 transition-colors"
         >
           Back to Dashboard
         </button>
