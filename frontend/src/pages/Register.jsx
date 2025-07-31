@@ -148,7 +148,7 @@ const Register = ({ user, onLogin }) => {
   };
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center px-6 py-8">
+      <div className="min-h-screen bg-radial from-purple-800/20 via-blue-950/20 to-bg-primary flex items-center justify-center px-6 py-8">
         <div className="max-w-md w-full">
           {/* Back Button */}
           < BackButton />
@@ -324,7 +324,7 @@ const Register = ({ user, onLogin }) => {
             {/* Login Link */}
             <div className="text-center mt-6">
               <p className="text-secondary">
-                Bereits ein Account?{' '}
+                Hast du bereits einen Account?{' '}
                 <Link
                   to="/login"
                   className="text-purple-600 font-semibold hover:text-purple-700 hover:cursor-pointer transition"

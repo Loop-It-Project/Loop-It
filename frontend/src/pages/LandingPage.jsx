@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Users, Heart, MapPin, MessageCircle } from 'lucide-react';
+import { Users, Heart, MapPin, MessageCircle, Infinity, MoveDown } from 'lucide-react';
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700">
+    <div className="min-h-screen bg-radial from-purple-800/20 via-blue-950/20 to-bg-primary">
       {/* Header */}
       <header className="container mx-auto px-6 py-8">
         <nav className="flex justify-between items-center">
@@ -12,7 +12,7 @@ const LandingPage = () => {
             {/* Login Link */}
             <Link 
               to="/login"
-              className="text-white hover:text-gray-200 hover:cursor-pointer transition hover:scale-105"
+              className="bg-secondary text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-hover hover:cursor-pointer transition hover:scale-105"
             >
               Anmelden
             </Link>
@@ -20,7 +20,7 @@ const LandingPage = () => {
             {/* Register Link */}
             <Link 
               to="/register"
-              className="bg-card text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-hover hover:cursor-pointer transition hover:scale-105"
+              className="bg-secondary text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-hover hover:cursor-pointer transition hover:scale-105"
             >
               Registrieren
             </Link>
@@ -29,16 +29,17 @@ const LandingPage = () => {
       </header>
 
       {/* Hero Section */}
-      <main className="container mx-auto px-6 py-16 text-center">
-        <h1 className="text-6xl font-bold text-white mb-6">
+      <main className="flex flex-col mx-auto py-5 items-center text-center">
+        <h1 className="text-6xl font-bold mb-5 text-white">
           Verbinde dich über deine
           <span className="text-yellow-300"> Hobbys</span>
         </h1>
-        <p className="text-xl text-gray-200 mb-12 max-w-3xl mx-auto">
+        <p className="text-xl text-gray-200 max-w-3xl mx-auto">
           Loop-It bringt Menschen mit gemeinsamen Hobbys zusammen. 
           Entdecke neue Freunde, teile deine Leidenschaft und werde Teil einer Community, 
           die deine Interessen teilt.
         </p>
+        <Infinity size={300} className="text-purple-600/70"/>
         
         <Link 
           to="/register"
@@ -49,10 +50,14 @@ const LandingPage = () => {
       </main>
 
       {/* Features */}
-      <section className="container mx-auto px-6 py-16">
-        <h2 className="text-4xl font-bold text-white text-center mb-12">
-          Warum Loop-It?
-        </h2>
+      <section className="container mx-auto px-6 py-10">
+        <div className="flex justify-center mb-8">
+          <MoveDown size={50} className="text-purple-600/70 pr-2"/>
+          <h2 className="text-4xl font-bold text-white text-center mb-12">
+            Warum Loop-It?
+          </h2>
+          <MoveDown size={50} className="text-purple-600/70 pl-2"/>
+        </div>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="text-center text-white">

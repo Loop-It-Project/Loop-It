@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1753000030546,
-      "tag": "0000_brown_justin_hammer",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1752661213066,
-      "tag": "0005_medical_nico_minoru",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1752825764770,
-      "tag": "0006_light_paper_doll",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1753087209555,
-      "tag": "0007_charming_dragon_lord",
+      "when": 1753450544754,
+      "tag": "0000_rich_ego",
       "breakpoints": true
     }
   ]

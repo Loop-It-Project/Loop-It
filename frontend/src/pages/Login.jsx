@@ -87,7 +87,7 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center px-6">
+    <div className="min-h-screen bg-radial from-purple-800/20 via-blue-950/20 to-bg-primary flex items-center justify-center px-6">
       <div className="max-w-md w-full">
 
         {/* Back Button */}
