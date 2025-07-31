@@ -1,1 +1,0 @@
-ALTER TABLE "friendships" ADD COLUMN "metadata" json;
