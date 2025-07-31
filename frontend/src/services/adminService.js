@@ -346,20 +346,6 @@ class AdminService {
     return this.getReports(page, limit, status);
   }
 
-  static async getPendingApprovals() {
-    try {
-      const response = await BaseService.fetchWithAuth(`/admin/approvals`, {
-        method: 'GET'
-      });
-
-      const data = await response.json();
-      return response.ok ? { success: true, data: data.data } : { success: false, error: data.error };
-    } catch (error) {
-      console.error('Get pending approvals error:', error);
-      return { success: false, error: 'Network error' };
-    }
-  }
-
   static async assignUniverseModerator(universeId, userId) {
     try {
       const response = await BaseService.fetchWithAuth(`/admin/universes/${universeId}/moderators`, {

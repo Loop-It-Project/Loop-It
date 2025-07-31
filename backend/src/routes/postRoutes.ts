@@ -60,7 +60,7 @@ router.post('/:postId/comments',
   addComment
 );
 router.get('/:postId/comments', authenticateToken, getPostComments);
-router.post('/comments/:commentId/like', authenticateToken, toggleCommentLike);
+router.post('/:postId/comments/:commentId/like', authenticateToken, toggleCommentLike);
 router.post('/:postId/comments/:commentId/replies', 
   authenticateToken,
   [

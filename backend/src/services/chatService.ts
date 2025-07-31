@@ -276,46 +276,48 @@ export class ChatService {
       const offset = (page - 1) * limit;
 
       // Nachrichten mit Sender-Info laden
-      const messages = await db
+      const messages = await db // Datenbankabfrage
         .select({
-          id: messagesTable.id,
-          conversationId: messagesTable.conversationId,
-          content: messagesTable.content,
-          messageType: messagesTable.messageType,
-          replyToId: messagesTable.replyToId,
-          isRead: messagesTable.isRead,
-          isEdited: messagesTable.isEdited,
-          isDeleted: messagesTable.isDeleted,
-          createdAt: messagesTable.createdAt,
+          id: messagesTable.id, // Nachricht-ID
+          conversationId: messagesTable.conversationId, // Conversation-ID
+          content: messagesTable.content, // Nachrichtentext
+          messageType: messagesTable.messageType, // Nachrichtentyp (z.B. Text, Bild)
+          replyToId: messagesTable.replyToId, // ID der Antwortnachricht
+          isRead: messagesTable.isRead, // Lese-Status
+          isEdited: messagesTable.isEdited, // Bearbeitungs-Status
+          isDeleted: messagesTable.isDeleted, // Lösch-Status
+          createdAt: messagesTable.createdAt, // Erstellungsdatum
           sender: {
-            id: usersTable.id,
-            username: usersTable.username,
-            displayName: usersTable.displayName,
-            avatarId: profilesTable.avatarId
+            id: usersTable.id, // Sender-ID
+            username: usersTable.username, // Sender-Benutzername
+            displayName: usersTable.displayName, // Sender-Anzeigename
+            avatarId: profilesTable.avatarId // Sender-Avatar-ID
           }
         })
-        .from(messagesTable)
-        .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
-        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId))
+        .from(messagesTable) // Nachrichten-Tabelle
+        .leftJoin(usersTable, eq(messagesTable.senderId, usersTable.id)) // Join mit Benutzern-Tabelle
+        .leftJoin(profilesTable, eq(usersTable.id, profilesTable.userId)) // Join mit Profilen-Tabelle
+        // Filter für aktive und nicht gelöschte Nachrichten
         .where(
           and(
-            eq(messagesTable.conversationId, conversationId),
-            eq(messagesTable.isDeleted, false)
+            eq(messagesTable.conversationId, conversationId), // Conversation-ID
+            eq(messagesTable.isDeleted, false) // Nur nicht gelöschte Nachrichten
           )
         )
-        .orderBy(desc(messagesTable.createdAt))
-        .offset(offset)
-        .limit(limit);
+        .orderBy(desc(messagesTable.createdAt)) // Neueste Nachrichten zuerst
+        .offset(offset) // Offset für Paginierung
+        .limit(limit); // Limit für Paginierung
 
-      console.log(`✅ Found ${messages.length} messages for conversation ${conversationId}`);
+      console.log(`✅ Found ${messages.length} messages for conversation ${conversationId}`); // Debug-Ausgabe
 
+      // Transformiere Nachrichten für Frontend
       return {
-        success: true,
+        success: true, // Erfolgreiche Antwort
         data: {
           messages: messages.reverse(), // Chronologische Reihenfolge
-          pagination: {
-            page,
-            limit,
+          pagination: { // Paginierungsinformationen
+            page, // Aktuelle Seite
+            limit, // Nachrichten pro Seite
             hasMore: messages.length === limit
           }
         }

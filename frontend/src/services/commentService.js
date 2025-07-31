@@ -38,29 +38,78 @@ class CommentService {
       return { success: false, error: 'Network error' };
     }
   }
+  
+  // Get comments preview (top comments)
+  static async getCommentsPreview(postId, limit = 3) {
+    try {
+      const response = await BaseService.fetchWithAuth(`/posts/${postId}/comments?page=1&limit=${limit}&sort=top`);
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        return { 
+          success: true, 
+          data: data.data, 
+          totalComments: data.total || data.pagination?.total || 0,
+          hasMore: (data.total || 0) > limit
+        };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      console.error('Get comments preview error:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 
   // Comment liken/unliken
-  static async toggleCommentLike(commentId) {
+  static async toggleCommentLike(commentId, postId = null) {
     try {
-      const response = await BaseService.fetchWithAuth(`/comments/${commentId}/like`, {
+      console.log('🔍 CommentService.toggleCommentLike:', { commentId, postId });
+
+      let endpoint;
+      if (postId) {
+        // Bevorzugte Route mit postId context
+        endpoint = `/posts/${postId}/comments/${commentId}/like`;
+      } else {
+        // Fallback für backwards compatibility
+        endpoint = `/posts/comments/${commentId}/like`;
+      }
+
+      console.log('🔍 Using endpoint:', endpoint);
+
+      const response = await BaseService.fetchWithAuth(endpoint, {
         method: 'POST'
       });
 
+      console.log('🔍 Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Toggle comment like response:', data);
+        
         return { 
           success: true, 
           data: {
-            isLiked: data.data?.isLiked || data.isLiked,
-            likeCount: data.data?.likeCount || data.likeCount
+            isLiked: data.data?.isLiked ?? data.isLiked,
+            likeCount: data.data?.likeCount ?? data.likeCount
           }
         };
       } else {
-        const errorData = await response.json();
-        return { success: false, error: errorData.error || 'Failed to toggle comment like' };
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Toggle comment like failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        
+        return { 
+          success: false, 
+          error: errorData.error || `HTTP ${response.status}: ${response.statusText}` 
+        };
       }
     } catch (error) {
-      console.error('Toggle comment like error:', error);
+      console.error('❌ Toggle comment like error:', error);
       return { success: false, error: 'Network error' };
     }
   }

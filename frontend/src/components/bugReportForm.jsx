@@ -82,8 +82,8 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-card rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
@@ -91,13 +91,13 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
               <Bug className="w-6 h-6 text-red-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Bug Report</h2>
+              <h2 className="text-xl font-bold text-primary">Bug Report</h2>
               <p className="text-sm text-tertiary">Hilf uns, das Problem zu beheben</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -163,7 +163,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-3 py-2 border border-gray-300 cursor-pointer rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
                   {categories.map(category => (
                     <option key={category.value} value={category.value}>
@@ -182,7 +182,7 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
                   name="priority"
                   value={formData.priority}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-3 py-2 border border-gray-300 cursor-pointer rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
                   {priorities.map(priority => (
                     <option key={priority.value} value={priority.value}>
@@ -251,14 +251,14 @@ const BugReportForm = ({ isVisible, onClose, user }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-secondary hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 rounded-lg cursor-pointer text-secondary hover:bg-gray-50 transition-colors"
               >
                 Abbrechen
               </button>
               <button
                 type="submit"
                 disabled={loading || !formData.title.trim() || !formData.description.trim()}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                className="px-6 py-2 bg-red-600 text-white rounded-lg cursor-pointer hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
                 {loading ? (
                   <>

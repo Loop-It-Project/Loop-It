@@ -108,7 +108,7 @@ const UserBugReports = ({ onBack }) => {
           </button>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="bg-primary border border-gray-200 rounded-lg p-6">
           <div className="flex items-center space-x-3 mb-4">
             <Bug className="text-red-500" size={24} />
             <h2 className="text-xl font-bold text-gray-900">{selectedReport.title}</h2>

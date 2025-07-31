@@ -39,38 +39,50 @@ const UniverseChatWidget = ({
 
   // WebSocket Event Listeners
   useEffect(() => {
-      if (!currentUser || !universe) return;
+    if (!currentUser || !universe) return;
 
-      const handleUniverseChatMessage = (data) => {
-        if (data.universeId === universe.id) {
-          console.log('📨 Universe chat message received:', data.message);
-        
-          setMessages(prev => {
-            // Prüfe sowohl echte als auch optimistische Nachrichten
-            const existingMessage = prev.find(msg => 
-              msg.id === data.message.id || 
-              (msg.sender?.id === data.message.sender?.id && 
-               msg.content === data.message.content &&
-               Math.abs(new Date(msg.createdAt).getTime() - new Date(data.message.createdAt).getTime()) < 5000)
+    // console.log(`🔌 Setting up WebSocket listeners for universe: ${universe.id}`);
+
+    const handleUniverseChatMessage = (data) => {
+      // console.log('📨 Universe chat message event received:', {
+        // eventData: data,
+        // currentUniverseId: universe.id,
+        // matches: data.universeId === universe.id
+      // });
+
+      if (data.universeId === universe.id) {
+        // console.log('✅ Message matches current universe:', data.message);
+      
+        setMessages(prev => {
+          const existingMessage = prev.find(msg => 
+            msg.id === data.message.id || 
+            (msg.sender?.id === data.message.sender?.id && 
+             msg.content === data.message.content &&
+             Math.abs(new Date(msg.createdAt).getTime() - new Date(data.message.createdAt).getTime()) < 5000)
+          );
+
+          if (existingMessage) {
+            // console.log('🔄 Replacing optimistic message:', existingMessage.id);
+            return prev.map(msg => 
+              msg.id === existingMessage.id ? {
+                ...data.message,
+                isOptimistic: false
+              } : msg
             );
+          }
 
-            if (existingMessage) {
-              // Ersetze optimistische Nachricht oder ignoriere Duplikat
-              return prev.map(msg => 
-                msg.id === existingMessage.id ? {
-                  ...data.message,
-                  isOptimistic: false
-                } : msg
-              );
-            }
+          // console.log('➕ Adding new message from other user');
+          return [...prev, data.message];
+        });
 
-            // Neue Nachricht von anderem User
-            return [...prev, data.message];
-          });
-
-          scrollToBottom();
-        }
-      };
+        scrollToBottom();
+      } else {
+        console.log('❌ Message universe ID mismatch:', {
+          received: data.universeId,
+          expected: universe.id
+        });
+      }
+    };
 
       const handleUserTyping = (data) => {
         if (data.universeId === universe.id && data.username !== currentUser.username) {
@@ -100,7 +112,7 @@ const UniverseChatWidget = ({
       // Handler für System-Nachrichten
       const handleSystemMessage = (data) => {
         if (data.universeId === universe.id) {
-          console.log('📢 System message received:', data);
+          // console.log('📢 System message received:', data);
           // Optional: System-Nachrichten anzeigen
         }
       };
@@ -109,16 +121,17 @@ const UniverseChatWidget = ({
       // Bestätigungs-Handler für Join/Leave Events
       const handleUniverseChatJoined = (data) => {
         if (data.universeId === universe.id) {
-          console.log('✅ Successfully joined universe chat via WebSocket');
+          // console.log('✅ Successfully joined universe chat via WebSocket');
         }
       };
   
       const handleUniverseChatLeft = (data) => {
         if (data.universeId === universe.id) {
-          console.log('✅ Successfully left universe chat via WebSocket');
+          // console.log('✅ Successfully left universe chat via WebSocket');
         }
       };
 
+      // console.log('📝 Registering WebSocket event listeners...');
       WebSocketService.addEventListener('universe_chat_message', handleUniverseChatMessage);
       WebSocketService.addEventListener('universe_chat_user_typing', handleUserTyping);
       WebSocketService.addEventListener('universe_chat_user_stopped_typing', handleUserStoppedTyping);
@@ -128,6 +141,7 @@ const UniverseChatWidget = ({
       WebSocketService.addEventListener('universe_chat_left', handleUniverseChatLeft);
 
     return () => {
+      // console.log('🗑️ Cleaning up WebSocket event listeners...');
       WebSocketService.removeEventListener('universe_chat_message', handleUniverseChatMessage);
       WebSocketService.removeEventListener('universe_chat_user_typing', handleUserTyping);
       WebSocketService.removeEventListener('universe_chat_user_stopped_typing', handleUserStoppedTyping);
@@ -136,7 +150,7 @@ const UniverseChatWidget = ({
       WebSocketService.removeEventListener('universe_chat_joined', handleUniverseChatJoined);
       WebSocketService.removeEventListener('universe_chat_left', handleUniverseChatLeft);
     };
-    }, [currentUser, universe]);
+  }, [currentUser, universe]);
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -151,17 +165,24 @@ const UniverseChatWidget = ({
   const handleJoinChat = async () => {
     if (!universe?.id) return;
 
+    // console.log(`🚀 Attempting to join universe chat: ${universe.id}`);
     setLoading(true);
+    
     try {
       const response = await UniverseChatService.joinUniverseChat(universe.id);
-      
+      // console.log('🔄 Join chat response:', response);
+
       if (response.success) {
         setIsJoined(true);
-        
+        // console.log('✅ Successfully joined chat via API');
+
         // WebSocket beitreten
         if (WebSocketService.isWebSocketConnected()) {
-          console.log(`🔌 Joining WebSocket room: universe_chat:${universe.id}`);
+          // console.log(`🔌 WebSocket is connected, joining room: universe_chat:${universe.id}`);
           WebSocketService.joinUniverseChat(universe.id);
+        } else {
+          console.error('❌ WebSocket is not connected!');
+          // console.log('🔍 WebSocket connection info:', WebSocketService.getConnectionInfo());
         }
 
         // Nachrichten und Teilnehmer laden
@@ -170,10 +191,11 @@ const UniverseChatWidget = ({
           loadParticipants()
         ]);
       } else {
+        console.error('❌ Failed to join chat:', response.error);
         alert(response.error || 'Fehler beim Beitreten des Chats');
       }
     } catch (error) {
-      console.error('Error joining chat:', error);
+      console.error('❌ Exception during join chat:', error);
       alert('Fehler beim Beitreten des Chats');
     } finally {
       setLoading(false);
@@ -195,7 +217,7 @@ const UniverseChatWidget = ({
 
         // WebSocket verlassen
         if (WebSocketService.isWebSocketConnected()) {
-          console.log(`🔌 Leaving WebSocket room: universe_chat:${universe.id}`);
+          // console.log(`🔌 Leaving WebSocket room: universe_chat:${universe.id}`);
           WebSocketService.leaveUniverseChat(universe.id);
         }
       }
@@ -302,7 +324,7 @@ const UniverseChatWidget = ({
             } : msg
           ));
 
-          console.log('✅ Message sent successfully:', response.message.id);
+          // console.log('✅ Message sent successfully:', response.message.id);
         } else {
           // Entferne optimistische Nachricht bei Fehler
           setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
@@ -373,7 +395,7 @@ const UniverseChatWidget = ({
   useEffect(() => {
     return () => {
       if (isJoinedRef.current && universe?.id && WebSocketService.isWebSocketConnected()) {
-        console.log(`🔌 UniverseChatWidget unmounting - leaving universe chat: ${universe.id}`);
+        // console.log(`🔌 UniverseChatWidget unmounting - leaving universe chat: ${universe.id}`);
         WebSocketService.leaveUniverseChat(universe.id);
       }
       
@@ -388,7 +410,7 @@ const UniverseChatWidget = ({
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (isJoinedRef.current && universe?.id && WebSocketService.isWebSocketConnected()) {
-        console.log(`🔌 Page unloading - leaving universe chat: ${universe.id}`);
+        // console.log(`🔌 Page unloading - leaving universe chat: ${universe.id}`);
         WebSocketService.leaveUniverseChat(universe.id);
       }
     };
@@ -400,7 +422,7 @@ const UniverseChatWidget = ({
   // onToggle (X-Button) macht keinen WebSocket cleanup
   const handleClose = async () => {
     if (isJoined && universe?.id) {
-      console.log(`🔌 Chat closing - leaving universe chat: ${universe.id}`);
+      // console.log(`🔌 Chat closing - leaving universe chat: ${universe.id}`);
       
       // WebSocket cleanup
       if (WebSocketService.isWebSocketConnected()) {
