@@ -1,3 +1,179 @@
+# Projekttagebuch Marc Droit - 24.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+frontend styling, datenschutz/impressum,webSocketServices und baseServices debuggen
+
+## *Fortschritte & Ergebnisse:*
+
+für datenschutz recherchiert, baseService debugged
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+webSocketServices debuggen, Präsi vorbereiten
+
+# Projekttagebuch Marc Droit - 23.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+firstUniverses anpassen / Deployment (Gruppe)
+
+## *Fortschritte & Ergebnisse:*
+
+firstUniverses editiert und darkmode hinzugefügt
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+Styling/Layout überarbeiten, Änderungen debuggen
+
+# Projekttagebuch Marc Droit - 22.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+firstUniverses fertigstellen
+
+## *Fortschritte & Ergebnisse:*
+
+firstUniverses fertig
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+Deployment / frontend anpassen
+
+# Projekttagebuch Marc Droit - 17.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+firstUniverses fertigstellen
+
+## *Fortschritte & Ergebnisse:*
+
+firstUniverses Styling und Anpassung an gewünschte Funktionen fertig
+
+## *Herausforderungen & Blockaden:*
+
+Merge-Konflikte von drizzle-Dateien ausgelöst
+
+## *Was ich heute gelernt habe:*
+
+Verbesserter Umgang mit manuellem Lösen von Merge-Konflikten
+
+## *Plan für morgen:*
+
+FirstUniversePopUp mit Backend verbinden + Hobbies Styling/Layout
+
+# Projekttagebuch Marc Droit - 16.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+FirstUniversePopUp frontend fertigstellen
+
+## *Fortschritte & Ergebnisse:*
+
+FirstUniversePopUp öffnet sich jetzt nach erfolgreicher Registrierung
+
+## *Herausforderungen & Blockaden:*
+
+Umgehen von PublicRoute-Bedingungen
+
+## *Was ich heute gelernt habe:*
+
+Wie man replace, eine property von Navigate aus "react-router-dom", nutzt
+
+## *Plan für morgen:*
+
+FirstUniversePopUp frontend fertigstellen und mit backend verbinden
+
+# Projekttagebuch Marc Droit - 15.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+HobbiesPage/FirstUniversesPopUp
+
+## *Fortschritte & Ergebnisse:*
+
+FirstUniversePopUp erstellt und integriert
+
+## *Herausforderungen & Blockaden:*
+
+Modale/PopUp-Struktur
+
+## *Was ich heute gelernt habe:*
+
+Modale/PopUp-Struktur
+
+## *Plan für morgen:*
+
+HobbiesPage/PopUp frontend fertigstellen
+
+# Projekttagebuch Marc Droit - 14.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+DiscoverUniversesPage/ChoseUniverses-PopUp
+
+## *Fortschritte & Ergebnisse:*
+
+ChoseUniverses und AbfrageLogik für frontend erstellt
+
+## *Herausforderungen & Blockaden:*
+
+/
+
+## *Was ich heute gelernt habe:*
+
+Was ein Paginator/Paginierung ist
+
+## *Plan für morgen:*
+
+ChoseUniversesPopUp vollständig ans backend anbinden/DiscoverUniversesPage erstellen
+
+# Projekttagebuch Marc Droit - 08.07.2025
+
+## *Heutige Hauptaufgabe(n):*
+
+Frontend debuggen, Styling überarbeiten
+
+## *Fortschritte & Ergebnisse:*
+
+frontend debugged -> checks bestanden
+
+## *Herausforderungen & Blockaden:*
+
+Drizzle nicht funktionsfähig
+
+## *Was ich heute gelernt habe:*
+
+/
+
+## *Plan für morgen:*
+
+Drizzle debuggen, Hobbies/LandingPage fertigstellen
+
 # Projekttagebuch Marc Droit - 07.07.2025
 
 ## *Heutige Hauptaufgabe(n):*

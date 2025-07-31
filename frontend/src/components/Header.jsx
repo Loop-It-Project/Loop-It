@@ -24,6 +24,7 @@ import PendingFriendRequests from './PendingFriendRequests';
 import FriendshipService from '../services/friendshipService';
 import SwipeGame from './SwipeGame';
 import WebSocketService from '../services/websocketService';
+import FirstUniverses from '../pages/Hobbies';
 
 // Header-Komponente für die Navigation und Aktionen im Dashboard
 // Importiere die benötigten Icons von Lucide
