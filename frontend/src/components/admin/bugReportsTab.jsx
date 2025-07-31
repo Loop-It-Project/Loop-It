@@ -184,7 +184,7 @@ const BugReportsTab = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
             <Bug className="w-6 h-6 text-red-600" />
-            <span>Bug Reports</span>
+            <p className='text-primary'>Bug Reports</p>
           </h2>
           <p className="text-tertiary">Verwalte eingereichte Bug Reports</p>
         </div>
@@ -201,7 +201,7 @@ const BugReportsTab = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="bg-primary rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Search */}
           <div className="relative">
@@ -211,14 +211,14 @@ const BugReportsTab = () => {
               placeholder="Suche nach Titel oder Beschreibung..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 bg-secondary rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
           {/* Status Filter */}
           <select
             value={filters.status}
             onChange={(e) => handleFilterChange('status', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg cursor-pointer bg-secondary focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           >
             {statusOptions.map(option => (
               <option key={option.value} value={option.value}>
@@ -230,7 +230,7 @@ const BugReportsTab = () => {
           <select
             value={filters.priority}
             onChange={(e) => handleFilterChange('priority', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-secondary cursor-pointer focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           >
             {priorityOptions.map(option => (
               <option key={option.value} value={option.value}>
@@ -242,7 +242,7 @@ const BugReportsTab = () => {
           <select
             value={filters.category}
             onChange={(e) => handleFilterChange('category', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-secondary cursor-pointer focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           >
             {categoryOptions.map(option => (
               <option key={option.value} value={option.value}>
@@ -260,7 +260,7 @@ const BugReportsTab = () => {
               category: '',
               search: ''
             })}
-            className="px-4 py-2 text-tertiary hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+            className="px-4 py-2 text-tertiary bg-secondary border-1 border-primary cursor-pointer hover:text-secondary hover:bg-secondary rounded-lg transition-colors"
           >
             Filter zurücksetzen
           </button>
@@ -268,7 +268,7 @@ const BugReportsTab = () => {
       </div>
 
       {/* Bug Reports Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-card rounded-lg shadow-sm border border-card">
         {loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
@@ -377,7 +377,7 @@ const BugReportsTab = () => {
 
       {/* Detail Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center space-x-3">

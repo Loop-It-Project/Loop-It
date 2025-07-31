@@ -36,10 +36,10 @@ export class WebSocketService {
     this.io.use(async (socket, next) => {
       try {
         const token = socket.handshake.auth.token;
-        console.log('🔌 WebSocket auth attempt:', { 
-          hasToken: !!token,
-          socketId: socket.id 
-        });
+        // console.log('🔌 WebSocket auth attempt:', { 
+        //   hasToken: !!token,
+        //   socketId: socket.id 
+        // });
 
         if (!token) {
           console.log('❌ WebSocket: No token provided');
@@ -51,11 +51,11 @@ export class WebSocketService {
         socket.data.username = decoded.username;
         socket.data.email = decoded.email;
         
-        console.log('✅ WebSocket: User authenticated:', {
-          userId: decoded.id,
-          username: decoded.username,
-          socketId: socket.id
-        });
+        // console.log('✅ WebSocket: User authenticated:', {
+          // userId: decoded.id,
+          // username: decoded.username,
+          // socketId: socket.id
+        // });
         
         next();
       } catch (error) {
@@ -70,7 +70,7 @@ export class WebSocketService {
       const userId = socket.data.userId;
       const username = socket.data.username;
 
-      console.log(`🔌 User connected: ${username} (${userId}) - Socket: ${socket.id}`);
+      // console.log(`🔌 User connected: ${username} (${userId}) - Socket: ${socket.id}`);
 
       // User als online markieren
       this.addUserSocket(userId, socket.id);
@@ -80,17 +80,17 @@ export class WebSocketService {
 
       // Join user's conversations
       socket.on('join_conversations', async (conversationIds: string[]) => {
-        console.log(`🏠 User ${username} joining conversations:`, conversationIds);
+        // console.log(`🏠 User ${username} joining conversations:`, conversationIds);
         
         for (const conversationId of conversationIds) {
           await socket.join(`conversation:${conversationId}`);
-          console.log(`  ✅ Joined conversation: ${conversationId}`);
+          // console.log(`  ✅ Joined conversation: ${conversationId}`);
         }
       });
 
       // Join specific conversation
       socket.on('join_conversation', async (conversationId: string) => {
-        console.log(`🏠 User ${username} joining conversation: ${conversationId}`);
+        // console.log(`🏠 User ${username} joining conversation: ${conversationId}`);
         await socket.join(`conversation:${conversationId}`);
         
         // Bestätige dem Client dass er beigetreten ist
@@ -99,7 +99,7 @@ export class WebSocketService {
 
       // Leave conversation
       socket.on('leave_conversation', async (conversationId: string) => {
-        console.log(`🚪 User ${username} leaving conversation: ${conversationId}`);
+        // console.log(`🚪 User ${username} leaving conversation: ${conversationId}`);
         await socket.leave(`conversation:${conversationId}`);
         
         socket.emit('conversation_left', { conversationId });
@@ -108,7 +108,7 @@ export class WebSocketService {
       // Neue Nachricht empfangen
       socket.on('new_message', (data) => {
         const { conversationId, message } = data;
-        console.log(`📨 Broadcasting message from ${username} to conversation ${conversationId}`);
+        // console.log(`📨 Broadcasting message from ${username} to conversation ${conversationId}`);
 
         // Stoppe Typing wenn Nachricht gesendet wird
         if (typingTimeout) {
@@ -130,7 +130,7 @@ export class WebSocketService {
 
       // Typing Indicator Start mit Auto-Stop
     socket.on('typing_start', (conversationId: string) => {
-      console.log(`✏️ User ${username} started typing in ${conversationId}`);
+      // console.log(`✏️ User ${username} started typing in ${conversationId}`);
       
       // Sende Typing-Event an andere
       socket.to(`conversation:${conversationId}`).emit('user_typing', {
@@ -145,7 +145,7 @@ export class WebSocketService {
       }
       
       typingTimeout = setTimeout(() => {
-        console.log(`✏️ Auto-stopping typing for ${username} in ${conversationId}`);
+        // console.log(`✏️ Auto-stopping typing for ${username} in ${conversationId}`);
         socket.to(`conversation:${conversationId}`).emit('user_stopped_typing', {
           userId,
           conversationId
@@ -155,7 +155,7 @@ export class WebSocketService {
 
       // Typing Indicator Stop
     socket.on('typing_stop', (conversationId: string) => {
-      console.log(`✏️ User ${username} stopped typing in ${conversationId}`);
+      // console.log(`✏️ User ${username} stopped typing in ${conversationId}`);
       
       // Stoppe Timeout
       if (typingTimeout) {
@@ -172,7 +172,7 @@ export class WebSocketService {
       // Message Read Status
       socket.on('message_read', (data) => {
         const { conversationId, messageId } = data;
-        console.log(`👁️ User ${username} read message ${messageId} in ${conversationId}`);
+        // console.log(`👁️ User ${username} read message ${messageId} in ${conversationId}`);
         
         socket.to(`conversation:${conversationId}`).emit('message_read_by', {
           messageId,
@@ -183,13 +183,13 @@ export class WebSocketService {
 
       // Conversation Updated (für neue Conversations)
       socket.on('conversation_updated', (conversationId: string) => {
-        console.log(`🔄 Conversation ${conversationId} updated by ${username}`);
+        // console.log(`🔄 Conversation ${conversationId} updated by ${username}`);
         socket.to(`conversation:${conversationId}`).emit('conversation_refresh');
       });
 
       // Disconnect Handler
       socket.on('disconnect', (reason) => {
-        console.log(`🔌 User ${username} disconnected: ${reason}`);
+        // console.log(`🔌 User ${username} disconnected: ${reason}`);
         
         // Comprehensive cleanup
         this.handleComprehensiveDisconnect(userId, socket.id, username);
@@ -197,7 +197,7 @@ export class WebSocketService {
 
       // Match-Notification Handler
       socket.on('match_notification_received', (data) => {
-        console.log('📱 Match notification received by user:', userId);
+        // console.log('📱 Match notification received by user:', userId);
       });
 
       // Error Handler
@@ -224,15 +224,14 @@ export class WebSocketService {
           }
         
           // Join socket room
-          await socket.join(`universe_chat:${universeId}`);
+          const roomName = `universe_chat:${universeId}`;
+          await socket.join(roomName);
         
           // Track user in universe room
           if (!this.universeRooms.has(universeId)) {
             this.universeRooms.set(universeId, new Set());
           }
           this.universeRooms.get(universeId)?.add(userId);
-
-          console.log(`👋 User ${userId} joined universe chat ${universeId}`);
           
           // BESTÄTIGUNG an Client senden
           socket.emit('universe_chat_joined', { universeId });
@@ -241,12 +240,12 @@ export class WebSocketService {
           const user = await this.getUserInfo(userId);
         
           // Notify others about user joining
-          socket.to(`universe_chat:${universeId}`).emit('universe_user_joined', {
+          socket.to(roomName).emit('universe_user_joined', {
             universeId,
             user
           });
         
-          console.log(`👋 User ${userId} joined universe chat ${universeId}`);
+          // console.log(`👋 User ${userId} joined universe chat ${universeId}`);
         } catch (error) {
           console.error('Error joining universe chat:', error);
           socket.emit('error', { message: 'Failed to join universe chat' });
@@ -261,23 +260,24 @@ export class WebSocketService {
           if (!userId || !universeId) return;
         
           // Leave socket room 
-          await socket.leave(`universe_chat:${universeId}`);
+          const roomName = `universe_chat:${universeId}`;
+          await socket.leave(roomName);
         
           // Remove user from universe room tracking
           this.universeRooms.get(universeId)?.delete(userId);
 
-          console.log(`👋 User ${userId} left universe chat ${universeId}`);
+          // console.log(`👋 User ${userId} left universe chat ${universeId}`);
           
           // BESTÄTIGUNG an Client senden
           socket.emit('universe_chat_left', { universeId });
         
           // Notify others about user leaving
-          socket.to(`universe_chat:${universeId}`).emit('universe_user_left', {
+          socket.to(roomName).emit('universe_user_left', {
             universeId,
             userId
           });
         
-          console.log(`👋 User ${userId} left universe chat ${universeId}`);
+          // console.log(`👋 User ${userId} left universe chat ${universeId}`);
         } catch (error) {
           console.error('Error leaving universe chat:', error);
         }
@@ -285,9 +285,10 @@ export class WebSocketService {
 
       // Universe Chat Typing
       socket.on('universe_chat_typing_start', (universeId: string) => {
-        console.log(`✏️ User ${username} typing in universe chat: ${universeId}`);
+        const roomName = `universe_chat:${universeId}`;
+        // console.log(`✏️ User ${username} typing in universe chat: ${universeId} (room: ${roomName})`);
 
-        socket.to(`universe_chat:${universeId}`).emit('universe_chat_user_typing', {
+        socket.to(roomName).emit('universe_chat_user_typing', {
           userId,
           username,
           universeId
@@ -295,9 +296,10 @@ export class WebSocketService {
       });
 
       socket.on('universe_chat_typing_stop', (universeId: string) => {
-        console.log(`✏️ User ${username} stopped typing in universe chat: ${universeId}`);
+        const roomName = `universe_chat:${universeId}`;
+        // console.log(`✏️ User ${username} stopped typing in universe chat: ${universeId} (room: ${roomName})`);
 
-        socket.to(`universe_chat:${universeId}`).emit('universe_chat_user_stopped_typing', {
+        socket.to(roomName).emit('universe_chat_user_stopped_typing', {
           userId,
           universeId
         });
@@ -343,7 +345,7 @@ export class WebSocketService {
             }
           });
 
-          console.log(`📨 Universe message broadcasted to ${universeId}`);
+          // console.log(`📨 Universe message broadcasted to ${universeId}`);
         } catch (error) {
           console.error('Error handling universe message:', error);
           socket.emit('error', { message: 'Failed to send message' });
@@ -374,7 +376,7 @@ export class WebSocketService {
             messageId
           });
 
-          console.log(`🗑️ Message ${messageId} deleted in universe ${universeId}`);
+          // console.log(`🗑️ Message ${messageId} deleted in universe ${universeId}`);
         } catch (error) {
           console.error('Error deleting universe message:', error);
           socket.emit('error', { message: 'Failed to delete message' });
@@ -393,7 +395,7 @@ export class WebSocketService {
       ...data
     });
   
-    console.log('📱 Match notification sent to user:', userId);
+    // console.log('📱 Match notification sent to user:', userId);
   }
 
   // User Socket Management
@@ -418,7 +420,7 @@ export class WebSocketService {
 
   // Public Methods für andere Services
   public sendMessageToConversation(conversationId: string, message: any, senderId?: string) {
-    console.log(`📡 Broadcasting message to conversation ${conversationId}`);
+    // console.log(`📡 Broadcasting message to conversation ${conversationId}`);
     this.io.to(`conversation:${conversationId}`).emit('message_received', {
       conversationId,
       message
@@ -431,7 +433,7 @@ export class WebSocketService {
       userSocketSet.forEach(socketId => {
         this.io.to(socketId).emit(event, data);
       });
-      console.log(`📤 Sent ${event} to user ${userId} (${userSocketSet.size} connections)`);
+      // console.log(`📤 Sent ${event} to user ${userId} (${userSocketSet.size} connections)`);
     } else {
       console.log(`📤 User ${userId} not connected, message queued`);
     }
@@ -446,7 +448,7 @@ export class WebSocketService {
   }
 
   public notifyConversationUpdate(conversationId: string, excludeUserId?: string) {
-    console.log(`🔄 Notifying conversation update: ${conversationId}`);
+    // console.log(`🔄 Notifying conversation update: ${conversationId}`);
     this.io.to(`conversation:${conversationId}`).emit('conversation_refresh');
   }
 
@@ -457,29 +459,32 @@ export class WebSocketService {
 
   // Public Broadcasting Methods für Universe Chat
   public broadcastToUniverseChat(universeId: string, event: string, data: any) {
-    console.log(`📡 Broadcasting ${event} to universe_chat:${universeId}`);
+    // console.log(`📡 Broadcasting ${event} to universe_chat:${universeId}`);
     this.io.to(`universe_chat:${universeId}`).emit(event, data);
   }
 
   public broadcastUniverseChatMessage(universeId: string, message: any) {
-    console.log(`📡 Broadcasting message to universe_chat:${universeId}`);
-    this.io.to(`universe_chat:${universeId}`).emit('universe_chat_message', {
+    const roomName = `universe_chat:${universeId}`;
+    // console.log(`📡 Broadcasting message to ${roomName}`);
+    this.io.to(roomName).emit('universe_chat_message', {
       universeId,
       message
     });
   }
 
   public broadcastUniverseChatSystemMessage(universeId: string, systemData: any) {
-    console.log(`📡 Broadcasting system message to universe_chat:${universeId}`);
-    this.io.to(`universe_chat:${universeId}`).emit('universe_chat_system', {
+    const roomName = `universe_chat:${universeId}`;
+    // console.log(`📡 Broadcasting system message to ${roomName}`);
+    this.io.to(roomName).emit('universe_chat_system', {
       universeId,
       systemData
     });
   }
 
   public broadcastUniverseChatMessageDeleted(universeId: string, messageId: string, moderatorId: string, reason?: string) {
-    console.log(`📡 Broadcasting message deletion to universe_chat:${universeId}`);
-    this.io.to(`universe_chat:${universeId}`).emit('universe_chat_message_deleted', {
+    const roomName = `universe_chat:${universeId}`;
+    // console.log(`📡 Broadcasting message deletion to ${roomName}`);
+    this.io.to(roomName).emit('universe_chat_message_deleted', {
       universeId,
       messageId,
       moderatorId,
@@ -489,7 +494,7 @@ export class WebSocketService {
 
   public broadcastUniverseChatTyping(universeId: string, userId: string, username: string, isTyping: boolean) {
     const event = isTyping ? 'universe_chat_user_typing' : 'universe_chat_user_stopped_typing';
-    console.log(`📡 Broadcasting typing status to universe_chat:${universeId}`);
+    // console.log(`📡 Broadcasting typing status to universe_chat:${universeId}`);
     this.io.to(`universe_chat:${universeId}`).emit(event, {
       universeId,
       userId,
@@ -498,16 +503,18 @@ export class WebSocketService {
   }
 
   public broadcastUniverseChatUserJoined(universeId: string, user: any) {
-    console.log(`📡 Broadcasting user joined to universe_chat:${universeId}`);
-    this.io.to(`universe_chat:${universeId}`).emit('universe_user_joined', {
+    const roomName = `universe_chat:${universeId}`;
+    // console.log(`📡 Broadcasting user joined to ${roomName}`);
+    this.io.to(roomName).emit('universe_user_joined', {
       universeId,
       user
     });
   }
 
   public broadcastUniverseChatUserLeft(universeId: string, userId: string) {
-    console.log(`📡 Broadcasting user left to universe_chat:${universeId}`);
-    this.io.to(`universe_chat:${universeId}`).emit('universe_user_left', {
+    const roomName = `universe_chat:${universeId}`;
+    // console.log(`📡 Broadcasting user left to ${roomName}`);
+    this.io.to(roomName).emit('universe_user_left', {
       universeId,
       userId
     });
@@ -515,12 +522,12 @@ export class WebSocketService {
 
   // General Broadcasting Method
   public broadcastToRoom(room: string, event: string, data: any) {
-    console.log(`📡 Broadcasting ${event} to room ${room}`);
+    // console.log(`📡 Broadcasting ${event} to room ${room}`);
     this.io.to(room).emit(event, data);
   }
 
   public broadcastToAllUsers(event: string, data: any) {
-    console.log(`📡 Broadcasting ${event} to all connected users`);
+    // console.log(`📡 Broadcasting ${event} to all connected users`);
     this.io.emit(event, data);
   }
 
@@ -539,7 +546,7 @@ export class WebSocketService {
 
   // Nachricht an Conversation senden (mit Sender-Ausschluss)
   public sendToConversation(conversationId: string, event: string, data: any, excludeUserId?: string) {
-    console.log(`📡 Sending ${event} to conversation ${conversationId}${excludeUserId ? ` (excluding ${excludeUserId})` : ''}`);
+    // console.log(`📡 Sending ${event} to conversation ${conversationId}${excludeUserId ? ` (excluding ${excludeUserId})` : ''}`);
 
     if (excludeUserId) {
       // Sende an alle in der Conversation außer dem Sender
@@ -620,7 +627,7 @@ export class WebSocketService {
           userId
         });
 
-        console.log(`👋 User ${userId} auto-left universe chat ${universeId} on disconnect`);
+        // console.log(`👋 User ${userId} auto-left universe chat ${universeId} on disconnect`);
       }
     }
   }
@@ -656,19 +663,20 @@ export class WebSocketService {
     // Regular user socket cleanup
     this.removeUserSocket(userId, socketId);
 
-    // Universe chat cleanup mit Notifications
+    // Universe chat cleanup mit KONSISTENTEN Room-Namen
     for (const [universeId, users] of this.universeRooms.entries()) {
       if (users.has(userId)) {
         users.delete(userId);
-        
-        // Konsistente Room-Namen
-        this.io.to(`universe_chat:${universeId}`).emit('universe_user_left', {
+
+        // KONSISTENTER ROOM NAME
+        const roomName = `universe_chat:${universeId}`;
+        this.io.to(roomName).emit('universe_user_left', {
           universeId,
           userId,
           username
         });
 
-        console.log(`👋 User ${userId} auto-left universe chat ${universeId} on disconnect`);
+        // console.log(`👋 User ${userId} auto-left universe chat ${universeId} from room ${roomName} on disconnect`);
       }
     }
 
@@ -678,7 +686,7 @@ export class WebSocketService {
         // Check ob User noch andere aktive Verbindungen hat
         if (!this.userSockets.has(userId)) {
           // User ist komplett offline - markiere als inactive in DB
-          console.log(`🧹 User ${userId} completely offline - cleaning up database`);
+          // console.log(`🧹 User ${userId} completely offline - cleaning up database`);
           // Hier könntest du UniverseChatService.markUserInactive(userId) aufrufen
         }
       } catch (error) {

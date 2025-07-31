@@ -15,19 +15,19 @@ class WebSocketService {
   // WebSocket-Verbindung initialisieren
   connect(token, user) {
     if (this.socket?.connected) {
-      console.log('🔌 WebSocket already connected');
+      // console.log('🔌 WebSocket already connected');
       return;
     }
 
     this.currentUser = user;
-    console.log('🔌 Connecting to WebSocket...', { 
-      userId: user?.id, 
-      username: user?.username 
-    });
+    // console.log('🔌 Connecting to WebSocket...', { 
+      // userId: user?.id, 
+      // username: user?.username 
+    // });
 
      // WebSocket URL für Production Environment
     const wsUrl = this.getWebSocketUrl();
-    console.log('🔗 WebSocket URL:', wsUrl);
+    // console.log('🔗 WebSocket URL:', wsUrl);
 
     this.socket = io(wsUrl, {
       auth: {
@@ -56,11 +56,11 @@ class WebSocketService {
     // Für Production, entferne /api suffix für WebSocket
     const wsUrl = baseUrl.replace('/api', '');
     
-    console.log('🔗 WebSocket URL calculation:', {
-      originalBaseUrl: baseUrl,
-      finalWsUrl: wsUrl,
-      environment: import.meta.env.MODE
-    });
+    // console.log('🔗 WebSocket URL calculation:', {
+      // originalBaseUrl: baseUrl,
+      // finalWsUrl: wsUrl,
+      // environment: import.meta.env.MODE
+    // });
     
     return wsUrl;
   }
@@ -71,7 +71,7 @@ class WebSocketService {
 
     // Connection Events
     this.socket.on('connect', () => {
-      console.log('✅ WebSocket connected:', this.socket.id);
+      // console.log('✅ WebSocket connected:', this.socket.id);
       this.isConnected = true;
       this.reconnectAttempts = 0;
       
@@ -108,52 +108,88 @@ class WebSocketService {
 
     // Match Notification Handler
     this.socket.on('match_notification', (data) => {
-      console.log('🎉 Match notification received:', data);
+      // console.log('🎉 Match notification received:', data);
       this.handleMatchNotification(data);
     });
 
     // Chat Events
     this.socket.on('message_received', (data) => {
-      console.log('📨 New message received:', data);
+      // console.log('📨 New message received:', data);
       this.emitToHandlers('message_received', data);
     });
 
     this.socket.on('conversation_refresh', () => {
-      console.log('🔄 Conversation refresh requested');
+      // console.log('🔄 Conversation refresh requested');
       this.emitToHandlers('conversation_refresh');
     });
 
     this.socket.on('new_conversation_created', (data) => {
-      console.log('💬 New conversation created:', data);
+      // console.log('💬 New conversation created:', data);
       this.emitToHandlers('new_conversation_created', data);
     });
 
     // Typing Events
     this.socket.on('user_typing', (data) => {
-      console.log(`✏️ User typing: ${data.username} in ${data.conversationId}`);
+      // console.log(`✏️ User typing: ${data.username} in ${data.conversationId}`);
       this.emitToHandlers('user_typing', data);
     });
 
     this.socket.on('user_stopped_typing', (data) => {
-      console.log(`✏️ User stopped typing: ${data.userId} in ${data.conversationId}`);
+      // console.log(`✏️ User stopped typing: ${data.userId} in ${data.conversationId}`);
       this.emitToHandlers('user_stopped_typing', data);
     });
 
     // Read Status Events
     this.socket.on('message_read_by', (data) => {
-      console.log(`👁️ Message read by: ${data.readBy.username}`);
+      // console.log(`👁️ Message read by: ${data.readBy.username}`);
       this.emitToHandlers('message_read_by', data);
     });
 
     // Conversation Events
     this.socket.on('conversation_joined', (data) => {
-      console.log(`🏠 Successfully joined conversation: ${data.conversationId}`);
+      // console.log(`🏠 Successfully joined conversation: ${data.conversationId}`);
       this.emitToHandlers('conversation_joined', data);
     });
 
     this.socket.on('conversation_left', (data) => {
-      console.log(`🚪 Successfully left conversation: ${data.conversationId}`);
+      // console.log(`🚪 Successfully left conversation: ${data.conversationId}`);
       this.emitToHandlers('conversation_left', data);
+    });
+
+    // Universe Chat Events - MIT DEBUGGING
+    this.socket.on('universe_chat_message', (data) => {
+      // console.log('📨 Raw universe_chat_message event received:', data);
+      this.emitToHandlers('universe_chat_message', data);
+    });
+
+    this.socket.on('universe_chat_joined', (data) => {
+      // console.log('✅ universe_chat_joined confirmation received:', data);
+      this.emitToHandlers('universe_chat_joined', data);
+    });
+
+    this.socket.on('universe_chat_left', (data) => {
+      // console.log('✅ universe_chat_left confirmation received:', data);
+      this.emitToHandlers('universe_chat_left', data);
+    });
+
+    this.socket.on('universe_chat_user_typing', (data) => {
+      // console.log('✏️ universe_chat_user_typing event received:', data);
+      this.emitToHandlers('universe_chat_user_typing', data);
+    });
+
+    this.socket.on('universe_chat_user_stopped_typing', (data) => {
+      // console.log('✏️ universe_chat_user_stopped_typing event received:', data);
+      this.emitToHandlers('universe_chat_user_stopped_typing', data);
+    });
+
+    this.socket.on('universe_chat_message_deleted', (data) => {
+      // console.log('🗑️ universe_chat_message_deleted event received:', data);
+      this.emitToHandlers('universe_chat_message_deleted', data);
+    });
+
+    this.socket.on('universe_chat_system', (data) => {
+      // console.log('📢 universe_chat_system event received:', data);
+      this.emitToHandlers('universe_chat_system', data);
     });
   }
 
@@ -168,7 +204,7 @@ class WebSocketService {
     this.reconnectAttempts++;
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
     
-    console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    // console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
     
     // Clear any existing timeout
     if (this.reconnectTimeout) {
@@ -194,7 +230,7 @@ class WebSocketService {
       return;
     }
 
-    console.log('🏠 Joining conversations:', conversationIds);
+    // console.log('🏠 Joining conversations:', conversationIds);
     this.socket.emit('join_conversations', conversationIds);
   }
 
@@ -205,7 +241,7 @@ class WebSocketService {
       return;
     }
 
-    console.log('🏠 Joining conversation:', conversationId);
+    // console.log('🏠 Joining conversation:', conversationId);
     this.socket.emit('join_conversation', conversationId);
   }
 
@@ -216,7 +252,7 @@ class WebSocketService {
       return;
     }
 
-    console.log('🚪 Leaving conversation:', conversationId);
+    // console.log('🚪 Leaving conversation:', conversationId);
     this.socket.emit('leave_conversation', conversationId);
   }
 
@@ -227,7 +263,7 @@ class WebSocketService {
       return;
     }
 
-    console.log('📨 Broadcasting message:', { conversationId, message });
+    // console.log('📨 Broadcasting message:', { conversationId, message });
     this.socket.emit('new_message', { conversationId, message });
   }
 
@@ -235,14 +271,14 @@ class WebSocketService {
   startTyping(conversationId) {
     if (!this.socket?.connected) return;
     
-    console.log(`✏️ Started typing in ${conversationId}`);
+    // console.log(`✏️ Started typing in ${conversationId}`);
     this.socket.emit('typing_start', conversationId);
   }
 
   stopTyping(conversationId) {
     if (!this.socket?.connected) return;
     
-    console.log(`✏️ Stopped typing in ${conversationId}`);
+    // console.log(`✏️ Stopped typing in ${conversationId}`);
     this.socket.emit('typing_stop', conversationId);
   }
 
@@ -297,7 +333,7 @@ class WebSocketService {
   // Disconnect
   disconnect() {
     if (this.socket) {
-      console.log('🔌 Disconnecting WebSocket...');
+      // console.log('🔌 Disconnecting WebSocket...');
       
       // Clear reconnect timeout
       if (this.reconnectTimeout) {
@@ -376,21 +412,24 @@ class WebSocketService {
   // Universe Chat spezifische Disconnect-Methoden
   joinUniverseChat(universeId) {
     if (!this.socket?.connected) {
-      console.log('❌ Cannot join universe chat: not connected');
+      console.error('❌ Cannot join universe chat: WebSocket not connected');
+      // console.log('🔍 Connection info:', this.getConnectionInfo());
       return;
     }
 
-    console.log('🏠 Joining universe chat:', universeId);
+    // console.log(`🏠 Joining universe chat: ${universeId}`);
+    // console.log('📡 Emitting join_universe_chat event...');
     this.socket.emit('join_universe_chat', { universeId });
   }
 
   leaveUniverseChat(universeId) {
     if (!this.socket?.connected) {
-      console.log('❌ Cannot leave universe chat: not connected');
+      console.error('❌ Cannot leave universe chat: WebSocket not connected');
       return;
     }
 
-    console.log('🚪 Leaving universe chat:', universeId);
+    // console.log(`🚪 Leaving universe chat: ${universeId}`);
+    // console.log('📡 Emitting leave_universe_chat event...');
     this.socket.emit('leave_universe_chat', { universeId });
   }
 
@@ -398,14 +437,14 @@ class WebSocketService {
   startUniverseChatTyping(universeId) {
     if (!this.socket?.connected) return;
     
-    console.log(`✏️ Started typing in universe chat ${universeId}`);
+    // console.log(`✏️ Started typing in universe chat ${universeId}`);
     this.socket.emit('universe_chat_typing_start', universeId);
   }
 
   stopUniverseChatTyping(universeId) {
     if (!this.socket?.connected) return;
     
-    console.log(`✏️ Stopped typing in universe chat ${universeId}`);
+    // console.log(`✏️ Stopped typing in universe chat ${universeId}`);
     this.socket.emit('universe_chat_typing_stop', universeId);
   }
 

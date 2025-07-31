@@ -584,6 +584,21 @@ export class PostService {
     try {
       const offset = (page - 1) * limit;
 
+      // Zuerst total count abrufen
+    const totalCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(commentsTable)
+      .where(
+        and(
+          eq(commentsTable.postId, postId),
+          eq(commentsTable.isDeleted, false),
+          isNull(commentsTable.parentId) // Nur Haupt-Comments
+        )
+      );
+
+    const totalComments = Number(totalCountResult[0]?.count) || 0;
+
+      // Comments laden
       const comments = await db
         .select({
           id: commentsTable.id,
@@ -626,15 +641,27 @@ export class PostService {
         .offset(offset)
         .limit(limit);
 
-      return {
-        success: true,
-        comments,
-        pagination: {
-          page,
-          limit,
-          hasMore: comments.length === limit
-        }
-      };
+      // 🔧 KORRIGIERTE hasMore Logik
+    const hasMore = totalComments > (offset + comments.length);
+
+    console.log('🔍 PostService: Pagination calculation:', {
+      totalComments,
+      offset,
+      commentsLoaded: comments.length,
+      hasMore,
+      shouldShowInPreview: totalComments > limit // Für Preview-Button
+    });
+
+    return {
+      success: true,
+      comments,
+      pagination: {
+        page,
+        limit,
+        total: totalComments,
+        hasMore
+      }
+    };
 
     } catch (error) {
       console.error('Get comments error:', error);
@@ -671,12 +698,56 @@ export class PostService {
     }
   }
 
+  // Verify comment exists and belongs to post
+  static async verifyCommentExists(commentId: string, postId?: string) {
+    try {
+      const whereConditions = [eq(commentsTable.id, commentId)];
+      
+      if (postId) {
+        whereConditions.push(eq(commentsTable.postId, postId));
+      }
+
+      const comment = await db
+        .select({
+          id: commentsTable.id,
+          postId: commentsTable.postId,
+          isDeleted: commentsTable.isDeleted
+        })
+        .from(commentsTable)
+        .where(and(...whereConditions))
+        .limit(1);
+
+      if (comment.length === 0) {
+        return { success: false, error: 'Comment not found' };
+      }
+
+      if (comment[0].isDeleted) {
+        return { success: false, error: 'Comment has been deleted' };
+      }
+
+      return { success: true, data: comment[0] };
+    } catch (error) {
+      console.error('❌ Verify comment exists error:', error);
+      return { success: false, error: 'Failed to verify comment' };
+    }
+  }
+
   // Comment liken/unliken
   static async toggleCommentLike(commentId: string, userId: string) {
     try {
+      console.log('🔍 PostService.toggleCommentLike:', { commentId, userId });
+
+      // Verify comment exists first
+      const commentCheck = await this.verifyCommentExists(commentId);
+      if (!commentCheck.success) {
+        return { success: false, error: commentCheck.error };
+      }
+
       // Prüfe ob Like bereits existiert
       const existingLike = await db
-        .select()
+        .select({
+          id: commentReactionsTable.id
+        })
         .from(commentReactionsTable)
         .where(
           and(
@@ -687,11 +758,19 @@ export class PostService {
         )
         .limit(1);
 
+      console.log('🔍 Existing like check:', { 
+        found: existingLike.length > 0, 
+        likeId: existingLike[0]?.id,
+        userId,
+        commentId 
+      });
+
       let isLiked = false;
-      let newLikeCount = 0;
 
       if (existingLike.length > 0) {
         // Unlike: Like entfernen
+        console.log('🔍 Removing existing like with ID:', existingLike[0].id);
+        
         await db
           .delete(commentReactionsTable)
           .where(eq(commentReactionsTable.id, existingLike[0].id));
@@ -700,23 +779,32 @@ export class PostService {
         await db
           .update(commentsTable)
           .set({
-            likeCount: sql`${commentsTable.likeCount} - 1`,
+            likeCount: sql`GREATEST(0, ${commentsTable.likeCount} - 1)`, // Prevent negative counts
             updatedAt: new Date()
           })
           .where(eq(commentsTable.id, commentId));
 
         isLiked = false;
+        console.log('✅ Removed like for userId:', userId);
       } else {
         // Like: Neuen Like hinzufügen
+        const newLikeData = {
+          id: uuidv4(),
+          commentId,
+          userId,
+          reactionType: 'like' as const,
+          createdAt: new Date()
+        };
+        
+        // console.log('🔍 About to insert like with data:', {
+        //   commentId: newLikeData.commentId,
+        //   userId: newLikeData.userId,
+        //   reactionType: newLikeData.reactionType
+        // });
+
         await db
           .insert(commentReactionsTable)
-          .values({
-            id: uuidv4(),
-            commentId,
-            userId,
-            reactionType: 'like',
-            createdAt: new Date()
-          });
+          .values(newLikeData);
 
         // Like-Count erhöhen
         await db
@@ -728,16 +816,26 @@ export class PostService {
           .where(eq(commentsTable.id, commentId));
 
         isLiked = true;
+        // console.log('✅ Inserted like for userId:', userId);
       }
 
-      // Aktuellen Like-Count abrufen
+      // Aktuellen Like-Count abrufen für Verification
       const updatedComment = await db
-        .select({ likeCount: commentsTable.likeCount })
+        .select({ 
+          likeCount: commentsTable.likeCount 
+        })
         .from(commentsTable)
         .where(eq(commentsTable.id, commentId))
         .limit(1);
 
-      newLikeCount = updatedComment[0]?.likeCount || 0;
+      const newLikeCount = updatedComment[0]?.likeCount || 0;
+
+      // console.log('✅ PostService.toggleCommentLike final result:', {
+      //   isLiked,
+      //   likeCount: newLikeCount,
+      //   commentId,
+      //   userId
+      // });
 
       return {
         success: true,
@@ -746,8 +844,18 @@ export class PostService {
       };
 
     } catch (error) {
-      console.error('Toggle comment like error:', error);
-      throw new Error('Failed to toggle comment like');
+      console.error('❌ PostService.toggleCommentLike error:', {
+        commentId,
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      return { 
+        success: false, 
+        error: 'Failed to toggle comment like',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 
